@@ -27,10 +27,7 @@
           </div>
 
           <!-- Role badge -->
-          <RoleBadge
-            :role-name="props.group.user_role"
-            v-if="props.group.user_role"
-          />
+          <RoleBadge :role-name="badge" v-if="badge" />
         </div>
 
         <!-- Tagline -->
@@ -95,11 +92,14 @@
 
 <script setup>
 import { maybePluralize } from "@/services/utils";
+import { rowBadgeFor } from "@/services/v2/standing";
 
 const props = defineProps({
   /** A group object from the API. */
   group: { type: Object, required: true },
 });
+
+const badge = computed(() => rowBadgeFor(props.group._meta?.standing, "group"));
 
 const number_formatter = Intl.NumberFormat("en", { notation: "compact" });
 </script>

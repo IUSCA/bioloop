@@ -1,19 +1,26 @@
 const { test, expect } = require('../../fixtures');
-const { expectForbidden, expectNotForbidden } = require('../../assertions/parity');
+const {
+  expectAllowed, expectConflict, expectForbidden, expectNotForbidden,
+} = require('../../assertions/parity');
 
 /**
- * Phase 6 — restrictions and oversight.
+ * Archiving, and the oversight boundary around it.
  *
- * Archiving is the restriction the system actually ships, and it is the one place where a
- * platform admin is *not* the most powerful caller: a restriction composes by AND with every
- * policy, so it binds Priya exactly as it binds Alice. Unarchive is the single exception, and
- * it belongs to Priya alone.
+ * Archiving is the group's own state, not a permission and not a restriction that composes with
+ * the policies. It is checked after authorization, inside the transaction that would perform the
+ * write, so a refusal is 409 and not 403: an archived group's admin keeps every capability they
+ * had, and telling them otherwise would be false. A platform admin is refused identically,
+ * because there is no authority to outrank — the group is simply not taking changes. Unarchive is
+ * the exception, and it belongs to a platform admin alone.
+ *
+ * Archiving covers the group and what it owns, one step. A sub-group keeps its own state until
+ * somebody archives it, which A4 is the test of.
  *
  * Every test archives something, which cannot be undone within the test without using the
  * very control under test, so each builds its own group.
  *
  * @see docs/design/groups/e2e-test-flows.md — A1, A3, A4, A5, K1, K2
- * @see docs/design/groups/decisions.md — 6. Restrictions compose by AND
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  */
 
 /**
@@ -139,61 +146,108 @@ test('A3 — archiving freezes a group without erasing it', async ({ world, as }
     await expectNotForbidden(alice.api, 'GET', `/groups/${group.id}${path}`);
   }
 
-  // And never a mutation, for the group's own admin.
+  // And never a mutation, for the group's own admin — 409, not 403. Alice still holds
+  // `add_member`, `invite`, and `edit_metadata` here; the group is what declines them.
   for (const [method, url, body] of mutationsOn(world, group)) {
     // eslint-disable-next-line no-await-in-loop
-    await expectForbidden(alice.api, method, url, body);
+    await expectConflict(alice.api, method, url, body);
   }
 
-  // K1: the restriction outranks a platform admin. This is the assertion that makes
-  // archiving a restriction rather than a permission — Priya is refused the same mutations.
+  // K1: a platform admin is refused the same way, and this is the assertion that makes
+  // archiving the group's state rather than a permission. Priya is not being outranked by a
+  // restriction — she is being told the group is not taking changes.
   for (const [method, url, body] of mutationsOn(world, group)) {
     // eslint-disable-next-line no-await-in-loop
-    await expectForbidden(priya.api, method, url, body);
+    await expectConflict(priya.api, method, url, body);
   }
 
   // With unarchive as the sole exception, and it is Priya's alone.
   await expectNotForbidden(priya.api, 'POST', `/groups/${group.id}/unarchive`, {});
 });
 
-test('A4 — archiving reaches descendants and their resources', async ({ world, as }) => {
+test('A4 — archiving covers the group and what it owns, not its sub-groups', async ({ world, as }) => {
   const alice = await as('alice');
   const parent = await createGroup(alice, world, 'a4-parent');
   const child = await alice.api.post(`/groups/${parent.id}/children`, {
     name: `${world.prefix}-a4-child-${Math.random().toString(36).slice(2, 8)}`,
-    description: 'Phase 6 fixture: the descendant that freezes with its ancestor.',
+    description: 'Phase 6 fixture: the sub-group that keeps its own state.',
     admins: [world.people.alice.subject_id],
     members: [],
   });
-  const childDataset = await createDatasetIn(alice, world, child, 'a4-dataset');
+  const parentDataset = await createDatasetIn(alice, world, parent, 'a4-parent-dataset');
+  const childDataset = await createDatasetIn(alice, world, child, 'a4-child-dataset');
 
-  // The child is not archived in its own right.
   await alice.api.post(`/groups/${parent.id}/archive`, {});
+
+  // The sub-group is untouched, and says so: archiving writes one column on one group.
   const childAfter = await alice.api.get(`/groups/${child.id}`);
-  expect(childAfter.is_archived, 'the child was archived in its own right rather than by its ancestor')
+  expect(childAfter.is_archived, 'the sub-group reports its ancestor\'s archive as its own')
     .toBe(false);
+  expect(
+    childAfter._meta.available_actions,
+    'the sub-group withholds a mutating action although its own state admits it',
+  ).toContain('add_member');
 
-  // And yet it is frozen, because the restriction propagates down. The distinction matters:
-  // the child says it is not archived, and still refuses every mutation.
-  for (const [method, url, body] of mutationsOn(world, child)) {
-    // eslint-disable-next-line no-await-in-loop
-    await expectForbidden(alice.api, method, url, body);
-  }
+  // And its mutating controls work.
+  //
+  // Deliberately not `mutationsOn`, which adds Quinn. Every other use of that helper asserts a
+  // refusal, so nothing is written; asserting it *allowed* would really put Quinn in this group,
+  // and membership rises through the hierarchy, making him a transitive member of every ancestor.
+  // Quinn is the suite's zero-access sentinel — `harness.spec.js` asserts he reaches none of the
+  // run's resources — so that one success deletes another file's premise, and whichever ran
+  // second failed. Measured: it did, in the first full run after this test was inverted.
+  //
+  // These two write nothing that outlives the test. An invitation is an offer and confers no
+  // access until somebody accepts it, and the PATCH consumes the version it sends, so it is sent
+  // once.
+  await expectAllowed(alice.api, 'PATCH', `/groups/${child.id}`, {
+    version: 1,
+    description: 'A4: edited while the ancestor is archived.',
+  });
+  await expectAllowed(alice.api, 'POST', `/groups/${child.id}/invitations`, {
+    email: `a4-active-${Date.now()}@example.org`,
+    role: 'MEMBER',
+  });
 
-  // Its resources are frozen too — a dataset owned by a frozen group cannot gain grants.
-  await expectForbidden(alice.api, 'POST', '/grants', {
+  // What the parent owns freezes with it. The refusal names the owning group, because the
+  // dataset itself is not archived — it has no such state of its own.
+  const refusedGrant = await alice.api.raw('POST', '/grants', {
+    subject_id: world.groups.siblingLab.id,
+    resource_type: 'DATASET',
+    resource_id: parentDataset.resource_id,
+    justification: 'A4: a dataset owned by the archived group.',
+    items: [{
+      access_type_id: world.accessTypes['DATASET:VIEW_METADATA'],
+      approved_expiry: { type: 'never', value: null },
+    }],
+  });
+  expect(refusedGrant.status, 'a grant on the archived group\'s dataset was not a conflict')
+    .toBe(409);
+  expect(
+    JSON.stringify(refusedGrant.body),
+    'the refusal does not say the owning group is archived',
+    // Deliberately the whole word rather than a truncated prefix. Every refusal in
+    // `api/src/state/builtin/` says "archived" in full — this one comes from the dataset
+    // container, which sends "This dataset's owning group is archived" — and a prefix would
+    // also be satisfied by an unrelated sentence about the SDA tape archive.
+  ).toMatch(/archived/i);
+
+  // While the sub-group's own dataset takes one, which is what makes the refusal above about
+  // the parent's state rather than about grants being broken.
+  await expectAllowed(alice.api, 'POST', '/grants', {
     subject_id: world.groups.siblingLab.id,
     resource_type: 'DATASET',
     resource_id: childDataset.resource_id,
-    justification: 'A4: the resource of a descendant of an archived group.',
+    justification: 'A4: a dataset owned by the sub-group, which is active.',
     items: [{
       access_type_id: world.accessTypes['DATASET:VIEW_METADATA'],
       approved_expiry: { type: 'never', value: null },
     }],
   });
 
-  // Reading it still works.
-  await expectNotForbidden(alice.api, 'GET', `/v2/datasets/${childDataset.resource_id}`);
+  // Reading the frozen group's dataset still works. Archiving closes governance and leaves the
+  // bytes and the metadata readable.
+  await expectNotForbidden(alice.api, 'GET', `/v2/datasets/${parentDataset.resource_id}`);
 });
 
 test('A5 — a group admin cannot unarchive their own group', async ({ world, as }) => {

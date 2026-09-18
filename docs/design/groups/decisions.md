@@ -2,7 +2,7 @@
 title: Decisions
 order: 2
 status: active
-last_verified: 2026-09-08
+last_verified: 2026-09-17
 ---
 
 ::: tip A decision record
@@ -89,6 +89,30 @@ middleware, rate limiting, and a decision about what metadata is safe to expose.
 The reason for doing the foundation half now is that retrofitting a second principal into
 every zero-default query later is the expensive move. Adding the row is not.
 
+**A system principal is only ever a grant subject.** Nobody governs one, so no row may name one
+in any other role. The database refuses each case with a CHECK constraint:
+
+- a member or a place in the hierarchy (`no_system_principal_members`,
+  `no_system_principal_hierarchy`);
+- the owning group of a dataset, collection, or import source;
+- the group a contribution is made to, or an affiliated group;
+- a grant's issuing or revoking authority.
+
+The two rows themselves cannot be modified. The trigger `system_principal_immutable` refuses any
+UPDATE to either one, and the rule `prevent_system_principal_delete` absorbs a DELETE. A later
+migration that must change one of these rows disables the trigger around its UPDATE.
+
+The API answers any of these refusals with 409 `Request could not be processed due to a
+constraint violation`. The response names no constraint, id, or row. That answer says nothing
+about why, so the services refuse invitations, new members, and new sub-groups first, each with
+a 409 that says the group is a system group. The dataset and collection creation routes and
+`GET /v2/datasets/name-available` do the same through `assertOwnerIsNotSystemPrincipal`. A
+platform admin passes the create policies on any group, so those routes refuse ahead of
+authorization.
+
+[Decision 19](#_19-the-anonymous-caller-is-a-principal-not-a-second-code-path) takes up the
+unauthenticated path.
+
 ## 4. Roles stay an enum
 
 **Decision.** `GROUP_MEMBER_ROLE` remains a database enum. Membership and governance
@@ -126,8 +150,8 @@ corrected rather than kept.
 ## 6. Restrictions compose by AND; grants stay additive
 
 **Decision.** Add a restriction layer evaluated before grants. A restriction is a row
-attached to a resource or a group that blocks an action. It never cancels a grant and never
-references one.
+attached to one resource that blocks an action on that resource. It never cancels a grant and
+never references one.
 
 ```
 allowed = no restriction blocks this  AND  some grant permits it
@@ -143,27 +167,27 @@ Adding a restriction can only narrow access, so it cannot surprise somebody with
 did not have. Both Synapse and Terra converged on this shape independently, as Access
 Requirements and as Authorization Domains, and neither built negative permissions.
 
-**Scope for this pass:** the table, the evaluation hook, and exactly one restriction type,
-`ARCHIVED`. This is a net deletion of design surface. Archiving is currently about thirty
-forbidden actions written out in prose, of which three are enforced; under one rule, all of
-them hold.
+**Scope.** The evaluation hook. Every action passes the restriction check, at every level that
+decides access: a single decision, a capability map, and a list. No restriction type ships. How a
+restriction is specified is deferred, and until then the check allows every action. No restriction
+table exists either, because a table nothing writes reads as shipped. The specification brings the
+storage it needs.
 
-Three properties are settled now because they sit in the evaluation path:
+Resource state is not a restriction. [Decision 17](#_17-resource-state-is-checked-after-authorization)
+places it after authorization.
 
-- **The hook goes in with one type.** A policy written against a pure union assumes access
-  only grows. Adding the AND later means revisiting every one.
-- **Propagation.** A restriction on a group applies to its descendants and to the resources
-  it governs. Implemented for `ARCHIVED`, inherited by every later type.
-- **Whether a restriction can be lifted is a property of the type, not the row.** `ARCHIVED` is liftable by a
-  platform admin. A future agreement-based restriction should not be liftable at all, only
-  satisfiable, which is the point Terra makes by never allowing an authorization domain to
-  be removed.
+Two properties are settled now because they sit in the evaluation path:
 
-**Known tension.** Archiving blocks mutation by anyone; a data use agreement blocks reading
-by one person until they have signed. One is a blanket prohibition on writes, the other a
-per-subject condition on reads. One table with a type that declares which actions it blocks
-covers both, but this is the seam to re-examine when the second restriction type arrives
-rather than to design for speculatively now.
+- **The hook goes in before any type needs it.** A policy written against a pure union
+  assumes access only grows. Adding the AND later means revisiting every one.
+- **Whether a restriction can be lifted is a property of the type, not the row.** An admin lifts
+  some types. An agreement is satisfied by each person accepting it and is never lifted on their
+  behalf, which is the point Terra makes by never allowing an authorization domain to be removed.
+
+**A restriction reaches only the resource it names.** It does not flow to other resources through
+the group tree. The group tree records governance, and a restriction comes from the data: a
+consent form, a provider's contract, a classification, or a publication date. Applying one rule to
+many resources is an explicit action that writes a row for each.
 
 ## 7. Access types imply one another
 
@@ -301,9 +325,9 @@ repetition, and it deletes the terms rather than adding a layer. This was the on
 the review's finding 1 worth taking; the rest of that finding, making groups resources, was
 rejected as decision 4.
 
-**What a short-circuit must not skip.** Restrictions still apply. An archived group is
-archived for a platform admin too, which is already how the restriction layer behaves and
-must stay that way.
+**What a short-circuit must not skip.** Restrictions still apply, and so does resource state.
+An archived group is archived for a platform admin too, because the service that performs an
+action checks the state after authorization, whoever is asking.
 
 ## 12. Owning-group members get a seeded grant, not structural read
 
@@ -347,7 +371,7 @@ subject path.
 
 The 2026-09-03 design review argued for dropping both, in its finding 5. The invariant is
 already false for effective access: a grant to a user and a grant to their group overlap
-freely, because `subject_id` differs, and `userDatasetsQuery` has always taken the union of the
+freely, because `subject_id` differs, and the grant term has always taken the union of the
 subject paths. The constraint therefore forbids overlap on one path and permits it on every other.
 The review was correct about that, and it deferred the change at the time.
 
@@ -369,11 +393,21 @@ insert instead of silently doubling rows.
 approval can create nothing, when a broader grant already covers the access type, which is
 risk 2 in [Trust and communication](./trust-and-communication.md); the reviewer's preview now
 names the covering grant instead of showing an unexplained skip. And two reviewers approving
-the same subject, resource, and access type at the same moment collide on the constraint,
-which is recorded as an edge case in
-[the access and requests plan](./access-requests-plan.md#the-concurrency-race-is-a-documented-edge-case).
-Neither is worth a model change. If the race is ever observed, the fix is to retry the losing
-transaction.
+the same subject, resource, and access type at the same moment collide on the constraint.
+Neither is worth a model change.
+
+**The race is accepted.** One approval commits, and its expiry is the one that survives. The
+other is rejected, and the losing reviewer sees a 409. Nothing retries. Reviewing again succeeds,
+because the winning grant is now visible: the second approval either writes nothing or supersedes
+the first, as [Design](./design.md#supersession) describes. `issueGrants.concurrency.test.js`
+asserts this shape. If the race is ever observed, the fix is to retry the losing transaction.
+
+**Why supersession, and not refusal or chaining.** A subject who holds one preset and
+requests another that shares an access type is not making a mistake. Refusing the second
+request would make them work out which grants they already hold. Chaining would start the
+new grant when the old one expires. An early revocation of the old grant would then leave the
+new one starting at a meaningless time. Supersession closes the shorter grant and writes the
+longer one in one transaction, as [Design](./design.md#supersession) describes.
 
 **Consequence to accept.** Supersession keeps writing `revoked_at` on grants nobody revoked.
 `revocation_type` separates `SUPERSEDED` from `MANUAL`, so any query that cares can tell them
@@ -409,6 +443,182 @@ so the question is answered where it is asked. Anyone adding a route, a policy a
 UI affordance for ownership transfer is reopening this decision, not finishing an
 implementation.
 
+## 16. The access model's open questions have answers
+
+**Decision.** The nineteen open questions that stating the access model formally raised are
+answered below. Each answer is stated in [Access model](./access-model.md) or in the operations
+table of [Design — Lifecycle Management](./design.md#lifecycle-management).
+
+The answers were taken during implementation, without a separate review, so each carries its
+reason. A later reader who disagrees is reopening one row, not the model.
+
+| # | Question | Answer | Reason |
+|---|---|---|---|
+| 1 | A removed member holds a direct grant | The grant stays. | A grant names its subject, not a membership. Grants only add, so removing a membership cannot reach a row it never created. |
+| 2 | Archiving a group, with pending invitations and open requests | Both stay. Acceptance answers `invalid` while archived. Filing, updating, submitting, withdrawing, and reviewing a request are refused while archived, both for requests on what the group owns and for requests on behalf of the group. No grant is issued to the group. A grant the group holds on another group's resource can still be revoked. The expiry job still closes what is under review. | Archiving freezes everything it covers without mutating it, so unarchiving restores every row as it was. Withdrawal is frozen too, because one step that still moved would make the freeze a rule with an exception. Revocation of the group's own grants stays open, because the resource belongs to a group that is not frozen, and blocking its admins would leave access nobody can take away. Expiry runs on time rather than on a person's action, as grant expiry does. |
+| 3 | Archiving a collection restricts its datasets | No. | Archiving is the state of the collection alone. The datasets belong to the owning group, which is not archived. |
+| 4 | Grants on a deleted dataset | Metadata stays readable to those who could read it. Every mutating action and every data-plane action is refused. Lists exclude it unless asked. | A deleted dataset is preserved as metadata, and its bytes are gone. A grant cannot confer access to bytes that no longer exist. |
+| 5 | A soft-deleted user's memberships and grants | They stay. The account does not count as an admin. | Soft deletion is reversible and login is refused. Closing rows would make the reversal lossy. |
+| 6 | Deleting a collection | Not possible. A collection is archived, and unarchiving reverses it. | Decision 1 preserves history, and a delete destroys it. One way to retire a collection needs no rule about when deletion would be safe. |
+| 7 | An admin leaves while a request they filed for the group is under review | It stays reviewable. | The request's subject is the group, which still exists. Filing was authorized when it happened. |
+| 8 | A grant to Public on a resource makes its owning group's page visible | No. A system-principal grant does not count toward `canAccessResourcesOwnedByGroup`. | The group page shows who the group is to people with a relationship to it. A world-readable dataset is not a relationship. |
+| 9 | A child of an archived group owns new datasets | Yes. | Archiving covers the group itself and what it owns. A sub-group keeps its own state. See decision 17. |
+| 10 | Zero admins | Allowed at creation and reported by the no-active-admins list. A change never takes a group from one admin to none. | Seeded cores and platform-created groups start with none. The harm is losing the last admin, not never having one. |
+| 11 | The seeded grant on an ownership change | Deferred with ownership transfer. No route changes a dataset's owner. | Decision 15 defers the transfer flow, and the one accidental path is closed. |
+| 12 | Batch shapes | A batch a person submits is atomic and names every invalid item. A batch a machine submits reports each item's result. | A person fixes the input and resubmits. A watch script needs to keep going past one bad directory. |
+| 13 | Import as a decision surface | It stays a service check with its rule stated in the model. | It reads the import source row, which no policy container addresses. Binding it adds an action nobody else checks. |
+| 14 | The platform-admin snapshot | The engine reads `user_role` once per request. | A revoked role should stop working on the next request, not after the token expires. |
+| 15 | The user directory | A caller who is not a platform admin gets name, username, and email for any term of any length, and never roles or last login. Who may search at all is `isAdminOfAnyGroup`. | What is disclosed is the contact card a campus directory already publishes, to people already trusted with governance authority. Roles and login times describe the account rather than the person and stay platform-admin only. A term length floor protected nothing and rendered as "No results found". See [the user directory](./user-directory.md). |
+| 16 | The `Policy.always` list actions | Each of collection, group, dataset, and grant keeps a `list` action. Its policy is `Policy.always`, and its one attribute rule decides the fields of every row. The list's query decides which rows appear. | A list names no single row, so no row's decision can project it. One rule per type keeps a list's fields in the policy file beside the detail rules. |
+| 17 | Download tokens after revocation | The token lifetime is the accepted window. | The download server is outside this system and trusts its own tokens. The window is stated rather than hidden. |
+| 18 | What the UI may compute | A v2 page gates only on what the API sent, plus display-only facts. | Every client re-derivation found by the UI reading disagreed with the server in some state. |
+| 19 | Leaving quarantine | The legacy create into the archived quarantine group is the intended state until cut-over. Moving a dataset out is ownership transfer, deferred with decision 15. | The workers still create through v1, and a platform admin can unarchive, reassign, and re-archive in the meantime. |
+
+## 17. Resource state is checked after authorization
+
+**Decision.** Authorization answers what a caller could do on a resource. Whether the resource's
+state admits the action is a separate question. The service that performs the action answers it,
+after authorization.
+
+Resource state is every lifecycle fact about the resource itself: an archived group or collection,
+a deleted dataset, and the status an access request, an invitation, or a grant is in. The
+service checks it inside the transaction that holds the row lock and refuses with 409. A platform
+admin is refused the same way. The UI reads the state flags, such as `is_archived`, for badges and
+labels.
+
+Archiving covers the group or collection itself and the resources it owns. A sub-group keeps its
+own state until someone archives it.
+
+Checking state inside the authorization layer is the alternative, and it has three costs. A check
+made before the transaction is not the check that holds, because the state can change before the
+write. The same state gets two answers, a refusal from the authorization layer and a 409 from the
+service. And every container needs a mapping to the thing whose state is checked.
+
+**Two answers reach the UI.** `_meta.capabilities` holds what the caller could do, and
+`_meta.available_actions` holds what the resource's state admits. A page shows a control when the
+caller could act, and enables it when the state admits the action. A control whose state cannot
+return, such as Review on a decided request, is hidden instead. Sending both keeps an admin's
+authority visible on an archived group, where a merged list would hide it. See
+[Access model — The UI consumption contract](./access-model.md#the-ui-consumption-contract).
+
+## 18. Presets are stored, and expanded when a grant is issued
+
+**Decision.** A grant preset is a database row, and a request item may name one. Expansion
+into access types happens once, when grants are issued. Each grant stays one access type, and
+it records the preset that supplied it.
+
+**Rejected: presets as UI sugar.** The UI could expand a preset and send only access type
+ids. Nothing would then record that a preset was chosen. Grants issued from one choice would
+share no provenance, so a reviewer could not reconstruct the intent. Revoking some of them
+would leave a state that matches no known preset and has no explanation. A reviewer who
+approved "Standard Research Use" approved something named, and the name should survive.
+
+**Rejected: grants that name a preset.** A grant could hold a preset id and be expanded when
+access is checked. Three costs follow. The no-overlap constraint cannot be enforced without
+expanding at write time anyway. Every authorization check becomes a join, an expansion, and a
+deduplication on the hottest read path. Editing a preset would change the access of every
+subject holding it, which turns preset configuration into an authorization event.
+
+**Rejected: expanding at submission.** A request expanded when it is submitted loses the
+shape the requester chose. The reviewer would approve a list rather than the preset, and the
+audit trail would record the list. Expanding at issue keeps the preset as the unit of intent
+through review.
+
+**Presets do not constrain revocation.** An admin revokes any grant on its own. The system
+explains a partial state rather than preventing it.
+
+**Deferred.** Four things wait for a need.
+
+- **Preset versioning.** No approval references a preset version.
+- **Per-group presets.** Every preset is platform configuration. `owner_group_id` on
+  `grant_preset` is a one-column migration when a group needs its own.
+- **Atomic preset revocation.** Grants are revoked one at a time, and the partial state is
+  explained.
+- **A snapshot of the preset name on the request item.** A preset is retired with
+  `is_active` rather than deleted, so a historical request still resolves its name. Build the
+  snapshot if anyone but a platform admin can ever rename a preset.
+
+@see [Design](./design.md#grant-presets) for how presets expand and which ones ship.
+
+## 19. The anonymous caller is a principal, not a second code path
+
+**Decision.** An unauthenticated request runs through the same authorization engine as every
+other request. It carries `ANONYMOUS_PRINCIPAL`, a frozen principal whose `subject_id` is Public
+and whose roles and memberships are empty. `optionalAuthenticate` sets it on the public router.
+
+**Rejected: a public read path outside the engine.** A service function could check the
+visibility column and return a hand-written projection. That creates two places that decide what
+a viewer may see. The two drift, and the one that drifts is the one nobody exercises. One engine
+keeps the attribute rules the single authority on which fields leave the building.
+
+**Consequence to accept.** A principal object exists that is not a person. It is frozen, it
+reaches only the GET routes of `api/src/routes/public.js`, and `public_router.test.js` asserts
+that shape. It holds only what was granted to Public, as
+[Access model — Base relations](./access-model.md#base-relations) states.
+
+## 20. Group names are unique among siblings, not system-wide
+
+**Decision.** `group.name` loses its system-wide `@unique`. A `parent_id` column carries the
+parent, and a unique index over `(parent_id, name)` with `NULLS NOT DISTINCT` replaces it. Two
+groups may share a name under different parents, and no two siblings may share one. Root groups
+have a null parent, and the `NULLS NOT DISTINCT` clause is what constrains them; a plain unique
+index treats each null as distinct and lets two roots share a name. That clause needs
+PostgreSQL 15 or newer.
+
+`group.slug` and `group.archive_key` keep their system-wide uniqueness. Neither derives from the
+name at read time: `generate_slug` appends a suffix until the slug is free, and `archive_key` is
+taken from the slug once and frozen.
+
+**Why the name never needed it.** Nothing resolves a group by name. Grants, subjects, closure
+edges, and the public profile route all key off the identifier, and that route validates a UUID
+and answers 404 rather than 403, so the public surface exposes no name-based handle at all. The
+slug answers `/groups/slug/:slug`, and the archive key names the tape directory. Both are already
+collision-proof without help from the name.
+
+A system-wide unique name is an existence oracle. Any caller learns whether a name is taken
+anywhere, including in archived groups and groups they may not see, and any group denies a name
+to every other group by taking it first. That is the argument that moved dataset names to
+`(owner_group_id, name, type, is_deleted)` in `20260910010000_group_scoped_dataset_names`, and it
+applies to groups unchanged. Sibling scope reduces the oracle to groups the caller can already
+see. Roots are the residue: creating one still reveals whether a root of that name exists.
+
+Deployments hold more than one institution, and organisational unit names repeat by construction.
+`Administrative Core`, `Microscopy Core`, and `Core Services` each belong to every centre that has
+one. Under the old rule the second centre to be modelled cannot name its own.
+
+**Rejected: dropping uniqueness altogether.** Collections already work this way, and the same slug
+generator serves them, so the machinery exists. It fails on the case it is meant to serve. Two
+siblings could both be `Imaging`, and the ancestor path would then not tell them apart either. A
+picker would fall back to the slug or the identifier, which is what showing the path was meant to
+avoid. Sibling scope is what makes the full path a unique, readable identifier.
+
+**Rejected: keeping the system-wide rule and living with it.** The refusal is legible, and it names
+no other group, so nothing leaks beyond the fact of the collision. It still refuses a name the
+caller is entitled to use, for a reason they cannot inspect, and it gets worse as more institutions
+are modelled.
+
+**Enforced in the index, not in a service.** A unique index is revalidated by every statement that
+writes the table, and it holds under concurrency. An equivalent check in `createGroup` and
+`updateGroup` protects only the call sites that exist when it is written.
+
+**Consequences to accept.** A name no longer identifies a group on its own, so every place that
+offers one for selection shows its ancestor path. `POST /groups/search` returns each row's
+ancestors, root first, built from `group_closure` at read time and never stored — which is what
+keeps a future re-parent a change to one table. A picker row shows the top of the tree, an
+ellipsis, and the parent, because three names do not fit on one line, and the whole tree on hover.
+
+The ancestors are in the `list` attribute filter rather than behind a per-caller one. In a
+research portal the name of the centre a lab sits under is not the secret; what the lab owns is,
+and that stays behind its own policies. The anonymous profile audience still sees no ancestors,
+because a profile is published to the world and a picker is not.
+
+The slug remains the handle that never collides, so the group's Overview shows it with a copy
+button. It is what somebody pastes into the grant subject picker to reach a group that publishes
+no profile.
+
+An archived sibling keeps its name reserved. Freeing it would let a new group take the name and
+make unarchiving fail, so the reservation is deliberate.
+
 ## Raised and deferred
 
 Two findings of the 2026-09-03 review were deliberately not acted on. Both dispositions were
@@ -431,14 +641,30 @@ enum-bearing row rather than a grant, so each of these stays its own piece of wo
 collapsing into the access-request machinery. **Ownership transfer** was in that list and is
 now settled as decision 15: deferred, with its table kept and nothing wired to it.
 
+One constraint on reparenting is recorded here so that the eventual design starts from it.
+**Moving a group is an authorization change, and it needs the consent of both parents' admins.**
+Membership flows upward, so the members of a moved group become effective members of its new
+ancestors, and every grant issued to those ancestors then reaches them. A move that only the
+moving group's admin approved would therefore let that admin help themselves to whatever the new
+parent holds, which is an escalation rather than a reorganisation. The new parent's admin has to
+accept the subtree. The old parent's admin has to release it, because they lose the oversight that
+their ancestry conferred and their own grants stop reaching the group's members. None of this is
+designed yet, and nothing is built.
+
+**Bounded model checkers such as Alloy or TLA+** are deferred. They earn their cost when the
+hierarchy changes during its lifetime, so reparenting or delegated authority is the trigger.
+
 **Invitations were in that list and are now built.** They confirm the decision rather than
 strain it: an invitation is a standing offer of a `group_user` row with a role, so it needed
 its own table and lifecycle and borrowed nothing from grants or access requests. See
 [Invitations](./invitations.md).
 
-**Serving unauthenticated requests** is deferred by decision 3. The principal exists; the
-route path does not.
+**Serving unauthenticated requests** was deferred by decision 3 and is settled as decision 19 for
+profile reads.
 
-**The second restriction type** is deferred by decision 6. Only `ARCHIVED` ships.
+**Restriction types** are deferred by decision 6. None ships, and the check allows every action.
+
+**Archiving a group's sub-groups in one action** is not built. A sub-group keeps its own state, as
+decision 17 states, and each one is archived on its own.
 
 **Attribution and funding** were deferred by decision 8 and taken up by decision 13.

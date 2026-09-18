@@ -1,8 +1,6 @@
 // const logger = require('@/services/logger');
-const { HydratorRegistry } = require('./hydrators/HydratorRegistry');
-const Policy = require('./policies/Policy');
 const { evaluateAttributeFilters, createFilterFunction } = require('./attributeFilters');
-const { resolveHydrators, hydrateEntities } = require('./hydrationUtils');
+const { resolveHydrators, hydrateEntities, contextIdentifiers } = require('./hydrationUtils');
 
 class AuthorizationError extends Error {
   constructor(message) {
@@ -65,39 +63,15 @@ async function authorizeWithFilters({
     eventToEmit: null,
   },
 }) {
-  // Validate inputs
-  if (!policy || !(policy instanceof Policy)) {
-    throw new AuthorizationError('Invalid policy: must be an instance of Policy');
-  }
-  if (!Array.isArray(attributeRules)) {
-    throw new AuthorizationError('Invalid attributeRules: must be an array');
-  }
-  if (!identifiers || typeof identifiers !== 'object') {
-    throw new AuthorizationError(
-      `[policy:${policy.name}] Invalid identifiers: must be an object`,
-    );
-  }
-  if (!registry || !(registry instanceof HydratorRegistry)) {
-    throw new AuthorizationError(
-      `[policy:${policy.name}] Invalid registry: must be an instance of HydratorRegistry`,
-    );
-  }
+  // The policy, its attribute rules, and the registry were checked when the containers were
+  // registered and the pipeline was built. Only the request's own values are checked here.
+  // @see core/pipeline.js — assertPipelineDependencies
   if (identifiers.user === null || identifiers.user === undefined) {
     throw new AuthorizationError(
       `[policy:${policy.name}] User identifier is required to evaluate policy`,
     );
   }
-  // validate events configuration
-  let emitEvent = false;
-  if (events.emit && typeof events.emit !== 'function') {
-    throw new AuthorizationError('Invalid events.emit: must be a function');
-  }
-  if (events.eventToEmit && typeof events.eventToEmit !== 'string') {
-    throw new AuthorizationError('Invalid events.eventToEmit: must be a string');
-  }
-  if (events.emit && events.eventToEmit) {
-    emitEvent = true;
-  }
+  const emitEvent = typeof events.emit === 'function' && typeof events.eventToEmit === 'string';
 
   // Initialize caches if not provided
   const caches = {
@@ -138,7 +112,7 @@ async function authorizeWithFilters({
   // This reuses the caches populated in Phase 1 and does incremental hydration.
   // contextId is forwarded so the context hydrator uses the same cache key as Phase 1
   // and finds active_grant_access_types already resolved (zero additional DB calls).
-  const contextId = { ...identifiers, resourceType: policy.resourceType };
+  const contextId = contextIdentifiers(identifiers, policy.resourceType, preFetched);
 
   const attributeFilters = await evaluateAttributeFilters(
     attributeRules,

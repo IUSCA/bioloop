@@ -14,7 +14,9 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const { authorizeAction, policyRegistry } = require('@/authorization');
-const restrictionsService = require('@/services/restrictions');
+const state = require('@/state');
+const groupsService = require('@/services/groups');
+const datasetService = require('@/services/datasets_v2');
 const {
   createTestUser,
   createTestGroup,
@@ -106,10 +108,10 @@ describe('a platform admin is allowed every action', () => {
   test('the caller role is PLATFORM_ADMIN', async () => {
     const result = await authorizeAction('dataset', 'view_metadata', {
       identifiers: { user: admin.subject_id, resource: dataset.resource_id },
-      shouldDeriveCallerRole: true,
+      shouldDeriveStanding: true,
     });
 
-    expect(result.callerRole).toBe('PLATFORM_ADMIN');
+    expect(result.standing[0]).toEqual({ kind: 'platform_admin' });
   });
 
   test('no attribute is filtered out', async () => {
@@ -141,28 +143,38 @@ describe('a non-admin is unaffected', () => {
   });
 });
 
-describe('a restriction still blocks a platform admin', () => {
-  test('an archived dataset refuses a mutation, and the reason names the restriction', async () => {
-    await restrictionsService.applyRestriction(prisma, {
-      type_name: 'ARCHIVED',
-      group_id: group.id,
-      actor_id: admin.subject_id,
-    });
+describe('a resource state still refuses a platform admin', () => {
+  // The short-circuit answers what the caller may do, and it says yes to a platform admin for
+  // every action. What the resource admits is the other answer, and being a platform admin is
+  // not a reason an archived group accepts a change. So the capability stays and the service
+  // refuses with 409.
+  // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+  test('the admin is granted the action, and the archived state refuses it with 409', async () => {
+    await groupsService.archiveGroup(group.id, admin.subject_id);
 
     try {
       const result = await authorizeAction('dataset', 'edit_metadata', {
         identifiers: { user: admin.subject_id, resource: dataset.resource_id },
       });
+      expect(result.granted).toBe(true);
 
-      // The short-circuit runs after the restriction check on purpose.
-      expect(result.granted).toBe(false);
-      expect(result.blockedBy).toBe('ARCHIVED');
+      // `patchDataset` takes the numeric id and asserts the dataset's state under its row lock.
+      await expect(datasetService.patchDataset(dataset.id, { description: 'changed' }))
+        .rejects.toMatchObject({ status: 409 });
     } finally {
-      await restrictionsService.liftRestriction(prisma, {
-        type_name: 'ARCHIVED',
-        group_id: group.id,
-        actor_id: admin.subject_id,
-      });
+      await groupsService.unarchiveGroup(group.id, admin.subject_id);
     }
   }, 30_000);
+
+  test('the same state refuses the same action for the owning group\'s admin', () => {
+    // Forced unless the state answer ignores the caller: if it read standing at all, the two
+    // callers above and here would not get the same refusal from one row.
+    const refusal = state.checkOf('dataset', 'edit_metadata', {
+      is_deleted: false, owner_group: { is_archived: true },
+    });
+    expect(refusal).not.toBeNull();
+    expect(state.checkOf('dataset', 'view_metadata', {
+      is_deleted: false, owner_group: { is_archived: true },
+    })).toBeNull();
+  });
 });

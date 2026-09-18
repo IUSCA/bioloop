@@ -23,15 +23,15 @@
       <!--
         An APPROVED request whose grants were all revoked reads as access the requester does
         not have. Saying so is the highest-value line on this page.
-        @see docs/design/groups/access-requests-plan.md — C4
+        @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
       -->
       <Alert
         v-if="props.summary.issued === 0"
         color="info"
         class="mt-3 text-sm"
       >
-        This request issued no grants. Anything approved was already covered by
-        access the subject holds.
+        This request gave no new permissions. Anything approved was already
+        covered by access {{ who }} holds.
       </Alert>
       <Alert
         v-else-if="props.summary.live === 0"
@@ -40,7 +40,7 @@
       >
         Nothing from this request is in force any more.
         <template v-if="props.summary.last_revoked_at">
-          The last grant was revoked
+          The last permission was revoked
           {{ datetime.fromNowShort(props.summary.last_revoked_at)
           }}<template v-if="props.summary.last_revocation_type">
             ({{ props.summary.last_revocation_type.toLowerCase() }})</template
@@ -60,7 +60,7 @@
  * question a decided request gets asked, and the status badge alone answers it wrongly
  * whenever a grant has since been revoked.
  *
- * @see docs/design/groups/access-requests-plan.md — C4
+ * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
  */
 import Alert from "@/components/utils/ModernAlert.vue";
 import * as datetime from "@/services/datetime";
@@ -71,7 +71,14 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  /** The name of the user or group the request is for. */
+  subjectName: {
+    type: String,
+    default: null,
+  },
 });
+
+const who = computed(() => props.subjectName || "the user or group");
 
 const stats = computed(() => [
   {

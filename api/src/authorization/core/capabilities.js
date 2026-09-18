@@ -1,4 +1,3 @@
-const { HydratorRegistry } = require('./hydrators/HydratorRegistry');
 const Policy = require('./policies/Policy');
 const PolicyContainer = require('./policies/PolicyContainer');
 const { resolveHydrators, hydrateEntities } = require('./hydrationUtils');
@@ -52,6 +51,9 @@ class CapabilityEvaluationError extends Error {
  *                                                            ContextHydrator seeds from this object, making
  *                                                            grant-based policies pure in-memory lookups.
  * @returns {Promise<Object.<string, boolean>>} Map of actionName → boolean capability result.
+ *   What the caller may do. What the resource's current state admits is a separate question,
+ *   answered by `src/state` and reported beside this as `available_actions`.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  */
 async function evaluateCapabilitySet({
   policyContainer,
@@ -61,24 +63,9 @@ async function evaluateCapabilitySet({
   preFetched = null,
   actionNames = null,
 }) {
-  // --- Input validation ---
-
-  if (!policyContainer || !(policyContainer instanceof PolicyContainer)) {
-    throw new CapabilityEvaluationError('policyContainer must be an instance of PolicyContainer');
-  }
-  if (!identifiers || typeof identifiers !== 'object') {
-    throw new CapabilityEvaluationError('identifiers must be an object');
-  }
+  // The container and the registry were checked when the pipeline was built.
   if (identifiers.user == null) {
     throw new CapabilityEvaluationError('identifiers.user is required');
-  }
-  if (!hydratorRegistry || !(hydratorRegistry instanceof HydratorRegistry)) {
-    throw new CapabilityEvaluationError('hydratorRegistry must be an instance of HydratorRegistry');
-  }
-  // actionNames is optional (defaults to all actions in container),
-  // but if provided must be a non-empty array of strings
-  if (actionNames != null && (!Array.isArray(actionNames) || actionNames.length === 0)) {
-    throw new CapabilityEvaluationError('actionNames must be a non-empty array of strings');
   }
 
   // --- Step 1: Resolve action policies ---
@@ -133,48 +120,75 @@ async function evaluateCapabilitySet({
   return results;
 }
 
-async function deriveCallerRole({
+/**
+ * Every path by which the caller reaches the resource: the caller's standing.
+ *
+ * Standing is the set of reasons the caller may read the resource, so it is read from the terms
+ * of every action the container declares as reading. Each term that holds contributes the paths
+ * `expandPath` returns for it; by default one path, `{ kind, rule }`, from the term's meta. A
+ * term with no path kind contributes nothing. Paths are unique by value.
+ *
+ * @param {Object} options
+ * @param {PolicyContainer} options.policyContainer
+ * @param {Object} options.identifiers - `{ user, resource }`
+ * @param {HydratorRegistry} options.hydratorRegistry
+ * @param {Object} [options.policyExecutionContext] - shares the request's caches
+ * @param {Object} [options.preFetched] - `{ user, resource, context }` seeds
+ * @param {Function} [options.expandPath] - `(term, { user, resource, context }) => Object[]`
+ * @returns {Promise<Object[]>} the paths, each with at least `kind`
+ * @see docs/design/groups/access-model.md — Paths and standing
+ */
+async function deriveStanding({
   policyContainer,
   identifiers,
   hydratorRegistry,
   policyExecutionContext = null,
   preFetched = null,
+  expandPath = null,
 }) {
-  if (!policyContainer || !(policyContainer instanceof PolicyContainer)) {
-    throw new CapabilityEvaluationError('policyContainer must be an instance of PolicyContainer');
-  }
-  if (!identifiers || typeof identifiers !== 'object') {
-    throw new CapabilityEvaluationError('identifiers must be an object');
-  }
   if (identifiers.user == null) {
     throw new CapabilityEvaluationError('identifiers.user is required');
   }
-  if (!hydratorRegistry || !(hydratorRegistry instanceof HydratorRegistry)) {
-    throw new CapabilityEvaluationError('hydratorRegistry must be an instance of HydratorRegistry');
-  }
 
-  const policy = policyContainer.getRoleDerivationPolicy();
+  const terms = [];
+  policyContainer.getActionNames()
+    .filter((action) => policyContainer.getRestrictionClass(action) !== PolicyContainer.RESTRICTION_CLASS.MUTATING)
+    .forEach((action) => policyContainer.getPolicy(action).terms().forEach((term) => {
+      if (term.meta?.pathKind && !terms.includes(term)) terms.push(term);
+    }));
+  if (terms.length === 0) return [];
 
+  const policy = Policy.or(terms);
   const caches = {
     user: policyExecutionContext?.cache?.user || new Map(),
     resource: policyExecutionContext?.cache?.resource || new Map(),
     context: policyExecutionContext?.cache?.context || new Map(),
   };
-
-  const hydrators = resolveHydrators(hydratorRegistry, policy);
   const [user, resource, context] = await hydrateEntities({
     policy,
     identifiers,
-    hydrators,
+    hydrators: resolveHydrators(hydratorRegistry, policy),
     caches,
     preFetched,
   });
 
-  const role = await policy.evaluate(user, resource, context);
-  if (!role) {
-    return null;
-  }
-  return role;
+  const expand = expandPath ?? ((term) => [
+    term.meta.rule ? { kind: term.meta.pathKind, rule: term.meta.rule } : { kind: term.meta.pathKind },
+  ]);
+  const seen = new Set();
+  const paths = [];
+  const held = await Promise.all(terms.map((term) => term.evaluate(user, resource, context)));
+  terms.forEach((term, index) => {
+    if (!held[index]) return;
+    expand(term, { user, resource, context }).forEach((path) => {
+      const key = JSON.stringify(path);
+      if (!seen.has(key)) {
+        seen.add(key);
+        paths.push(path);
+      }
+    });
+  });
+  return paths;
 }
 
 function toCapabilitiesArray(capabilitiesObj) {
@@ -189,5 +203,8 @@ function toCapabilitiesArray(capabilitiesObj) {
 }
 
 module.exports = {
-  evaluateCapabilitySet, CapabilityEvaluationError, deriveCallerRole, toCapabilitiesArray,
+  evaluateCapabilitySet,
+  CapabilityEvaluationError,
+  deriveStanding,
+  toCapabilitiesArray,
 };

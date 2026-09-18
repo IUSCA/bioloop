@@ -1,26 +1,12 @@
 const _ = require('lodash/fp');
-const { Prisma, GROUP_MEMBER_ROLE } = require('@prisma/client');
+const { Prisma } = require('@prisma/client');
 
 const prisma = require('@/db');
-const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
+const { withStateFields } = require('@/state').import('dataset');
+const { buildWhereClause, createLikePattern } = require('@/utils/sql');
 const grantService = require('@/services/grants');
-const { UPLOAD_STATUS_GROUPS } = require('@/constants');
+const { accessibleIdsQuery } = require('@/authorization');
 const { RESOURCE_SCOPES } = require('../resources');
-
-/**
- * The upload statuses one value of the `upload_status` filter stands for.
- *
- * `ANY` returns every dataset that has an upload log, whatever became of it. A group name
- * returns that group's statuses, and a single status returns just itself.
- *
- * @see docs/design/groups/dataset-creation-plan.md — C5
- * @param {string} upload_status
- * @returns {string[]|null} the statuses to match, or null for "any status"
- */
-function uploadStatusesFor(upload_status) {
-  if (upload_status === 'ANY') return null;
-  return UPLOAD_STATUS_GROUPS[upload_status] ?? [upload_status];
-}
 
 /**
  * Create an includes object for Prisma queries based on requested includes.
@@ -32,8 +18,8 @@ function uploadStatusesFor(upload_status) {
  * @param {Boolean} includes.source_datasets - Whether to include source datasets
  * @param {Boolean} includes.derived_datasets - Whether to include derived datasets
  * @param {Boolean} includes.workflows - Whether to include associated workflows
- * @param {Boolean} includes.upload_log - Whether to include the upload log, if the dataset was uploaded
- * @returns {object} An includes object for Prisma queries
+ * @returns {object} An includes object for Prisma queries. It always carries the fields the
+ *   dataset's state rules read, so every row a caller fetches can answer `available_actions`.
  */
 function createPrismaInclude(includes) {
   const result = {};
@@ -73,15 +59,7 @@ function createPrismaInclude(includes) {
   if (includes.owner_group) {
     result.owner_group = true;
   }
-  if (includes.upload_log) {
-    // At most one row: dataset_upload_log is unique on dataset_id.
-    result.upload_logs = {
-      select: {
-        status: true, retry_count: true, updated_at: true, metadata: true,
-      },
-    };
-  }
-  return result;
+  return withStateFields({ include: result }).include;
 }
 
 /**
@@ -112,11 +90,10 @@ function createPrismaOrderBy({ sort_by, sort_order }) {
  * @param {boolean} [filters.has_source_data] - true to filter for datasets with source data, false for datasets without source data, omit for all
  * @param {string} [filters.type] - Filter by dataset type
  * @param {string} [filters.name] - Filter by dataset name (partial match)
- * @param {string} [filters.upload_status] - ANY, an UPLOAD_STATUS_GROUPS name, or one upload status
  * @returns {object} A filters object for Prisma queries
  */
 function createPrismaWhere({
-  is_deleted, is_archived, is_staged, upload_status,
+  is_deleted, is_archived, is_staged,
   has_workflows, has_derived_data, has_source_data,
   type, name,
   id, resource_id, owner_group_id, collection_id,
@@ -131,10 +108,6 @@ function createPrismaWhere({
   }
   if (is_staged != null) {
     filters.is_staged = is_staged;
-  }
-  if (upload_status != null) {
-    const statuses = uploadStatusesFor(upload_status);
-    filters.upload_logs = { some: statuses ? { status: { in: statuses } } : {} };
   }
   if (has_workflows != null) {
     filters.workflows = { [has_workflows ? 'some' : 'none']: {} };
@@ -193,7 +166,7 @@ function createPrismaWhere({
 }
 
 function createSqlWhere({
-  is_deleted, is_archived, is_staged, upload_status,
+  is_deleted, is_archived, is_staged,
   has_workflows, has_derived_data, has_source_data,
   type, name,
   id, resource_id, owner_group_id, collection_id,
@@ -210,15 +183,6 @@ function createSqlWhere({
   }
   if (is_staged != null) {
     clauses.push(Prisma.sql`d.is_staged = ${is_staged}`);
-  }
-  if (upload_status != null) {
-    const statuses = uploadStatusesFor(upload_status);
-    clauses.push(statuses
-      ? Prisma.sql`EXISTS (
-          SELECT 1 FROM dataset_upload_log ul
-          WHERE ul.dataset_id = d.id AND ul.status::text IN (${Prisma.join(statuses)})
-        )`
-      : Prisma.sql`EXISTS (SELECT 1 FROM dataset_upload_log ul WHERE ul.dataset_id = d.id)`);
   }
   if (has_workflows != null) {
     clauses.push(has_workflows
@@ -339,65 +303,34 @@ async function searchAllDatasets({
 const LISTING_ACCESS_TYPE = 'DATASET:VIEW_METADATA';
 
 /**
+ * The path kinds each list scope reads. `member` is absent: on a dataset it records a
+ * contributor, which admits `contribute` and not reading.
+ * @see docs/design/groups/access-model.md — Paths and standing
+ */
+const DATASET_SCOPE_PATH_KINDS = {
+  [RESOURCE_SCOPES.ALL]: ['admin', 'oversight', 'grant'],
+  [RESOURCE_SCOPES.OWNED]: ['admin'],
+  [RESOURCE_SCOPES.GRANTS]: ['grant'],
+  [RESOURCE_SCOPES.OVERSIGHT]: ['oversight'],
+};
+
+/**
+ * The datasets a user reaches under one list scope, as the `accessible_ids` CTE.
+ * @see src/authorization/builtin/paths
  * @param {string} user_id - subject id
  * @param {string} scope - one of RESOURCE_SCOPES
  * @param {string[]} grant_access_types - `satisfiedBy([LISTING_ACCESS_TYPE])`
  */
 function createAccessibleDatasetIdsCte(user_id, scope, grant_access_types) {
-  const includeAll = scope === RESOURCE_SCOPES.ALL;
-  const parts = [];
-
-  if (includeAll || scope === RESOURCE_SCOPES.GRANTS) {
-    parts.push(Prisma.sql`(${grantService.accessibleDatasetIdsByGrantsQuery(user_id, grant_access_types)})`);
-  }
-
-  if (includeAll || scope === RESOURCE_SCOPES.OWNED) {
-    parts.push(Prisma.sql`
-      SELECT d.resource_id
-      FROM "dataset" d
-      JOIN active_group_user gu ON d.owner_group_id = gu.group_id
-      WHERE gu.user_id = ${user_id} AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
-    `);
-  }
-
-  if (includeAll || scope === RESOURCE_SCOPES.OVERSIGHT) {
-    parts.push(Prisma.sql`
-      SELECT d.resource_id
-      FROM "dataset" d
-      JOIN effective_user_oversight_groups eug 
-        ON eug.user_id = ${user_id} AND d.owner_group_id = eug.group_id
-    `);
-  }
-
-  if (parts.length === 0) {
-    // No known scope provided; return no rows to avoid granting access.
-    parts.push(Prisma.sql`SELECT NULL::text AS resource_id WHERE FALSE`);
-  }
-
+  const pathKinds = DATASET_SCOPE_PATH_KINDS[scope];
+  if (!pathKinds) throw new Error(`No dataset list scope named ${scope}`);
   return Prisma.sql`
     WITH accessible_ids AS (
-      ${Prisma.join(parts, '\n\nUNION\n\n')}
+      ${accessibleIdsQuery({
+    userId: user_id, resourceType: 'dataset', accessTypes: grant_access_types, pathKinds,
+  })}
     )
   `;
-}
-
-/**
- * Which of `resource_ids` the user can open, by the same rule the dataset list uses.
- *
- * A platform admin is not special-cased here; the caller checks for one first.
- * @param {string} user_id - subject id
- * @param {string[]} resource_ids - dataset resource ids
- * @returns {Promise<Set<string>>}
- */
-async function viewableDatasetIds(user_id, resource_ids) {
-  if (resource_ids.length === 0) return new Set();
-  const grant_access_types = await grantService.satisfiedBy([LISTING_ACCESS_TYPE]);
-  const rows = await prisma.$queryRaw(Prisma.sql`
-    ${createAccessibleDatasetIdsCte(user_id, RESOURCE_SCOPES.ALL, grant_access_types)}
-    SELECT resource_id FROM accessible_ids
-    WHERE resource_id IN (${Prisma.join(resource_ids)})
-  `);
-  return new Set(rows.map((r) => r.resource_id));
 }
 
 async function searchDatasetsForUser({
@@ -475,7 +408,6 @@ module.exports = {
   getDatasetById,
   searchAllDatasets,
   searchDatasetsForUser,
-  viewableDatasetIds,
   getDatasetsByOwnerGroup,
   getDatasetsByCollection,
 };

@@ -35,7 +35,6 @@
       kind="group"
       :name="group.name"
       :tagline="group.tagline"
-      :avatar-url="avatarUrl"
       :type="group.metadata?.type"
       :is-archived="group.is_archived"
     />
@@ -90,7 +89,6 @@ import ProfileCitation from "@/components/v2/profiles/ProfileCitation.vue";
 import ProfileHeader from "@/components/v2/profiles/ProfileHeader.vue";
 import ProfileLinks from "@/components/v2/profiles/ProfileLinks.vue";
 import ProfilePublications from "@/components/v2/profiles/ProfilePublications.vue";
-import ProfileService from "@/services/v2/profiles";
 import PublicProfileService from "@/services/v2/publicProfiles";
 
 /**
@@ -99,7 +97,7 @@ import PublicProfileService from "@/services/v2/publicProfiles";
  * The API answers the same 404 for a group that does not exist and for one whose profile
  * is not published, so this page cannot tell the two apart and does not try to.
  *
- * @see docs/design/groups/profiles.md — The UI
+ * @see docs/design/groups/profiles.md — The public router
  */
 const props = defineProps({ id: { type: String, required: true } });
 
@@ -107,10 +105,6 @@ const group = ref(null);
 const loading = ref(true);
 const error = ref(null);
 const notFound = ref(false);
-
-const avatarUrl = computed(() =>
-  ProfileService.groupAvatarUrl(props.id, group.value?.avatar_key),
-);
 
 /** A published profile with none of its optional parts filled in still needs to say so. */
 const isEmptyProfile = computed(

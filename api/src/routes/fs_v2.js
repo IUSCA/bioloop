@@ -20,7 +20,7 @@ const router = express.Router();
  * A path outside every reachable source is refused without saying whether such a source
  * exists, so the refusal reveals nothing about another group's filesystem.
  *
- * @see docs/design/groups/dataset-creation-plan.md — B2
+ * @see docs/design/groups/dataset-creation.md — Import sources are visible to everyone
  */
 router.get(
   '/',

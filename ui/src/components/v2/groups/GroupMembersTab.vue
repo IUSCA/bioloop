@@ -27,6 +27,8 @@
             <VaButton
               v-if="props.canAdd"
               size="small"
+              :disabled="!stateAdmits('add_member')"
+              :title="stateAdmits('add_member') ? null : DISABLED_REASON"
               @click="openAddMemberModal"
             >
               <div class="flex items-center justify-between gap-2 mx-1">
@@ -50,7 +52,11 @@
               />
             </div>
 
-            <div v-else-if="members.length > 0">
+            <div
+              v-else-if="members.length > 0"
+              class="v2-table-page"
+              :style="tablePageStyle"
+            >
               <VaDataTable :items="members" :columns="columns" class="v2-table">
                 <template #cell(name)="{ rowData }">
                   <div class="flex items-center gap-3 text-sm">
@@ -108,6 +114,12 @@
                       <div class="flex flex-col items-start gap-2">
                         <VaButton
                           v-if="props.canEditRole"
+                          :disabled="!stateAdmits('edit_member_role')"
+                          :title="
+                            stateAdmits('edit_member_role')
+                              ? null
+                              : DISABLED_REASON
+                          "
                           @click="handleEditRole(rowData)"
                           size="small"
                           :color="roleActionColor(rowData.effective_role)"
@@ -126,6 +138,12 @@
 
                         <VaButton
                           v-if="props.canRemove"
+                          :disabled="!stateAdmits('remove_member')"
+                          :title="
+                            stateAdmits('remove_member')
+                              ? null
+                              : DISABLED_REASON
+                          "
                           @click="handleRemove(rowData)"
                           size="small"
                           preset="secondary"
@@ -176,7 +194,11 @@
                   </template>
                 </template>
                 <template v-if="props.canAdd" #actions>
-                  <VaButton @click="openAddMemberModal">
+                  <VaButton
+                    :disabled="!stateAdmits('add_member')"
+                    :title="stateAdmits('add_member') ? null : DISABLED_REASON"
+                    @click="openAddMemberModal"
+                  >
                     <div class="flex items-center gap-3 px-2">
                       <i-mdi-plus class="text-lg" />
                       <span class="font-medium">Add Member</span>
@@ -215,7 +237,31 @@ const props = defineProps({
   // Inviting an address with no account is a separate capability from adding an existing
   // member, and unlike adding it is blocked on an archived group.
   canInvite: { type: Boolean, default: false },
+  /**
+   * `_meta.available_actions`: what the group's own state admits right now, or null when the
+   * response did not say. A control the state withholds stays visible and disabled, because
+   * the caller keeps the authority and will hold it again.
+   *
+   * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+   */
+  availableActions: { type: Array, default: null },
 });
+
+/**
+ * Whether the group's state admits the action.
+ *
+ * A null list means the response did not answer, and every control stays usable: the service
+ * checks the state again under its own lock, so a wrongly enabled control costs a 409 rather
+ * than a wrong write.
+ */
+function stateAdmits(action) {
+  return props.availableActions === null
+    ? true
+    : props.availableActions.includes(action);
+}
+
+/** The words a disabled control shows for why the state withholds it. */
+const DISABLED_REASON = "This group is archived.";
 
 const emit = defineEmits(["count-changed", "invite"]);
 
@@ -230,6 +276,10 @@ const searchTerm = ref("");
 const total = ref(0);
 const currentPage = ref(1);
 const itemsPerPage = ref(20);
+
+// Reserves one page of rows on the table container, so the pagination keeps its
+// place when the last page is short.
+const tablePageStyle = useTablePageStyle(total, itemsPerPage);
 const ITEMS_PER_PAGE_OPTIONS = [20, 50, 100];
 
 const countsLoading = ref(false);

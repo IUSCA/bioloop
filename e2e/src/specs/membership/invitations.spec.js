@@ -1,9 +1,9 @@
 const { test, expect } = require('../../fixtures');
-const { expectForbidden } = require('../../assertions/parity');
+const { expectConcealed, expectForbidden } = require('../../assertions/parity');
 const { waitForInvitationToken, mailMark } = require('../../world/mail');
 
 /**
- * Phase 5b — invitations.
+ * Invitations.
  *
  * An invitation is a claim on an address, not on an account, so the token has to survive
  * somebody signing up later and must confer exactly what it says and nothing more. Three of
@@ -15,7 +15,7 @@ const { waitForInvitationToken, mailMark } = require('../../world/mail');
  * `bin/devserver.sh up notifications-worker`.
  *
  * @see docs/design/groups/e2e-test-flows.md — C1, C2, C3, C4, C6
- * @see docs/design/groups/invitations.md
+ * @see docs/design/groups/invitations.md — The flow
  */
 
 /** A fresh group so one test's invitations cannot decide another's. */
@@ -184,9 +184,9 @@ test('C6 — an admin cannot cancel another group\'s invitation', async ({ world
   const [invitation] = (await invitationsOf(alice, group.id))
     .filter((i) => i.invited_email.toLowerCase() === address.toLowerCase());
 
-  // Erin administers a different group. Governance is local, and cancelling an invitation is
-  // governance.
-  await expectForbidden(erin.api, 'DELETE', `/groups/${group.id}/invitations/${invitation.id}`);
+  // Erin administers a sibling group and holds no standing on this one, so the refusal is the
+  // answer an unknown id gets. Governance is local, and cancelling an invitation is governance.
+  await expectConcealed(erin.api, 'DELETE', `/groups/${group.id}/invitations/${invitation.id}`);
 
   // It is still pending afterwards — the refusal did not half-apply.
   const [after] = (await invitationsOf(alice, group.id))

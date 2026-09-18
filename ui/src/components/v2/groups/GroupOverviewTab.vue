@@ -98,9 +98,8 @@
           </VaCard>
 
           <!--
-            A tree rather than a breadcrumb, because group names are long enough that a
-            horizontal path of three of them does not fit on one row. A root group gets no
-            card at all; there is no lineage to report.
+            A root group gets no card at all; there is no lineage to report. The tree itself is
+            GroupLineageTree, shared with the hover card in the group pickers.
           -->
           <VaCard v-if="sortedAncestors.length">
             <VaCardContent>
@@ -116,33 +115,10 @@
                   />
                 </span>
               </div>
-              <div class="flex flex-col text-sm">
-                <div
-                  v-for="item in treeItems"
-                  :key="item.isCurrent ? 'current' : item.id"
-                  class="flex items-start leading-6"
-                  :style="{
-                    paddingLeft:
-                      item.level === 0 ? '0' : `${(item.level - 1) * 1.25}rem`,
-                  }"
-                >
-                  <span
-                    v-if="item.level > 0"
-                    class="mr-1 select-none font-mono shrink-0"
-                    style="color: var(--va-secondary)"
-                    >└──</span
-                  >
-                  <RouterLink
-                    v-if="!item.isCurrent"
-                    :to="`/v2/groups/${item.id}`"
-                    class="hover:underline"
-                    style="color: var(--va-primary)"
-                  >
-                    {{ item.name }}
-                  </RouterLink>
-                  <span v-else class="font-semibold">{{ item.name }}</span>
-                </div>
-              </div>
+              <GroupLineageTree
+                :group="props.group"
+                :ancestors="props.ancestors"
+              />
             </VaCardContent>
           </VaCard>
         </div>
@@ -151,6 +127,20 @@
       <!-- Thin panel: what the caller can do, and how to refer to this group -->
       <div class="flex flex-col gap-4">
         <OverviewActions :actions="quickActions" />
+
+        <!--
+          The slug, because a name identifies a group only among its siblings and this is the
+          handle that does not. It addresses the public profile at /groups/slug/:slug, and it
+          is what somebody pastes into a group picker to reach a group that publishes nothing.
+          @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+        -->
+        <VaCard v-if="props.group.slug">
+          <VaCardContent>
+            <h2 class="v2-card-title mb-2">Identifier</h2>
+            <CopyText :text="props.group.slug" />
+          </VaCardContent>
+        </VaCard>
+
         <ProfileLinks :links="props.group.metadata?.links" />
         <ProfileCitation :citation="props.group.citation" kind="group" />
       </div>
@@ -177,12 +167,13 @@
     :about-md="props.group.about_md"
     :profile-visibility="props.group.profile_visibility"
     :metadata="props.group.metadata"
-    :avatar-key="props.group.avatar_key"
     @update="emit('update')"
   />
 </template>
 
 <script setup>
+import CopyText from "@/components/utils/CopyText.vue";
+import GroupLineageTree from "@/components/v2/groups/GroupLineageTree.vue";
 import EditProfileModal from "@/components/v2/profiles/EditProfileModal.vue";
 import ProfileAbout from "@/components/v2/profiles/ProfileAbout.vue";
 import ProfileCitation from "@/components/v2/profiles/ProfileCitation.vue";
@@ -208,9 +199,31 @@ const props = defineProps({
   canAddMember: { type: Boolean, default: false },
   canCreateSubgroup: { type: Boolean, default: false },
   canCreateCollection: { type: Boolean, default: false },
+  /**
+   * `_meta.available_actions`: what the group's own state admits right now, or null when the
+   * response did not say. One prop rather than a boolean per action, because the state answer
+   * is one list and splitting it up invites the two halves to disagree.
+   */
+  availableActions: { type: Array, default: null },
 });
 
 const emit = defineEmits(["toggle-archive", "update", "action-requested"]);
+
+/**
+ * Whether the group's state admits the action.
+ *
+ * A null list means the response did not answer, and every control stays usable: the service
+ * checks the state again under its own lock, so a wrongly enabled control costs a 409 rather
+ * than a wrong write.
+ */
+function stateAdmits(action) {
+  return props.availableActions === null
+    ? true
+    : props.availableActions.includes(action);
+}
+
+/** The words a disabled control shows for why the state withholds it. */
+const ARCHIVED_REASON = "This group is archived.";
 
 /**
  * Whether the band shows the member-uploads cell.
@@ -227,21 +240,6 @@ const showsMemberUploads = computed(
 const sortedAncestors = computed(() =>
   [...props.ancestors].sort((a, b) => b.depth - a.depth),
 );
-
-// flat list for tree rendering: each ancestor + current group as the leaf
-const treeItems = computed(() => [
-  ...sortedAncestors.value.map((ancestor, i) => ({
-    ...ancestor,
-    level: i,
-    isCurrent: false,
-  })),
-  {
-    id: null,
-    name: props.group.name,
-    level: sortedAncestors.value.length,
-    isCurrent: true,
-  },
-]);
 
 /**
  * Whether anything an admin wrote is present. The citation is excluded, because the API
@@ -282,6 +280,8 @@ const quickActions = computed(() => {
     actions.push({
       icon: "mdi-account-plus",
       label: "Add a member",
+      disabled: !stateAdmits("add_member"),
+      disabledReason: ARCHIVED_REASON,
       onClick: () => emitAction("add-member", "members", "add-member"),
     });
   }
@@ -289,6 +289,8 @@ const quickActions = computed(() => {
     actions.push({
       icon: "mdi-sitemap-outline",
       label: "Create a subgroup",
+      disabled: !stateAdmits("create_child"),
+      disabledReason: ARCHIVED_REASON,
       onClick: () =>
         emitAction("create-subgroup", "subgroups", "create-subgroup"),
     });
@@ -297,6 +299,8 @@ const quickActions = computed(() => {
     actions.push({
       icon: getIcon("collection", { outlined: true }),
       label: "Create a collection",
+      disabled: !stateAdmits("add_collection"),
+      disabledReason: ARCHIVED_REASON,
       onClick: () =>
         emitAction("create-collection", "collections", "create-collection"),
     });
@@ -305,22 +309,33 @@ const quickActions = computed(() => {
     actions.push({
       icon: "mdi-card-account-details-outline",
       label: "Edit profile",
+      disabled: !stateAdmits("edit_metadata"),
+      disabledReason: ARCHIVED_REASON,
       onClick: openProfileModal,
     });
     actions.push({
       icon: "mdi-pencil",
       label: "Edit name",
+      disabled: !stateAdmits("edit_metadata"),
+      disabledReason: ARCHIVED_REASON,
       onClick: openEditModal,
     });
   }
-  if (props.canArchive || props.canUnarchive) {
+  // Which way the toggle points is the state's answer, not the column's. The two are the
+  // same fact today, and reading the answer keeps them from drifting apart: an archived
+  // group whose state withholds `unarchive` offers nothing here rather than a control that
+  // fails.
+  if (props.canUnarchive) {
     actions.push({
-      icon: props.group.is_archived
-        ? "mdi-archive-arrow-up-outline"
-        : "mdi-archive-outline",
-      label: props.group.is_archived
-        ? "Unarchive this group"
-        : "Archive this group",
+      icon: "mdi-archive-arrow-up-outline",
+      label: "Unarchive this group",
+      danger: true,
+      onClick: () => emit("toggle-archive"),
+    });
+  } else if (props.canArchive) {
+    actions.push({
+      icon: "mdi-archive-outline",
+      label: "Archive this group",
       danger: true,
       onClick: () => emit("toggle-archive"),
     });

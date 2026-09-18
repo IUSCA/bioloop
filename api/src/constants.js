@@ -130,38 +130,6 @@ const UPLOAD_STATUSES = {
   PERMANENTLY_FAILED: 'PERMANENTLY_FAILED',
 };
 
-// The ten upload statuses collapsed into the three answers a person actually wants from a
-// listing: is it still moving, did it stop, or is it done. `GET /v2/datasets` takes a group
-// name in `upload_status`; a single status is accepted there as well.
-//
-// A test asserts these three cover every value of UPLOAD_STATUSES exactly once, so a status
-// added to the enum has to be classified before it can ship.
-// @see docs/design/groups/dataset-creation-plan.md — C5
-const UPLOAD_STATUS_GROUPS = {
-  IN_PROGRESS: [
-    UPLOAD_STATUSES.UPLOADING,
-    UPLOAD_STATUSES.UPLOADED,
-    UPLOAD_STATUSES.VERIFYING,
-    UPLOAD_STATUSES.VERIFIED,
-    UPLOAD_STATUSES.PROCESSING,
-  ],
-  FAILED: [
-    UPLOAD_STATUSES.UPLOAD_FAILED,
-    UPLOAD_STATUSES.VERIFICATION_FAILED,
-    UPLOAD_STATUSES.PROCESSING_FAILED,
-    UPLOAD_STATUSES.PERMANENTLY_FAILED,
-  ],
-  COMPLETE: [UPLOAD_STATUSES.COMPLETE],
-};
-
-// Accepted values of the `upload_status` query parameter: the three group names, ANY for
-// "was uploaded at all, whatever came of it", and any single status.
-const UPLOAD_STATUS_FILTERS = [
-  'ANY',
-  ...Object.keys(UPLOAD_STATUS_GROUPS),
-  ...Object.values(UPLOAD_STATUSES),
-];
-
 const WORKFLOWS = {
   INTEGRATED: 'integrated',
   STAGE: 'stage',
@@ -236,15 +204,13 @@ const SYSTEM_PRINCIPAL_GROUP_IDS = [AUTHENTICATED_USERS_GROUP_ID, PUBLIC_GROUP_I
 //
 // Every user attribute the group and collection policies declare is present, so the engine
 // hydrates none of them and reads no user row.
-// @see docs/design/groups/profiles.md — The anonymous principal
+// @see docs/design/groups/decisions.md — 19. The anonymous caller is a principal, not a second code path
 const ANONYMOUS_PRINCIPAL = Object.freeze({
   subject_id: PUBLIC_GROUP_ID,
   is_anonymous: true,
   roles: Object.freeze([]),
   group_memberships: Object.freeze([]),
-  effective_group_ids: Object.freeze([]),
   oversight_group_ids: Object.freeze([]),
-  accessible_owner_group_ids: Object.freeze([]),
 });
 
 // The service account every unattended write is credited to: the watch script, the workers,
@@ -406,7 +372,7 @@ const GRANT_ACCESS_TYPE_IMPLICATIONS = [
 
 // Every preset is scoped to collections. A preset listed here is active; one removed from
 // this list is retired by the seed, never deleted, and its id is never reused.
-// @see docs/design/groups/access-presets.md — 2.11 Presets are scoped to collections
+// @see docs/design/groups/design.md — The seeded presets
 const GRANT_PRESETS = [
   {
     id: 1,
@@ -437,8 +403,6 @@ module.exports = {
   DONE_STATUSES,
   DATASET_CREATE_METHODS,
   UPLOAD_STATUSES,
-  UPLOAD_STATUS_GROUPS,
-  UPLOAD_STATUS_FILTERS,
   WORKFLOWS,
   ALERT_TYPES,
   ALERT_STATUSES,

@@ -69,12 +69,15 @@ describe('the paths stay behind view_sensitive_metadata', () => {
   });
 });
 
-describe('listing returns the public set', () => {
-  test('list hands out exactly the public attributes, for every caller', () => {
-    // Structural role or not, a listing is the same shape, so is_staged now shows on the
-    // dataset list as well as the detail page.
-    const rules = datasetPolicies.getAttributeRules('list');
-    expect(rules).toHaveLength(1);
-    expect(rules[0].attribute_filters).toEqual(PUBLIC_ATTRIBUTES);
+describe('a list shows the public set', () => {
+  test('the list action filters every row to the public attributes', () => {
+    // No single row is decided on a list, so its one rule applies to every row.
+    // @see docs/design/groups/access-model.md — Projection
+    expect(datasetPolicies.getAttributeRules('list').map((rule) => rule.attribute_filters))
+      .toEqual([PUBLIC_ATTRIBUTES]);
+  });
+
+  test('the public set still says whether staging finished', () => {
+    expect(PUBLIC_ATTRIBUTES).toContain('is_staged');
   });
 });

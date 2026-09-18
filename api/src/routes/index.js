@@ -17,7 +17,7 @@ router.use('/about', require('./about'));
 router.use('/env', require('./env'));
 // Profiles that have been published. The only routes reachable without a token, and every
 // one of them a GET authorizing `view_profile`.
-// @see docs/design/groups/profiles.md — API
+// @see docs/design/groups/profiles.md — The public router
 router.use('/public', require('./public'));
 
 // From this point on, all routes require authentication.
@@ -38,6 +38,7 @@ router.use('/v2/datasets', require('./datasets_v2'));
 router.use('/v2/users', require('./users_v2'));
 router.use('/v2/import-sources', require('./import_sources'));
 router.use('/v2/fs', require('./fs_v2'));
+router.use('/v2/states', require('./states'));
 
 router.use('/datasets', require('./datasets'));
 router.use('/metrics', require('./metrics'));

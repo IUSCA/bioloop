@@ -85,11 +85,16 @@
         <!-- The rail: what the request produced, what else reaches the subject, and who
              asked for what. -->
         <div class="flex flex-col gap-4 min-w-0">
-          <RequestOutcomeCard v-if="summary && isDecided" :summary="summary" />
+          <RequestOutcomeCard
+            v-if="summary && isDecided"
+            :summary="summary"
+            :subject-name="subjectName"
+          />
           <SubjectCoverageCard
             v-if="summary?.covered_elsewhere?.length"
             :rows="summary.covered_elsewhere"
             :decided="isDecided"
+            :subject-name="subjectName"
           />
           <RequestDetailsCard :request="request" />
         </div>
@@ -114,7 +119,7 @@
  * what access is in force right now, and the status badge alone answers that wrongly
  * whenever a grant has since been revoked.
  *
- * @see docs/design/groups/access-requests-plan.md — B3, C4
+ * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
  * @see docs/public/mockups/access-request-screens.html
  */
 import Badge from "@/components/v2/Badge.vue";
@@ -123,11 +128,11 @@ import RequestOutcomeCard from "@/components/v2/access-requests/RequestOutcomeCa
 import RequestedAccessCard from "@/components/v2/access-requests/RequestedAccessCard.vue";
 import ReviewRequestModal from "@/components/v2/access-requests/ReviewRequestModal.vue";
 import SubjectCoverageCard from "@/components/v2/access-requests/SubjectCoverageCard.vue";
+import { useCapabilities } from "@/composables/useCapabilities";
 import AccessRequestService from "@/services/v2/access-requests";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { useNavStore } from "@/stores/nav";
-import { useAuthStore } from "@/stores/auth";
 
 // The file-based router passes the path parameter as a prop; declaring it also stops it
 // falling through as an attribute onto this page's fragment root.
@@ -139,9 +144,14 @@ const props = defineProps({
 });
 
 const nav = useNavStore();
-const auth = useAuthStore();
 
 const request = ref(null);
+const subjectName = computed(
+  () =>
+    request.value?.subject?.user?.name ||
+    request.value?.subject?.group?.name ||
+    null,
+);
 const loading = ref(true);
 const error = ref(null);
 const withdrawing = ref(false);
@@ -174,21 +184,15 @@ const resourceName = computed(() => {
   );
 });
 
-const capabilities = computed(
-  () => new Set(request.value?._meta?.capabilities ?? []),
-);
+const { can, available } = useCapabilities(request);
 
-const canReview = computed(
-  () =>
-    capabilities.value.has("review") &&
-    request.value?.status === "UNDER_REVIEW",
-);
-
-const canWithdraw = computed(
-  () =>
-    request.value?.requester_id === auth.user?.subject_id &&
-    ["DRAFT", "UNDER_REVIEW"].includes(request.value?.status),
-);
+// Both controls are hidden rather than disabled, because neither action can return: a decided
+// request is not reviewed again, and a withdrawn one is not withdrawn twice. `available` is
+// the request's own state, which carries the status and the state of the dataset or collection
+// it names — an archived target stops the request moving either way, and no capability says so.
+// @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+const canReview = computed(() => can("review") && available("review"));
+const canWithdraw = computed(() => can("withdraw") && available("withdraw"));
 
 const summary = computed(() => request.value?.access_summary ?? null);
 

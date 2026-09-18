@@ -125,10 +125,16 @@ async function control(run, verb) {
     await fetchRuns();
   } catch (err) {
     console.error(err);
-    toast.error(
+    const fallback =
       verb === "resume"
         ? "Unable to resume workflow"
-        : "Unable to stop workflow",
+        : "Unable to stop workflow";
+    // A 409 is the dataset's state refusing, and its message names the state.
+    // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+    toast.error(
+      err?.response?.status === 409
+        ? (err.response.data?.message ?? fallback)
+        : fallback,
     );
   } finally {
     acting.value = null;

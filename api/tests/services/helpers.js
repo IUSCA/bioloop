@@ -223,14 +223,33 @@ async function deleteCollection(collectionId) {
 }
 
 /**
- * Delete a group by id.
+ * Delete a group and everything under it, deepest first.
+ *
  * Cascades on group_closure and group_user in the DB schema, but audit records must be
  * removed manually as there is no FK cascade on authorization_audit.
+ *
+ * `group.parent_id` is ON DELETE RESTRICT, so a parent cannot go before its children. Suites
+ * track ids in creation order and clean up in that same order, which puts the parent first, so
+ * the descendants are collected here rather than left to each caller.
  */
 async function deleteGroup(groupId) {
-  await prisma.authorization_audit.deleteMany({ where: { target_type: 'group', target_id: groupId } });
+  const descendants = await prisma.group_closure.findMany({
+    where: { ancestor_id: groupId },
+    select: { descendant_id: true, depth: true },
+    orderBy: { depth: 'desc' },
+  });
+  const ids = descendants.length > 0
+    ? descendants.map((d) => d.descendant_id)
+    : [groupId];
+
+  await prisma.authorization_audit.deleteMany({
+    where: { target_type: 'group', target_id: { in: ids } },
+  });
   // group_closure and group_user cascade on group deletion
-  await prisma.group.deleteMany({ where: { id: groupId } });
+  for (const id of ids) {
+    // eslint-disable-next-line no-await-in-loop
+    await prisma.group.deleteMany({ where: { id } });
+  }
 }
 
 /**

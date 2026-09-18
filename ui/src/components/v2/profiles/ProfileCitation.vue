@@ -42,7 +42,7 @@
  * The API resolves the line — a stored one when an admin wrote it, a generated one
  * otherwise — so this component never builds a citation of its own.
  *
- * @see docs/design/groups/profiles.md — Schema
+ * @see docs/design/groups/profiles.md — The columns
  */
 const props = defineProps({
   citation: { type: String, default: "" },

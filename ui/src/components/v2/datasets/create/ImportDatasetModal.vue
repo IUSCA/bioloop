@@ -7,7 +7,7 @@
 
   No project or instrument fields. Projects do not exist in v2, and instruments are deferred.
 
-  @see docs/design/groups/dataset-creation-plan.md — B4
+  @see docs/design/groups/dataset-creation.md — What the creation dialogs look like
 -->
 <template>
   <VaModal
@@ -332,7 +332,9 @@ async function submit() {
         err.response.data?.message || "That directory or name is already taken",
       );
     } else if (status === 403) {
-      toast.error("You cannot import from that location");
+      // Authorization only. An archived owning group refuses with 409 and its own message,
+      // handled above, so this no longer has to stand for both.
+      toast.error("You cannot import into that group from that location");
     } else {
       toast.error("Could not import the dataset");
     }

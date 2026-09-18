@@ -1,17 +1,25 @@
 const express = require('express');
+const createError = require('http-errors');
 const { param, query, body } = require('express-validator');
 const _ = require('lodash/fp');
 const { isInt } = require('validator');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
-const { createAuthorizationMiddleware: authorize } = require('@/authorization');
+const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const grantService = require('@/services/grants');
-const { isPlatformAdmin } = require('@/services/auth');
+const grantState = require('@/state').import('grant');
 const Expiry = require('@/utils/expiry');
 const prisma = require('@/db');
 const { RESOURCE_TYPE, SUBJECT_TYPE } = require('@prisma/client');
+
+const { projectObject } = require('@/utils/expression');
+const baseAttributes = require('@/authorization/builtin/policies/base_attributes');
+
+// A grant's state reads the resource it is on and the user or group it is for. These are the
+// arguments that fetch each relation with what the state rules read.
+const { resource: RESOURCE_STATE_ARGS, subject: SUBJECT_STATE_ARGS } = grantState.select();
 
 const router = express.Router();
 
@@ -203,53 +211,9 @@ router.post(
       return res.status(validationError.status).json({ message: validationError.message });
     }
 
-    const data = pickNonNil([
-      'subject_id',
-      'resource_id',
-      'resource_type',
-    ])(req.body);
-    data.granted_by = req.user.subject_id;
-
-    // [{type: 'new' | 'existing' | 'supersede', access_type_id: int, expiry: Expiry, existing_grant: Object?}]
-    // expiry is the latest approved expiry for the access type, either from preset or directly from the item, that would result from the request
-    const effectiveGrants = await prisma.$transaction(
-      (tx) => grantService.buildEffectiveGrants(tx, data, req.body.items),
-    );
-
-    // What the subject already holds through some other path — a group it belongs to, an
-    // ancestor of that group, a system principal, or a collection holding the dataset.
-    // `buildEffectiveGrants` matches on the exact subject, because that is what the write path
-    // may supersede, so on its own it would report a brand new grant for access the subject
-    // already has. The reviewer needs to see that before deciding.
-    // @see docs/design/groups/access-requests-plan.md — C2
-    const coverage = await grantService.labelCoverage(
-      await grantService.getEffectiveCoverage({
-        subject_id: data.subject_id,
-        resource_id: data.resource_id,
-        resource_type: data.resource_type,
-        access_type_ids: effectiveGrants.map((g) => g.access_type_id),
-      }),
-    );
-    // Attach each coverage row to the access types it answers for, not to its own. The
-    // coverage query widens through the order, so a lab's DATASET:DOWNLOAD grant is what
-    // covers a request for DATASET:LIST_FILES, and keying by the row's own type would file
-    // it under a type the reviewer never asked about.
-    // @see docs/design/groups/decisions.md — 7. Access types imply one another
-    const impliedIds = await grantService.impliedIdsByAccessTypeId();
-    const indirectByAccessType = new Map();
-    for (const row of coverage.filter((c) => c.via !== 'DIRECT')) {
-      const answersFor = [row.access_type_id, ...(impliedIds.get(row.access_type_id) ?? [])];
-      for (const accessTypeId of answersFor) {
-        const held = indirectByAccessType.get(accessTypeId) ?? [];
-        held.push(row);
-        indirectByAccessType.set(accessTypeId, held);
-      }
-    }
-
-    return res.json(effectiveGrants.map((g) => ({
-      ...g,
-      indirect_coverage: indirectByAccessType.get(g.access_type_id) ?? [],
-    })));
+    const { subject_id, resource_id, resource_type } = req.body;
+    const rows = await grantService.previewIssue({ subject_id, resource_id, resource_type }, req.body.items);
+    return res.json(rows);
   }),
 );
 
@@ -272,7 +236,7 @@ router.get(
     } = req.query;
 
     let grantsGrouped;
-    if (isPlatformAdmin(req)) {
+    if (await callerIsPlatformAdmin(req)) {
       // if platform admin, list all expiring grants
       grantsGrouped = await grantService.listExpiringGrants({
         within_days,
@@ -286,12 +250,13 @@ router.get(
     // The service groups by subject and resource. Destructuring `source` here dropped the
     // subject from every row and added an undefined key, so a caller could not say who
     // held the access that is about to lapse.
-    const filteredGrants = grantsGrouped.map(({ subject, resource, grants }) => ({
-      subject,
-      resource,
+    // The service scopes the grants to the caller's authority, and the list decision's filter
+    // picks each grant's fields.
+    res.json(grantsGrouped.map(({ subject, resource, grants }) => ({
+      subject: projectObject(subject, baseAttributes.subject),
+      resource: projectObject(resource, baseAttributes.resource),
       grants: grants.map((g) => req.permission.filter(g)),
-    }));
-    res.json(filteredGrants);
+    })));
   }),
 );
 
@@ -316,9 +281,8 @@ router.get(
       expiring_within_days,
     });
 
-    const filteredData = rows.map((g) => req.permission.filter(g));
-
-    res.json(filteredData);
+    // The service returns only the caller's own grants, and the list decision's filter picks their fields.
+    res.json(rows.map((g) => req.permission.filter(g)));
   }),
 );
 
@@ -335,6 +299,27 @@ router.get(
 
     const grant = await grantService.getGrantById(req.params.id);
     res.status(200).json(req.permission.filter(grant));
+  }),
+);
+
+// What revoking a grant leaves its subject, for the confirmation modal. The coverage it reads
+// counts every path, so the modal never tells an admin a subject loses access they keep.
+// @see docs/design/groups/access-model.md — The UI consumption contract
+router.get(
+  '/:id/revoke-preview',
+  validate([
+    param('id').isUUID(),
+  ]),
+  authorize('grant', 'revoke'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'Preview what revoking a grant leaves its subject'
+    const preview = await grantService.previewRevoke(req.params.id);
+    if (!preview) return next(createError.NotFound('Permission not found'));
+    return res.json(preview.map((row) => ({
+      ...row,
+      still_conferred_by: row.still_conferred_by.map((c) => projectObject(c, baseAttributes.coverage)),
+    })));
   }),
 );
 
@@ -417,9 +402,27 @@ router.get(
       subject_id,
     });
 
+    // Each group names a different resource, and a grant's state reads what it concerns as
+    // well as its own `revoked_at`. One query fetches every resource with what the rules read;
+    // the hydrated resource above does not carry the owning group.
+    const stateResources = await prisma.resource.findMany({
+      where: { id: { in: grouped.map(({ resource }) => resource.id) } },
+      select: { id: true, ...RESOURCE_STATE_ARGS.select },
+    });
+    const stateResourceById = new Map(stateResources.map((r) => [r.id, r]));
+    // Every grant here is for the one user or group in the path.
+    const subject = await prisma.subject.findUniqueOrThrow({ where: { id: subject_id }, ...SUBJECT_STATE_ARGS });
+
     const filteredData = grouped.map(({ resource, grants }) => ({
-      resource,
-      grants: grants.map((g) => req.permission.filter(g)),
+      resource: projectObject(resource, baseAttributes.resource),
+      grants: grants.map((g) => ({
+        ...req.permission.filter(g),
+        _meta: {
+          available_actions: grantState.availableActions({
+            ...g, resource: stateResourceById.get(resource.id), subject,
+          }),
+        },
+      })),
     }));
 
     res.json(filteredData);
@@ -461,9 +464,18 @@ router.get(
       ...options,
     });
 
+    // Every grant here concerns the one resource in the path, so its state is a single read
+    // and only `revoked_at` separates the rows.
+    const resource = await prisma.resource.findUnique({ where: { id: resource_id }, ...RESOURCE_STATE_ARGS });
+    if (!resource) throw createError.NotFound('Resource not found');
+    // Each group of rows is for one user or group, fetched with its group relation, so issuing
+    // reads its state from the row already here.
     const filteredData = grouped.map(({ subject, grants }) => ({
-      subject,
-      grants: grants.map((g) => req.permission.filter(g)),
+      subject: projectObject(subject, baseAttributes.subject),
+      grants: grants.map((g) => ({
+        ...req.permission.filter(g),
+        _meta: { available_actions: grantState.availableActions({ ...g, resource, subject }) },
+      })),
     }));
 
     res.json(filteredData);
@@ -500,7 +512,7 @@ router.get(
 
 // Everything that already reaches a subject on a resource, and how each grant arrives.
 // Distinct from the route below, which answers only what the subject holds directly.
-// @see docs/design/groups/access-requests-plan.md — C1
+// @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
 router.get(
   '/:subject_type/:subject_id/:resource_type/:resource_id/coverage',
   validate([
@@ -527,7 +539,8 @@ router.get(
     const coverage = await grantService.getEffectiveCoverage({
       subject_id, resource_id, resource_type,
     });
-    res.json(await grantService.labelCoverage(coverage));
+    const labelled = await grantService.labelCoverage(coverage);
+    res.json(labelled.map((row) => projectObject(row, baseAttributes.coverage)));
   }),
 );
 
@@ -561,7 +574,18 @@ router.get(
       active: is_active,
     });
 
-    const filteredGrants = grants.map((g) => req.permission.filter(g));
+    // Unlike the grouped lists, this one can be asked for inactive grants, so `revoked_at`
+    // separates the rows. The resource is the one in the path, so its state is a single read.
+    const resource = await prisma.resource.findUnique({ where: { id: resource_id }, ...RESOURCE_STATE_ARGS });
+    if (!resource) throw createError.NotFound('Resource not found');
+    const subject = await prisma.subject.findUniqueOrThrow({ where: { id: subject_id }, ...SUBJECT_STATE_ARGS });
+
+    // Each grant was fetched with its resource and subject, but not with what the state rules
+    // read, so the rows fetched above take their place.
+    const filteredGrants = grants.map((g) => ({
+      ...req.permission.filter(g),
+      _meta: { available_actions: grantState.availableActions({ ...g, resource, subject }) },
+    }));
     res.json(filteredGrants);
   }),
 );

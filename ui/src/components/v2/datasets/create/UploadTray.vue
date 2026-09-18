@@ -7,7 +7,7 @@
 
   Renders nothing when there is nothing to report.
 
-  @see docs/design/groups/dataset-creation-plan.md — C3
+  @see docs/design/groups/dataset-creation.md — The transfer does not live in the dialog
 -->
 <template>
   <div

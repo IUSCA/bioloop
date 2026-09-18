@@ -202,6 +202,18 @@ async function main() {
     })),
   );
 
+  // Parentage is applied after every group row exists, because the upserts above run
+  // concurrently and a child could otherwise be written before the parent its foreign key
+  // names. group_parents is derived from group_closure, so the two cannot disagree.
+  // @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+  const { group_parents } = groupData;
+  await Promise.all(
+    group_parents.map(({ id, parent_id }) => prisma.group.update({
+      where: { id },
+      data: { parent_id },
+    })),
+  );
+
   const { group_closure } = groupData;
   await Promise.all(
     group_closure.map((gc) => prisma.group_closure.upsert({
@@ -257,7 +269,7 @@ async function main() {
   //
   // Seeded after the groups, because each source names its owning group. A source with no
   // group is invisible to the v2 browse routes.
-  // @see docs/design/groups/dataset-creation-plan.md — B1
+  // @see docs/design/groups/dataset-creation.md — Import sources are visible to everyone
   const importSourcesDir = config.get('import.sources_dir');
   const importSources = [
     {

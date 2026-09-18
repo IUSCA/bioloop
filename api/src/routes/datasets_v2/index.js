@@ -11,18 +11,26 @@ const _ = require('lodash/fp');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
-const {
-  createAuthorizationMiddleware: authorize, toCapabilitiesArray, authorizeAction,
-} = require('@/authorization');
+const authorization = require('@/authorization');
 const datasetService = require('@/services/datasets_v2');
 const importService = require('@/services/datasets_v2/imports');
 const uploadService = require('@/services/datasets_v2/uploads');
 const auditService = require('@/services/audit');
-const { isPlatformAdmin } = require('@/services/auth');
+const accessRequestsService = require('@/services/access_requests');
+const { buildMeta } = require('@/services/meta');
 const { RESOURCE_SCOPES } = require('@/services/resources');
-const { UPLOAD_STATUS_FILTERS } = require('@/constants');
+const { assertNotSystemPrincipal } = require('@/services/system_principals');
+
+const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin } = authorization;
+const datasetAuth = authorization.import('dataset');
+const decideContribute = datasetAuth.action('contribute');
+const decideCreate = datasetAuth.action('create');
+const datasetListFilter = datasetAuth.listFilter();
 
 const router = express.Router();
+
+// Routes below name the dataset :dataset_resource_id, so authorize() is told where to find it.
+const byDatasetResourceId = { resourceIdFn: (req) => req.params.dataset_resource_id };
 
 // ── Creation support ─────────────────────────────────────────────────────────
 
@@ -33,15 +41,38 @@ const router = express.Router();
  * `admitted_by`, so the creation dialog can say why a group is offered rather than showing
  * an unexplained list. The creation routes still authorize — this is a convenience.
  *
- * @see docs/design/groups/dataset-creation-plan.md — A2
+ * @see docs/design/groups/dataset-creation.md — Choosing the group
  */
 router.get(
   '/eligible-owner-groups',
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Groups the caller may create a dataset in'
-    const groups = await datasetService.listEligibleOwnerGroups(req.user);
-    res.json(groups);
+
+    // Each candidate is decided by `dataset.contribute`, the action the creation routes
+    // authorize, so a group offered here is one they admit and one they admit is offered.
+    const everyGroup = await callerIsPlatformAdmin(req);
+    const candidates = await datasetService.listOwnerGroupCandidates({ user_id: req.user.subject_id, everyGroup });
+    const eligible = [];
+    for (const { path_kinds, ...group } of candidates) {
+      // eslint-disable-next-line no-await-in-loop
+      const decision = await decideContribute({
+        identifiers: { user: req.user.subject_id, resource: null },
+        policyExecutionContext: req.policyContext,
+        preFetched: {
+          user: req.user,
+          resource: { owner_group_id: group.id, owner_group_allows_contributions: group.allow_user_contributions },
+          context: { req },
+        },
+      });
+      if (decision.granted) {
+        let admitted_by = 'CONTRIBUTOR';
+        if (everyGroup) admitted_by = 'PLATFORM_ADMIN';
+        else if (path_kinds.includes('admin')) admitted_by = 'ADMIN';
+        eligible.push({ ...group, admitted_by });
+      }
+    }
+    res.json(eligible);
   }),
 );
 
@@ -53,7 +84,7 @@ router.get(
  * `GET /datasets/:type/:name/exists` answers for any name in the system and is open to
  * every `user` role; that is a global existence oracle and this deliberately is not one.
  *
- * @see docs/design/groups/dataset-creation-plan.md — A3
+ * @see docs/design/groups/dataset-creation.md — Asking whether a name is free, without an oracle
  */
 router.get(
   '/name-available',
@@ -70,7 +101,7 @@ router.get(
     const group = await datasetService.getOwnerGroupForAuthorization(owner_group_id);
     if (!group) return next(createError.NotFound('Group not found'));
 
-    const decision = await authorizeAction('dataset', 'contribute', {
+    const decision = await decideContribute({
       identifiers: { user: req.user?.subject_id, resource: null },
       policyExecutionContext: req.policyContext,
       preFetched: {
@@ -100,7 +131,7 @@ router.get(
  * Authorized with `contribute`, so a member of a group that accepts contributions may
  * import into it, not only its admins.
  *
- * @see docs/design/groups/dataset-creation-plan.md — B3
+ * @see docs/design/groups/dataset-creation.md — The import and upload routes
  */
 router.post(
   '/imports',
@@ -120,7 +151,7 @@ router.post(
     const group = await datasetService.getOwnerGroupForAuthorization(owner_group_id);
     if (!group) return next(createError.NotFound('Group not found'));
 
-    const decision = await authorizeAction('dataset', 'contribute', {
+    const decision = await decideContribute({
       identifiers: { user: req.user?.subject_id, resource: null },
       policyExecutionContext: req.policyContext,
       preFetched: {
@@ -156,14 +187,14 @@ router.post(
 /**
  * Register a dataset that is about to be uploaded from a browser.
  *
- * Returns the upload log. The transfer itself goes to the TUS server, which is unchanged
- * and keys everything on dataset_id, so nothing downstream cares which route created the
- * dataset.
+ * Returns the upload log. The transfer itself goes to the TUS server, which keys everything on
+ * dataset_id, so nothing downstream cares which route created the dataset. The TUS server
+ * authorizes each upload itself in `onUploadCreate` (`services/upload/UploadService.js`).
  *
  * Authorized with `contribute`, so a member of a group that accepts contributions may upload
  * into it and not only its admins.
  *
- * @see docs/design/groups/dataset-creation-plan.md — C1
+ * @see docs/design/groups/dataset-creation.md — The import and upload routes
  */
 router.post(
   '/uploads',
@@ -183,7 +214,7 @@ router.post(
     const group = await datasetService.getOwnerGroupForAuthorization(owner_group_id);
     if (!group) return next(createError.NotFound('Group not found'));
 
-    const decision = await authorizeAction('dataset', 'contribute', {
+    const decision = await decideContribute({
       identifiers: { user: req.user?.subject_id, resource: null },
       policyExecutionContext: req.policyContext,
       preFetched: {
@@ -221,13 +252,13 @@ router.post(
  * middleware, and a contributor who is not an administrator would be refused there.
  */
 router.get(
-  '/:id/upload-log',
-  validate([param('id').isUUID()]),
-  authorize('dataset', 'view_workflows'),
+  '/:dataset_resource_id/upload-log',
+  validate([param('dataset_resource_id').isUUID()]),
+  authorize('dataset', 'view_workflows', byDatasetResourceId),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Upload log for a dataset'
-    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    const dataset = await datasetService.getDatasetById(req.params.dataset_resource_id, { includes: {} });
     if (!dataset) return next(createError.NotFound('Dataset not found'));
 
     const upload_log = await uploadService.getUploadLog(dataset.id);
@@ -248,9 +279,9 @@ router.get(
  * @see docs/design/groups/use-cases.md — 57. The audit log is readable only by people with a reason
  */
 router.get(
-  '/:id/audit',
+  '/:dataset_resource_id/audit',
   validate([
-    param('id').isUUID(),
+    param('dataset_resource_id').isUUID(),
     query('event_type').optional().isString().trim(),
     query('start_date').optional().isISO8601(),
     query('end_date').optional().isISO8601(),
@@ -258,7 +289,7 @@ router.get(
     query('limit').default(50).isInt({ min: 1, max: 500 }).toInt(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
   ]),
-  authorize('dataset', 'view_audit_logs'),
+  authorize('dataset', 'view_audit_logs', byDatasetResourceId),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Audit records for a dataset'
@@ -268,7 +299,7 @@ router.get(
     } = req.query;
 
     const result = await auditService.getResourceAuditRecords({
-      resource_id: req.params.id,
+      resource_id: req.params.dataset_resource_id,
       event_type,
       start_date,
       end_date,
@@ -290,7 +321,6 @@ router.get(
     query('is_deleted').optional().toBoolean(),
     query('is_archived').optional().toBoolean(),
     query('is_staged').optional().toBoolean(),
-    query('upload_status').optional().isIn(UPLOAD_STATUS_FILTERS),
     query('has_workflows').optional().toBoolean(),
     query('has_derived_data').optional().toBoolean(),
     query('has_source_data').optional().toBoolean(),
@@ -310,7 +340,6 @@ router.get(
     query('match_name_exact').default(false).toBoolean(),
     query('include_states').optional().toBoolean(),
     query('include_bundle').optional().toBoolean(),
-    query('include_upload_log').optional().toBoolean(),
     query('include_owner_group').optional().toBoolean(),
     query('id').optional().isInt().toInt(),
     query('resource_id').optional().isUUID(),
@@ -322,18 +351,14 @@ router.get(
     // #swagger.summary = 'List and search datasets'
 
     const filters = _.pick(
-      ['is_deleted', 'is_archived', 'is_staged', 'upload_status',
+      ['is_deleted', 'is_archived', 'is_staged',
         'has_workflows', 'has_derived_data', 'has_source_data',
         'type', 'name', 'id', 'resource_id', 'owner_group_id', 'collection_id', 'scope',
         'created_at_start', 'created_at_end', 'updated_at_start', 'updated_at_end', 'days_since_last_staged'],
     )(req.query);
 
-    // Deleted datasets are hidden unless the caller asks for them. The exception is a
-    // search by upload state: an upload that fails for good is tombstoned, so the dataset
-    // is renamed and marked deleted, and the default would hide exactly the rows the
-    // person who uploaded needs to see.
-    // @see docs/design/groups/dataset-creation-plan.md — C5
-    if (filters.is_deleted == null && filters.upload_status == null) {
+    // Deleted datasets are hidden unless the caller asks for them.
+    if (filters.is_deleted == null) {
       filters.is_deleted = false;
     }
 
@@ -344,13 +369,12 @@ router.get(
     const includes = {
       states: req.query.include_states,
       bundle: req.query.include_bundle,
-      upload_log: req.query.include_upload_log,
       owner_group: req.query.include_owner_group,
     };
 
     // if user is platform admin, search all groups, otherwise search only groups the user has access to
     let promise;
-    if (isPlatformAdmin(req)) {
+    if (await callerIsPlatformAdmin(req)) {
       promise = datasetService.searchAllDatasets({
         filters, sort, pagination, includes,
       });
@@ -361,23 +385,27 @@ router.get(
     }
 
     const { metadata, data } = await promise;
-    const filteredData = data.map((dataset) => req.permission.filter(dataset));
-    res.json({ metadata, data: filteredData });
+    // The query scopes the rows, and every row shows the public attributes.
+    res.json({ metadata, data: data.map((dataset) => req.permission.filter(dataset)) });
   }),
 );
 
 // ── Get by ID ────────────────────────────────────────────────────────────────
 
 router.get(
-  '/:id',
+  '/:dataset_resource_id',
   validate([
-    param('id').isUUID(),
+    param('dataset_resource_id').isUUID(),
   ]),
-  authorize('dataset', 'view_metadata', { shouldDeriveCapabilities: true, shouldDeriveCallerRole: true }),
+  authorize('dataset', 'view_metadata', {
+    ...byDatasetResourceId,
+    shouldDeriveCapabilities: true,
+    shouldDeriveStanding: true,
+  }),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Get a dataset by ID'
-    const dataset = await datasetService.getDatasetById(req.params.id, {
+    const dataset = await datasetService.getDatasetById(req.params.dataset_resource_id, {
       includes: {
         owner_group: true,
       },
@@ -387,10 +415,13 @@ router.get(
     }
     res.json({
       ...req.permission.filter(dataset),
-      _meta: {
-        caller_role: req.permission.callerRole,
-        capabilities: toCapabilitiesArray(req.permission.capabilities),
-      },
+      _meta: buildMeta('dataset', dataset, req.permission, {
+        extraCapabilities: await accessRequestsService.mayFileRequest({
+          user: req.user,
+          resource_id: req.params.dataset_resource_id,
+        })
+          ? ['request_access'] : [],
+      }),
     });
   }),
 );
@@ -400,8 +431,9 @@ router.get(
 /**
  * Creates a dataset under an owning group.
  *
- * `owner_group_id` is required here even though the column is nullable, because the legacy
- * creation routes still write rows without one until cut-over.
+ * `owner_group_id` is required here even though the column has a default. The default is the
+ * `Unassigned Datasets` group, which exists so the legacy creation routes, which send no owning
+ * group, keep working until cut-over.
  * @see docs/design/v2-cutover.md — What v2 requires that the schema does not
  */
 router.post(
@@ -417,7 +449,7 @@ router.post(
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
     body('src_instrument_id').optional().isInt().toInt(),
-    body('src_dataset_id').optional().isInt().toInt(),
+    body('src_dataset_row_id').optional().isInt().toInt(),
     body('workflow_id').optional().isString(),
     body('state').optional().isString(),
     body('create_method').optional().isString(),
@@ -429,6 +461,10 @@ router.post(
     body('use_conditions.*.label').optional().isString(),
     body('use_conditions.*.note').optional().isString(),
   ]),
+  asyncHandler(async (req, res, next) => {
+    assertNotSystemPrincipal(req.body.owner_group_id, 'owner');
+    next();
+  }),
   authorize('dataset', 'create', {
     resourceIdFn: () => null,
     preFetchedResourceFn: (req) => ({ owner_group_id: req.body.owner_group_id }),
@@ -440,7 +476,7 @@ router.post(
     const createQuery = datasetService.buildDatasetCreateQuery({
       ..._.pick([
         'name', 'type', 'owner_group_id', 'origin_path', 'description', 'metadata',
-        'du_size', 'size', 'bundle_size', 'src_instrument_id', 'src_dataset_id',
+        'du_size', 'size', 'bundle_size', 'src_instrument_id', 'src_dataset_row_id',
         'workflow_id', 'state', 'create_method', 'use_conditions',
       ])(req.body),
       user_id: req.user.id,
@@ -471,9 +507,11 @@ router.post(
  * distinct group rather than once per dataset.
  * @see docs/design/groups/dataset-creation.md — The watch script
  *
- * Responds with { created, conflicted, errored }. A name and type already held by a live
- * dataset is a conflict rather than an error, because a scan sees the same directory on
- * every pass.
+ * Responds with { created, conflicted, refused, errored }. A name and type already held by
+ * a live dataset is a conflict rather than an error, because a scan sees the same directory
+ * on every pass. A dataset the state layer refuses, such as one owned by an archived group,
+ * is `refused` with the status and message it was refused with, because no retry will ever
+ * place it.
  */
 router.post(
   '/bulk',
@@ -489,7 +527,7 @@ router.post(
     body('datasets.*.size').optional().notEmpty().customSanitizer(BigInt),
     body('datasets.*.bundle_size').optional().notEmpty().customSanitizer(BigInt),
     body('datasets.*.src_instrument_id').optional().isInt().toInt(),
-    body('datasets.*.src_dataset_id').optional().isInt().toInt(),
+    body('datasets.*.src_dataset_row_id').optional().isInt().toInt(),
     body('datasets.*.workflow_id').optional().isString(),
     body('datasets.*.state').optional().isString(),
     body('datasets.*.create_method').optional().isString(),
@@ -503,8 +541,9 @@ router.post(
     // is hydrated once however many groups the batch names.
     const ownerGroupIds = [...new Set(req.body.datasets.map((d) => d.owner_group_id))];
     for (const owner_group_id of ownerGroupIds) {
+      assertNotSystemPrincipal(owner_group_id, 'owner');
       // eslint-disable-next-line no-await-in-loop
-      const decision = await authorizeAction('dataset', 'create', {
+      const decision = await decideCreate({
         identifiers: { user: req.user?.subject_id, resource: null },
         policyExecutionContext: req.policyContext,
         preFetched: { user: req.user, resource: { owner_group_id }, context: { req } },
@@ -518,7 +557,7 @@ router.post(
 
     const datasets = req.body.datasets.map(_.pick([
       'name', 'type', 'owner_group_id', 'origin_path', 'description', 'metadata',
-      'du_size', 'size', 'bundle_size', 'src_instrument_id', 'src_dataset_id',
+      'du_size', 'size', 'bundle_size', 'src_instrument_id', 'src_dataset_row_id',
       'workflow_id', 'state', 'create_method',
     ]));
 
@@ -534,42 +573,54 @@ router.post(
 // ── Patch (metadata) ─────────────────────────────────────────────────────────
 
 router.patch(
-  '/:id',
+  '/:dataset_resource_id',
   validate([
-    param('id').isUUID(),
+    param('dataset_resource_id').isUUID(),
     body('name').optional().isString().notEmpty(),
     body('description').optional().isString(),
   ]),
-  authorize('dataset', 'edit_metadata'),
+  authorize('dataset', 'edit_metadata', byDatasetResourceId),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Update dataset metadata (name, description)'
 
     // Fetch dataset to get integer id and verify it exists
-    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    const dataset = await datasetService.getDatasetById(req.params.dataset_resource_id, { includes: {} });
     if (!dataset) {
       return next(createError(404, 'Dataset not found'));
     }
 
-    // Perform update with integer id
-    const updated = await datasetService.patchDataset(dataset.id, req.body);
+    // Only the fields this route validates. Passing the body through whole would let an admin
+    // of the owning group rewrite owner_group_id, is_deleted, or archive_path.
+    const updated = await datasetService.patchDataset(
+      dataset.id,
+      _.pick(['name', 'description'])(req.body),
+    );
     res.json(req.permission.filter(updated));
   }),
 );
 
-// ── Archive ──────────────────────────────────────────────────────────────────
+// ── Delete ───────────────────────────────────────────────────────────────────
 
-router.post(
-  '/:id/archive',
+/**
+ * Deletes a dataset.
+ *
+ * A dataset has no archived state: deleting one keeps its record, removes its archived files,
+ * and cannot be undone. The verb and the method say so, unlike the groups and collections
+ * routes, which archive reversibly.
+ * @see docs/design/groups/design.md — Operation Effects
+ */
+router.delete(
+  '/:dataset_resource_id',
   validate([
-    param('id').isUUID(),
+    param('dataset_resource_id').isUUID(),
   ]),
-  authorize('dataset', 'archive'),
+  authorize('dataset', 'delete', byDatasetResourceId),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Archive (soft-delete) a dataset'
+    // #swagger.summary = 'Delete a dataset, keeping its record'
 
-    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    const dataset = await datasetService.getDatasetById(req.params.dataset_resource_id, { includes: {} });
     if (!dataset) {
       return next(createError(404, 'Dataset not found'));
     }
@@ -582,18 +633,18 @@ router.post(
 // ── Source Datasets ──────────────────────────────────────────────────────────
 
 router.get(
-  '/:id/source-datasets',
+  '/:dataset_resource_id/source-datasets',
   validate([
-    param('id').isUUID(),
+    param('dataset_resource_id').isUUID(),
     query('limit').default(50).isInt({ min: 0, max: 500 }).toInt(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
   ]),
-  authorize('dataset', 'view_source_datasets'),
+  authorize('dataset', 'view_source_datasets', byDatasetResourceId),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Get source datasets that this dataset was derived from'
 
-    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    const dataset = await datasetService.getDatasetById(req.params.dataset_resource_id, { includes: {} });
     if (!dataset) {
       return next(createError(404, 'Dataset not found'));
     }
@@ -601,28 +652,26 @@ router.get(
     const { limit, offset } = _.pick(['limit', 'offset'])(req.query);
     const { data, metadata } = await datasetService.getSourceDatasets(dataset.id, { limit, offset });
 
-    // Filter each source dataset through permission filters
-    const filteredData = data.map((sourceDataset) => req.permission.filter(sourceDataset));
-
-    res.json({ metadata, data: filteredData });
+    // Each related dataset shows the fields a list shows; this route's decision is about the dataset named.
+    res.json({ metadata, data: data.map(await datasetListFilter(req)) });
   }),
 );
 
 // ── Derived Datasets ─────────────────────────────────────────────────────────
 
 router.get(
-  '/:id/derived-datasets',
+  '/:dataset_resource_id/derived-datasets',
   validate([
-    param('id').isUUID(),
+    param('dataset_resource_id').isUUID(),
     query('limit').default(50).isInt({ min: 0, max: 500 }).toInt(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
   ]),
-  authorize('dataset', 'view_derived_datasets'),
+  authorize('dataset', 'view_derived_datasets', byDatasetResourceId),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Get datasets derived from this dataset'
 
-    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    const dataset = await datasetService.getDatasetById(req.params.dataset_resource_id, { includes: {} });
     if (!dataset) {
       return next(createError(404, 'Dataset not found'));
     }
@@ -630,10 +679,8 @@ router.get(
     const { limit, offset } = _.pick(['limit', 'offset'])(req.query);
     const { data, metadata } = await datasetService.getDerivedDatasets(dataset.id, { limit, offset });
 
-    // Filter each derived dataset through permission filters
-    const filteredData = data.map((derivedDataset) => req.permission.filter(derivedDataset));
-
-    res.json({ metadata, data: filteredData });
+    // Each related dataset shows the fields a list shows; this route's decision is about the dataset named.
+    res.json({ metadata, data: data.map(await datasetListFilter(req)) });
   }),
 );
 
@@ -679,34 +726,21 @@ router.get(
 //   }),
 // );
 
-// // ── Delete (soft) ────────────────────────────────────────────────────────────
-
-// router.delete(
-//   '/:id',
-//   validate([
-//     param('id').isInt().toInt(),
-//   ]),
-//   authorize('dataset', 'archive'),
-//   asyncHandler(async (req, res) => {
-//     // #swagger.tags = ['datasets']
-//     // #swagger.summary = 'Soft-delete a dataset'
-//     await datasetService.softDelete(req.params.id, req.user.id);
-//     res.sendStatus(204);
-//   }),
-// );
-
 // // ── Sub-routers ──────────────────────────────────────────────────────────────
 
 router.use(
-  '/:dataset_id/files',
-  // validate([
-  //   param('dataset_id').isUUID(),
-  // ]),
+  '/:dataset_resource_id/files',
+  validate([
+    param('dataset_resource_id').isUUID(),
+  ]),
   require('./files'),
 );
 
 router.use(
-  '/:dataset_id/workflows',
+  '/:dataset_resource_id/workflows',
+  validate([
+    param('dataset_resource_id').isUUID(),
+  ]),
   require('./workflows'),
 );
 

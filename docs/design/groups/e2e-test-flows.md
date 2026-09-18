@@ -2,16 +2,16 @@
 title: End-to-end test flows
 order: 11
 status: active
-implemented: none
-last_verified: 2026-09-09
+implemented: partial
+last_verified: 2026-09-17
 ---
 
 ::: warning Design record — active
 What a browser-driven test suite for the v2 groups system must prove. This page is written
 from [Design](./design.md), [Decisions](./decisions.md), and [Use Cases](./use-cases.md)
 alone. It names no file, no route, and no selector, because a flow that quotes the code
-cannot contradict it. The grounded companion is
-[End-to-end test plan](./e2e-test-plan.md).
+cannot contradict it. The suite that proves these flows lives in `e2e/`, and `e2e/README.md`
+says how to run it.
 :::
 
 <!-- cspell:ignore Priya -->
@@ -109,9 +109,36 @@ sample datasets. Flow H1 is therefore walked against this world's resources rath
 against an absolutely empty portal.
 
 The end-to-end suite does **not** use these rows. It builds its own world per run, named for
-the run, and borrows unaffiliated `user-0NN` accounts — see
-[End-to-end test plan](./e2e-test-plan.md). Seeded and generated worlds coexist without
-colliding.
+the run, and borrows unaffiliated `user-0NN` accounts. Seeded and generated worlds coexist
+without colliding.
+
+### How the suite builds its world
+
+**The v2 suite is separate from the v1 suite in `tests/`.** Every v1 project selects one of
+three RBAC roles. v2 has no roles below platform admin, and these flows need at least eight
+actors, sometimes two in one test. The v1 suite also needs `NODE_ENV=ci` on the API, so it
+cannot run against an ordinary dev stack.
+
+**The suite builds its structure and borrows its people.** It creates groups, memberships,
+datasets, collections, and grants at the start of a run. It does not assert against seeded
+groups or seeded grants. Seeded memberships move when the seed changes, and the sample world
+grants to both system principals, so nothing there is truly invisible.
+
+**It builds through the HTTP API as a platform admin, not through direct inserts.** A world
+built by inserts can be one the API would refuse, such as a dataset with no resource row. A
+world built through the API makes the fixture itself a check that the creation paths work.
+An import source is the one exception. No route registers one, because a platform admin
+inserts the row by hand after checking the path, so the suite inserts it the same way.
+
+**It never creates a user account.** Creating an account runs the `USER_CREATED` handlers, and
+one of them applies that address's pending invitations. A world builder that created accounts
+would exercise the invitation path before any invitation flow had started. Flow C1 is where an
+account first appears, and it appears because a person accepted an invitation.
+
+**It tears the world down through SQL, because the API offers no way.** Groups and collections
+have no delete, and a dataset delete keeps its record. Archiving is not deletion, and history is
+preserved. A destructive endpoint added only so a test suite can tidy up would put a hole in the
+model. Teardown deletes the run's own rows by run identifier, and touches nothing seeded.
 
 ### The resources
 
@@ -123,9 +150,9 @@ colliding.
 | `PAT-1101` | Patel Lab | Frank's own data, used to prove refusals run both ways |
 | Aim 2 Release | Wong Lab | The collection holding `PCM230203` and `PCM230204` |
 
-The imaging group is **Midwest Imaging Core**. `group.name` is unique and the seed's sample
-world already holds a group called Imaging Core. No flow depends on that group's name — it
-exists to own a dataset in a branch neither Wong Lab nor Patel Lab reaches.
+The imaging group is **Midwest Imaging Core**, which keeps it distinct from the Imaging Core
+the seed's sample world already holds. No flow depends on that group's name — it exists to own
+a dataset in a branch neither Wong Lab nor Patel Lab reaches.
 
 ### What the world must not contain
 
@@ -155,6 +182,9 @@ list with the admin role. Dana's own oversight list gains Wong Lab.
 checked and disabled, because a group needs an admin and on an empty form Dana is the only
 candidate. Naming Alice makes it a real choice, and Dana clears it. Dana never appears in the
 admin search: the checkbox is how she would put herself in.
+**And** a name a sibling under the Center already holds is refused on the name field, and the
+form stays open with what Dana typed. A name held only in another branch is accepted, because
+[decision 20](./decisions.md) scopes group names to siblings.
 **And never** does Dana gain the ability to issue or revoke a grant on anything Wong Lab
 owns. Creating a child confers oversight, not authority.
 
@@ -177,7 +207,7 @@ does a descendant admin see anything of a sibling branch.
 
 ### A3 — Archiving freezes a group without erasing it · `Next` · `journey`
 
-Covers use case 17 and [decision 6](./decisions.md#_6-restrictions-compose-by-and-grants-stay-additive).
+Covers use case 17 and [decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization).
 
 **Actor** Alice, then Bob, then Priya.
 **Given** Wong Lab is active, owns `PCM230203`, and has Bob as a member.
@@ -190,20 +220,21 @@ the audit log.
 a dataset owned by Wong Lab, edit collection membership, or invite anybody. Each of those
 controls is absent from the page rather than present and failing.
 **When** Priya opens the archived Wong Lab.
-**Then** Priya is refused the same mutations Alice was refused, because a restriction applies
-to a platform admin too.
+**Then** Priya is refused the same mutations Alice was refused, because archived state binds a
+platform admin too.
 **And** Priya alone is offered unarchive.
 
-### A4 — Archiving reaches descendants and their resources · `Next` · `boundary`
+### A4 — Archiving covers the group and what it owns, not its sub-groups · `Next` · `boundary`
 
-Covers the propagation rule in [decision 6](./decisions.md#_6-restrictions-compose-by-and-grants-stay-additive).
+Covers [decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization).
 
-**Actor** Alice.
-**Given** Wong Lab is archived and Wong Sequencing is not.
-**When** Alice opens Wong Sequencing, and then `PCM230203`.
-**Then** both read as frozen, and both say the reason names the ancestor rather than
-themselves.
-**And never** is a mutating control offered on either.
+**Actor** Alice, then an admin of Wong Sequencing.
+**Given** Wong Lab is archived, and Wong Sequencing, beneath it, is not.
+**When** Alice opens `PCM230203`, which Wong Lab owns.
+**Then** it reads as frozen, and the reason names Wong Lab.
+**When** the admin of Wong Sequencing opens Wong Sequencing.
+**Then** it reads as active, and its mutating controls are offered.
+**And never** does Wong Sequencing report Wong Lab's archive as its own.
 
 ### A5 — A group admin cannot unarchive their own group · `MVP` · `boundary`
 
@@ -253,6 +284,9 @@ refused. The membership history still shows that Frank was a member, and when he
 being one.
 **And never** is the historical row absent, and never does Frank retain a stale page that
 still serves the data.
+
+The current member list shows current members only. The membership history lives in the
+group's audit log, as `GROUP_MEMBER_ADDED` and `GROUP_MEMBER_REMOVED`.
 
 ### B3 — Membership can end on a date · `Next` · `journey`
 
@@ -326,6 +360,9 @@ Wong Lab.
 **Then** Bob remains a member. The invitation closes, and his role does not change.
 **And never** is an invitation a route to privilege escalation.
 
+The system closes the door earlier than the flow imagines. Inviting an existing member is
+refused with a 400 saying the person is already a member, so no invitation is ever issued.
+
 ### C5 — An archived group takes no invitations · `Next` · `boundary`
 
 **Actor** Alice.
@@ -340,6 +377,24 @@ the group has been archived and closes itself.
 **Given** Wong Lab has a pending invitation.
 **When** Erin attempts to cancel it from Patel Lab's context.
 **Then** the request is refused, and Wong Lab's invitation stays pending.
+
+### C7 — A lapsed invitation is sent again · `MVP` · `journey`
+
+Covers use case 61 and
+[Invitations — Re-inviting after an invitation lapses](./invitations.md#re-inviting-after-an-invitation-lapses).
+
+**Actor** Alice, then Vic.
+**Given** Wong Lab's invitation to Vic has passed its expiry, and the list marks it Expired.
+**When** Alice invites the same address again.
+**Then** a second mail arrives at that address. The lapsed invitation reads withdrawn, with
+the reason that it expired, and the new one reads pending.
+**When** Vic opens the first link.
+**Then** the page says the invitation is no longer valid.
+**And never** does an admin have to withdraw a lapsed invitation before sending another.
+
+No spec covers this flow. The world drives the API and holds no database handle, so it cannot
+age an invitation, and the expiry is seven days away. The API suites cover the service, and the
+missing browser half is `.todo/local/L6-verification-and-e2e-gaps.md` T15.
 
 ---
 
@@ -405,6 +460,24 @@ naming the archive.
 Covers use case 24.
 
 **Then** no control moves a dataset between groups, on any page, for any actor.
+
+### D7 — A group imports a directory from its own import source · `MVP` · `journey`
+
+Covers the import route in [Dataset creation](./dataset-creation.md#import-sources-are-visible-to-everyone).
+
+**Actor** Alice, then Erin.
+**Given** Alice administers a lab that owns an `ACTIVE` import source, and the source holds a
+directory nobody has imported.
+**When** Alice opens New Dataset, chooses Import, picks the source, and picks the directory.
+**Then** the name fills in from the directory, and a name the lab already holds is marked on
+the field. The import succeeds, the dataset appears in her list owned by the lab, and one
+`integrated` workflow has started on it.
+**When** Erin, who administers Patel Lab, lists her import sources and imports the same path
+into Patel Lab.
+**Then** the source is absent from her list, and the import is refused with 403. Erin may
+create datasets in Patel Lab, so the refusal comes from the source and not from the group.
+**And never** is one directory registered as two datasets. A second import of the path is
+refused with 409, and the refusal names neither the dataset nor its group.
 
 ---
 
@@ -511,7 +584,7 @@ or download.
 
 ### F6 — A longer grant closes a shorter one, and says so · `Next` · `invariant`
 
-Covers supersession, case 1, in [Access presets](./access-presets.md#supersession--the-adopted-approach).
+Covers supersession, case 1, in [Design](./design.md#supersession).
 
 **Actor** Alice.
 **Given** Frank holds download on `PCM230203` until the end of the month.
@@ -594,8 +667,8 @@ Covers use case 28.
 
 ### G3 — A request against an invisible resource is refused · `MVP` · `boundary`
 
-Covers use case 5 and the enforcement hole in
-[Access and requests plan](./access-requests-plan.md#one-enforcement-hole-blocks-everything-else).
+Covers use case 5 and the check in
+[Design — Filing a request](./design.md#filing-a-request).
 
 **Actor** Frank.
 **Given** Frank cannot see `IMG-0007`, which belongs to Imaging Core.
@@ -623,7 +696,7 @@ from it is in force, with the date of the last revocation.
 
 ### G6 — A requester can see their own requests · `MVP` · `journey`
 
-Covers use case 8, and the gap named in [Dashboard plan](./dashboard-plan.md#the-gap-only-the-dashboard-closes).
+Covers use case 8, and a gap the [Dashboard](./ui-information-architecture.md#dashboard) closes.
 
 **Actor** Frank.
 **Then** one page lists every request Frank has filed, across every resource, with its status
@@ -651,8 +724,8 @@ Covers use case 33 as applied to requests.
 
 ### G10 — Two reviewers colliding fails loudly · `Later` · `boundary`
 
-Covers the documented edge case in
-[Access and requests plan](./access-requests-plan.md#the-concurrency-race-is-a-documented-edge-case).
+Covers the accepted race in
+[Decision 14](./decisions.md#_14-the-no-overlap-constraint-and-supersession-stay).
 
 **Then** one approval is refused with a conflict the reviewer can see and retry, and the
 second attempt succeeds.
@@ -688,7 +761,7 @@ visible to you, and nothing exists here.
 
 ### H3 — Metadata and data are gated separately · `MVP` · `boundary`
 
-Covers postures B.5 and B.6 in [Use Cases](./use-cases.md#5-dataset-visibility).
+Covers postures B.5 and B.6 in [Use Cases](./use-cases.md#_5-dataset-visibility).
 
 **Actor** Frank.
 **Given** `PCM230203` is discoverable and locked.
@@ -753,18 +826,18 @@ absent from every list she sees.
 
 ---
 
-## K. Restrictions applied uniformly
+## K. Archived state applied uniformly
 
-### K1 — A restriction outranks a platform admin · `Next` · `boundary`
+### K1 — Archived state binds a platform admin · `Next` · `boundary`
 
-Covers the ordering rule in [Design](./design.md#restrictions-apply-to-platform-admins).
+Covers [decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization).
 
 **Actor** Priya.
 **Given** Wong Lab is archived.
 **Then** every mutating control on Wong Lab and its resources is absent for Priya, exactly as
 it is for Alice, with unarchive as the sole exception.
 
-### K2 — A reading action survives a restriction · `Next` · `invariant`
+### K2 — A reading action survives archiving · `Next` · `invariant`
 
 **Then** on an archived group, every read — metadata, members, grants, audit, outstanding
 invitations — still works for whoever could read it before.
@@ -858,7 +931,7 @@ property, and both are asserted.
 
 ### O1 — Each persona lands somewhere true · `Next` · `journey`
 
-Covers [Dashboard plan](./dashboard-plan.md).
+Covers the [Dashboard](./ui-information-architecture.md#dashboard).
 
 **Actor** Quinn, Bob, Alice, and Priya in turn.
 **Then** each sees a page that renders without error, with sections composed from what is
@@ -881,7 +954,7 @@ honest.
 | Group reparenting | No control offers it |
 | Access renewal | A request cannot be filed as a renewal |
 | Cross-group collections | A collection cannot take another group's dataset |
-| Dataset unarchive | Recorded as a known gap, not as a working control |
+| Restoring a deleted dataset | Deletion cannot be undone, so no control offers it |
 | Access history as of a past date | Not offered; membership history is still readable |
 | Compliance reports | Not offered |
 | Training or agreement preconditions | No dataset presents one |
@@ -922,7 +995,7 @@ in [Deliberately absent](#p-deliberately-absent).
 ## What this suite is not for
 
 **It is not a unit test of the authorization engine.** The order over access types, the
-closure table, and the restriction propagation each deserve tests close to the code, where a
+closure table, and the state checks each deserve tests close to the code, where a
 case costs milliseconds rather than seconds. This suite asserts that the engine's answers
 reach the screen intact.
 
@@ -933,6 +1006,12 @@ must not assert a duration.
 is absent. Absence is easy to assert accidentally — a selector that matches nothing passes
 for the wrong reason — so each such flow must also assert that something expected *is*
 present on the same page.
+
+**It must not mutate seeded rows.** Every write lands on a resource the run created. This is
+what makes the suite safe to run against a developer's own database.
+
+**It must not edit the v1 suite in `tests/`.** The v1 suite keeps working unchanged until the
+cut-over, as [v2 cut-over](../v2-cutover.md) requires of every legacy surface.
 
 ## Keep this page current
 

@@ -43,6 +43,16 @@ export default {
     return api.post("/access-requests/", data);
   },
 
+  /**
+   * POST /access-requests/compute-effective-grants — what the request would confer if
+   * approved as asked. Writes nothing.
+   *
+   * @param {{ resource_id, subject_id, items: Array }} data
+   */
+  computeEffectiveGrants(data) {
+    return api.post("/access-requests/compute-effective-grants", data);
+  },
+
   /** PUT /access-requests/:id — update a DRAFT status request. */
   update(id, data) {
     return api.put(`/access-requests/${id}`, data);

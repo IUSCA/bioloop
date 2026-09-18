@@ -15,7 +15,7 @@
         class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 py-2"
       >
         <i-mdi-loading class="animate-spin" />
-        <span>Loading grant details…</span>
+        <span>Loading access details…</span>
       </div>
 
       <!-- Error State -->
@@ -46,15 +46,16 @@
             emit('revoke', {
               grant: $event,
               subject: props.subject,
-              siblingGrants: activeExpandedGrants,
             })
           "
           @navigate-to-request="emit('navigate-to-request', $event)"
         />
 
-        <!-- Remove All Access -->
+        <!-- Remove All Access. Offered only for the grants whose own state still admits a
+             revocation, so it never proposes an action the service would refuse.
+             @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization -->
         <div
-          v-if="props.canRevoke && activeExpandedGrants.length > 1"
+          v-if="props.canRevoke && revocableExpandedGrants.length > 1"
           class="flex justify-end pt-1"
         >
           <va-button
@@ -64,14 +65,14 @@
             icon="remove_circle_outline"
             @click="
               emit('revoke-all', {
-                grants: activeExpandedGrants,
+                grants: revocableExpandedGrants,
                 subject: props.subject,
                 resourceType: props.resourceType,
                 resourceId: props.resourceId,
               })
             "
           >
-            Remove All Access
+            Revoke All Access
           </va-button>
         </div>
       </template>
@@ -82,6 +83,7 @@
 <script setup>
 import ErrorState from "@/components/utils/ErrorState.vue";
 import ModernCollapsible from "@/components/utils/ModernCollapsible.vue";
+import { admits } from "@/composables/useCapabilities";
 import GrantService from "@/services/v2/grants";
 import GrantRow from "./GrantRow.vue";
 import SubjectPanelHeader from "./SubjectPanelHeader.vue";
@@ -131,14 +133,25 @@ const expandedError = ref(null);
 // ── Expanded grants (sorted: active first, revoked last) ─────────────────────
 
 const activeExpandedGrants = computed(() =>
+  expandedGrants.value ? expandedGrants.value.filter((g) => g.is_active) : [],
+);
+
+/**
+ * The grants Remove all access would actually revoke.
+ *
+ * Distinct from the active ones: a grant on an archived or deleted resource is live and still
+ * cannot be revoked, because the resource's access has stopped changing. Asking each grant what
+ * its state admits keeps the control from proposing a batch the service would refuse.
+ */
+const revocableExpandedGrants = computed(() =>
   expandedGrants.value
-    ? expandedGrants.value.filter((g) => g.revoked_at === null)
+    ? expandedGrants.value.filter((g) => admits(g, "revoke"))
     : [],
 );
 
 const sortedExpandedGrants = computed(() => {
   if (!expandedGrants.value) return [];
-  const revoked = expandedGrants.value.filter((g) => g.revoked_at !== null);
+  const revoked = expandedGrants.value.filter((g) => !g.is_active);
   return [...activeExpandedGrants.value, ...revoked];
 });
 

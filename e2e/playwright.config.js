@@ -1,7 +1,7 @@
 const { defineConfig } = require('@playwright/test');
 
-// Minimal configuration, standing up only what spike 1 needs.
-// @see docs/design/groups/e2e-test-plan.md — Phase 0
+// Configuration for the v2 end-to-end suite.
+// @see e2e/README.md — Running it
 module.exports = defineConfig({
   testDir: './src/specs',
   // Compiles the first UI route and checks the API answers, once, before any test. Without

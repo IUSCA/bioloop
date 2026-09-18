@@ -88,6 +88,67 @@ async function expectForbidden(api, method, url, body) {
 }
 
 /**
+ * Asserts the resource's *state* refused this call, with 409.
+ *
+ * Distinct from `expectForbidden` on purpose, and the distinction is the whole of decision 17.
+ * Authorization answers whether the caller may act, and refuses with 403. The state layer answers
+ * whether the resource admits the action right now, runs after authorization inside the
+ * transaction, and refuses with 409. An archived group's admin keeps every capability they had,
+ * so a 403 there would tell them they lack authority, which is false.
+ *
+ * It follows that a platform admin is refused exactly the same way. That is not a restriction
+ * outranking them — there is nothing to outrank — it is the resource declining the action for
+ * everybody.
+ *
+ * Pair it with `expectAllowed` on a caller or resource whose state does admit the action, for the
+ * same reason `expectForbidden` is paired with `expectNotForbidden`: a 409 from a route that
+ * answers 409 to everything would satisfy this on its own.
+ *
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ */
+async function expectConflict(api, method, url, body) {
+  const status = await api.status(method, url, body);
+  // As in `expectForbidden`: a 400 means the payload never reached the service, so the call
+  // says nothing about what the resource's state admits.
+  expect(
+    status,
+    `${method} ${url} was rejected by validation (400) before the state check ran. `
+    + 'Fix the request body or params — this call is not testing the resource state.',
+  ).not.toBe(400);
+  expect(
+    status,
+    `expected ${method} ${url} to be refused by the resource's state (409), got ${status}. `
+    + 'A 403 means authorization refused it, which is a different claim.',
+  ).toBe(409);
+  return status;
+}
+
+/**
+ * Asserts the API answered this caller as if the resource did not exist.
+ *
+ * A caller with no standing on a resource is refused with 404, the answer an unknown id gets, so
+ * the refusal confirms nothing. A caller who stands on the resource and is refused an action
+ * gets 403, which `expectForbidden` asserts.
+ *
+ * A 404 alone could be a route that was never mounted. Pair every use with a caller who reaches
+ * the same URL, as `expectForbidden` is paired with `expectNotForbidden`.
+ *
+ * @see docs/design/groups/access-model.md — Refusal shapes
+ */
+async function expectConcealed(api, method, url, body) {
+  const status = await api.status(method, url, body);
+  expect(
+    status,
+    `${method} ${url} was rejected by validation (400) before authorization ran.`,
+  ).not.toBe(400);
+  expect(
+    status,
+    `expected ${method} ${url} to be concealed from a caller with no standing (404), got ${status}`,
+  ).toBe(404);
+  return status;
+}
+
+/**
  * Asserts authorization did *not* refuse this caller, without requiring the call to succeed.
  *
  * The pair to `expectForbidden`, and the only honest positive control where the handler
@@ -106,6 +167,8 @@ async function expectNotForbidden(api, method, url, body) {
 }
 
 module.exports = {
+  expectConcealed,
+  expectConflict,
   REFUSALS,
   expectRefused,
   expectAllowed,

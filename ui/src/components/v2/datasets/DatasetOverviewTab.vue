@@ -104,7 +104,7 @@
       </VaCard>
 
       <VaCard
-        v-if="props.canArchive && !props.dataset.is_deleted"
+        v-if="props.canDelete"
         class="border border-solid border-red-200 dark:border-red-800"
       >
         <VaCardContent>
@@ -119,7 +119,13 @@
                 retaining metadata.
               </p>
             </div>
-            <VaButton color="danger" size="small" @click="openDeleteModal">
+            <VaButton
+              color="danger"
+              size="small"
+              :disabled="!stateAdmits('delete')"
+              :title="stateAdmits('delete') ? null : ARCHIVED_REASON"
+              @click="openDeleteModal"
+            >
               Delete
             </VaButton>
           </div>
@@ -200,25 +206,32 @@
         </div>
       </div>
 
-      <!-- Quick Actions -->
-      <div>
+      <!-- Quick Actions. The heading goes with the grid: a deleted dataset hides every
+           mutating and data control, and a lone heading over an empty grid reads as a page
+           that failed to load rather than as a dataset with nothing left to do. -->
+      <div v-if="showsQuickActions">
         <h2 class="text-sm font-semibold mb-3 va-text-secondary">
           QUICK ACTIONS
         </h2>
         <div class="grid grid-cols-2 gap-3">
           <ActionButton
             v-if="props.canIssueGrants"
+            :disabled="!stateAdmits('manage_grants')"
             icon="mdi-key"
             icon-color="text-amber-500"
-            title="Grant Access"
-            description="Grant access to users or groups"
+            title="Give Access"
+            :description="
+              stateAdmits('manage_grants')
+                ? 'Give access to users or groups'
+                : ARCHIVED_REASON
+            "
             hover-theme="blue"
             @click="emitAction('grant-access', 'grants', 'issue-grants')"
           />
 
           <!-- The counterpart of Grant Access, as on the collection Overview. -->
           <ActionButton
-            v-if="!props.canIssueGrants"
+            v-if="props.canRequestAccess && !props.canIssueGrants"
             icon="mdi-account-question"
             icon-color="text-emerald-500"
             title="Request Access"
@@ -228,8 +241,11 @@
           />
 
           <!-- emitAction('download', 'files', 'download') -->
+          <!-- Downloading survives archiving: the bytes stay readable, and only a deletion
+               stops them, which the page hides this control for. -->
           <ActionButton
             v-if="props.canDownload"
+            :disabled="!stateAdmits('download')"
             icon="mdi-download"
             icon-color="text-emerald-500"
             title="Download"
@@ -240,17 +256,24 @@
 
           <ActionButton
             v-if="props.canEdit"
+            :disabled="!stateAdmits('edit_metadata')"
             icon="mdi-pencil"
             icon-color="text-blue-500"
             title="Edit Details"
-            description="Update metadata"
+            :description="
+              stateAdmits('edit_metadata') ? 'Update metadata' : ARCHIVED_REASON
+            "
             hover-theme="blue"
             @click="openEditModal"
           />
 
           <ActionButton
             v-if="props.canRequestStage"
-            :disabled="props.dataset.is_staged || staging"
+            :disabled="
+              props.dataset.is_staged ||
+              staging ||
+              !stateAdmits('request_stage')
+            "
             :loading="staging"
             icon="mdi-cloud-download"
             icon-color="text-blue-500"
@@ -295,8 +318,10 @@ const props = defineProps({
     default: () => ({ grants: null, requests: null, workflows: null }),
   },
   canEdit: { type: Boolean, default: false },
-  canArchive: { type: Boolean, default: false },
+  canDelete: { type: Boolean, default: false },
   canIssueGrants: { type: Boolean, default: false },
+  // `request_access`: filing a request on this dataset would be accepted.
+  canRequestAccess: { type: Boolean, default: false },
   canDownload: { type: Boolean, default: false },
   // Staging is its own authority. Being able to download a dataset that is already staged
   // does not imply being able to ask for it to be staged again.
@@ -306,6 +331,12 @@ const props = defineProps({
   canViewWorkflows: { type: Boolean, default: false },
   canViewSourceDatasets: { type: Boolean, default: false },
   canViewDerivedDatasets: { type: Boolean, default: false },
+  /**
+   * `_meta.available_actions`: what the dataset's own state admits right now, or null when the
+   * response did not say. One prop rather than a boolean per action, because the state answer
+   * is one list and splitting it up invites the two halves to disagree.
+   */
+  availableActions: { type: Array, default: null },
 });
 
 const emit = defineEmits([
@@ -314,6 +345,43 @@ const emit = defineEmits([
   "action-requested",
   "navigate-to-files",
 ]);
+
+/**
+ * Whether the dataset's state admits the action.
+ *
+ * A null list means the response did not answer, and every control stays usable: the service
+ * checks the state again under its own lock, so a wrongly enabled control costs a 409 rather
+ * than a wrong write.
+ *
+ * The page hides these controls outright on a deleted dataset, where no state can readmit
+ * them. What reaches here is the reversible case, an archived owning group, which disables.
+ *
+ * `request_access` never passes through: the API derives that capability and folds the state
+ * check into it, so the state list does not name it.
+ */
+function stateAdmits(action) {
+  return props.availableActions === null
+    ? true
+    : props.availableActions.includes(action);
+}
+
+/** The words a disabled control shows for why the state withholds it. */
+const ARCHIVED_REASON = "This dataset's owning group is archived.";
+
+/**
+ * Whether any quick action will render at all.
+ *
+ * Each control below is gated on its own prop, and the page withholds those it hides on a
+ * deleted dataset, so all five can be false at once.
+ */
+const showsQuickActions = computed(
+  () =>
+    props.canIssueGrants ||
+    props.canRequestAccess ||
+    props.canDownload ||
+    props.canEdit ||
+    props.canRequestStage,
+);
 
 const editModalRef = ref(null);
 

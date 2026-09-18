@@ -13,7 +13,7 @@ const invitationService = require('@/services/invitations');
  * has to decide what to show them. `/apply` is authenticated, because applying an invitation
  * means putting a specific account into a group.
  *
- * @see docs/design/groups/invitations.md — API Reference
+ * @see docs/design/groups/invitations.md — Why it is shaped this way
  */
 const router = express.Router();
 

@@ -37,8 +37,8 @@ cp workers/.env.dev.example workers/.env
 cd api && node src/scripts/issue_token.js svc_tasks     # paste into APP_API_TOKEN
 ```
 
-The token is a never-expiring JWT for the seeded `svc_tasks` account. Reissue it after
-`prisma migrate reset`, which gives that account a new subject id.
+The token is a never-expiring JWT for the seeded `svc_tasks` account. The seed creates that
+account at pinned ids, so the token survives `prisma migrate reset`.
 
 The API needs to agree with the workers about two directories. Add these to `api/.env`,
 using absolute paths, and restart the API afterwards — nodemon does not reload environment

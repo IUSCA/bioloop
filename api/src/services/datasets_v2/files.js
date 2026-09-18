@@ -4,9 +4,26 @@ const createError = require('http-errors');
 const config = require('config');
 
 const prisma = require('@/db');
+const { assertPossible, withStateFields } = require('@/state').import('dataset');
 const FileGraph = require('@/services/fileGraph');
 const authService = require('@/services/auth');
 const logger = require('@/services/logger');
+
+/**
+ * A dataset's integer primary key and the fields its state rules read, from its resource UUID.
+ *
+ * @param {string} resource_id
+ * @returns {Promise<{id: number, is_deleted: boolean, owner_group: {is_archived: boolean}}>}
+ * @throws {createError.NotFound} when no dataset carries that resource id
+ */
+async function findDatasetRow(resource_id) {
+  const dataset = await prisma.dataset.findUnique(withStateFields({
+    where: { resource_id },
+    select: { id: true },
+  }));
+  if (!dataset) throw createError.NotFound('Dataset not found');
+  return dataset;
+}
 
 /**
  * Adds files to a dataset.
@@ -16,16 +33,20 @@ const logger = require('@/services/logger');
  * @description This function is idempotent, so it can be called multiple times with overlapping file paths without creating duplicate entries in the database.
  * It will maintain the file hierarchy by inferring directories from the file paths and creating metadata for them as well.
  * @param {Object} params - The parameters object.
- * @param {number} params.dataset_id - The ID of the dataset.
+ * @param {string} params.dataset_resource_id - The dataset's resource UUID.
  * @param {Array} params.data - An array of file objects to add.
  * @param {string} params.data[].path - The path of the file.
  * @param {number} params.data[].size - The size of the file in bytes.
  * @param {string} params.data[].md5 - The MD5 hash of the file.
  * @param {string} params.data[].filetype - The type of the file (e.g., 'file' or 'directory').
  * @returns {Promise<void>} A promise that resolves when the files have been added.
- * @throws {Error} Throws an error if there is an issue adding the files to the dataset.
+ * @throws {createError.NotFound} when no dataset carries that resource id.
  */
-async function addFilesToDataset({ dataset_id, data }) {
+async function addFilesToDataset({ dataset_resource_id, data }) {
+  const dataset_row = await findDatasetRow(dataset_resource_id);
+  assertPossible('edit', dataset_row);
+  const dataset_row_id = dataset_row.id;
+
   // 1. create file graph data structure from the list of file paths
   // 2. infer directories from the data structure and create metadata for them as well,
   //    so we can maintain the file hierarchy in the database
@@ -34,7 +55,7 @@ async function addFilesToDataset({ dataset_id, data }) {
   // 5. create entries in the dataset_file_hierarchy table to maintain parent-child relationships
 
   const files = data.map((f) => ({
-    dataset_id,
+    dataset_id: dataset_row_id,
     name: path.parse(f.path).base,
     ...f,
   }));
@@ -44,7 +65,7 @@ async function addFilesToDataset({ dataset_id, data }) {
 
   // query non leaf nodes (directories) from the graph data structure
   const directories = graph.non_leaf_nodes().map((p) => ({
-    dataset_id,
+    dataset_id: dataset_row_id,
     name: path.parse(p).base,
     path: p,
     filetype: 'directory',
@@ -62,7 +83,7 @@ async function addFilesToDataset({ dataset_id, data }) {
     // retrieve all files and directories for this dataset to get their ids
     const fileObjs = await tx.dataset_file.findMany({
       where: {
-        dataset_id,
+        dataset_id: dataset_row_id,
       },
       select: {
         id: true,
@@ -106,7 +127,7 @@ function normalizeBasePath(base) {
  * it returns files and directories directly under the specified base path, without recursively listing all files in
  * subdirectories.
  *
- * `dataset_id` is the dataset's resource UUID, matching every other v2 entry point, and is
+ * `dataset_resource_id` is the dataset's resource UUID, matching every other v2 entry point, and is
  * resolved to the integer `dataset_file.dataset_id` here rather than by the caller.
  *
  * A dataset that holds no files, and a base path with nothing under it, are both an empty
@@ -116,13 +137,15 @@ function normalizeBasePath(base) {
  * @async
  * @function files_ls
  * @param {Object} params - The parameters object.
- * @param {string} params.dataset_id - The dataset's resource UUID.
+ * @param {string} params.dataset_resource_id - The dataset's resource UUID.
  * @param {string} [params.base=''] - The base path to list files from.
  * @returns {Promise<Array>} An array of file objects, empty when nothing is under the base path.
  * @throws {createError.NotFound} when no dataset carries that resource id.
  */
-async function listFiles({ dataset_id, base = '' }) {
-  const dataset_row_id = await resolveDatasetRowId(dataset_id);
+async function listFiles({ dataset_resource_id, base = '' }) {
+  const dataset_row = await findDatasetRow(dataset_resource_id);
+  assertPossible('list_files', dataset_row);
+  const dataset_row_id = dataset_row.id;
   const base_path = normalizeBasePath(base);
 
   const results = await prisma.dataset_file.findFirst({
@@ -180,18 +203,20 @@ function createFileTree(files) {
 /**
  * The whole file hierarchy of a dataset, as a nested tree.
  *
- * `dataset_id` is the dataset's resource UUID, matching every other v2 entry point, and is
+ * `dataset_resource_id` is the dataset's resource UUID, matching every other v2 entry point, and is
  * resolved to the integer `dataset_file.dataset_id` here rather than by the caller.
  *
  * @async
  * @function getFileTree
  * @param {Object} params
- * @param {string} params.dataset_id - The dataset's resource UUID.
+ * @param {string} params.dataset_resource_id - The dataset's resource UUID.
  * @returns {Promise<Object>} the root node; `children` is empty when the dataset holds no files.
  * @throws {createError.NotFound} when no dataset carries that resource id.
  */
-async function getFileTree({ dataset_id }) {
-  const dataset_row_id = await resolveDatasetRowId(dataset_id);
+async function getFileTree({ dataset_resource_id }) {
+  const dataset_row = await findDatasetRow(dataset_resource_id);
+  assertPossible('list_files', dataset_row);
+  const dataset_row_id = dataset_row.id;
 
   const files = await prisma.dataset_file.findMany({
     where: {
@@ -208,7 +233,7 @@ async function getFileTree({ dataset_id }) {
  * @async
  * @function searchFiles
  * @param {Object} params - The parameters object.
- * @param {number} params.dataset_id - The ID of the dataset.
+ * @param {string} params.dataset_resource_id - The dataset's resource UUID.
  * @param {string} [params.name=''] - The name to search for.
  * @param {string} [params.base=''] - The base path to search from.
  * @param {number} params.skip - The number of items to skip.
@@ -218,13 +243,17 @@ async function getFileTree({ dataset_id }) {
  * @param {number} [params.min_file_size] - The minimum file size to filter by.
  * @param {number} [params.max_file_size] - The maximum file size to filter by.
  * @returns {Promise<Array>} An array of matching file objects.
+ * @throws {createError.NotFound} when no dataset carries that resource id.
  */
 async function searchFiles({
-  dataset_id, name = '', base = '',
+  dataset_resource_id, name = '', base = '',
   skip, take,
   extension = null, filetype = null, min_file_size = null, max_file_size = null,
   sort_order = null, sort_by = null,
 }) {
+  const dataset_row = await findDatasetRow(dataset_resource_id);
+  assertPossible('list_files', dataset_row);
+  const dataset_row_id = dataset_row.id;
   const base_path = normalizeBasePath(base);
 
   let size_query = {};
@@ -285,7 +314,7 @@ async function searchFiles({
 
   return prisma.dataset_file.findMany({
     where: {
-      dataset_id,
+      dataset_id: dataset_row_id,
       ...name_query,
       ...(base_path ? { path: { startsWith: base_path } } : {}),
       ...(filetype ? { filetype } : {}),
@@ -298,30 +327,16 @@ async function searchFiles({
 }
 
 /**
- * Turns a dataset's resource UUID into its integer primary key.
- *
- * @param {string} resource_id
- * @returns {Promise<number>} the dataset's `id`
- * @throws {createError.NotFound} when no dataset carries that resource id
- */
-async function resolveDatasetRowId(resource_id) {
-  const dataset = await prisma.dataset.findUnique({
-    where: { resource_id },
-    select: { id: true },
-  });
-  if (!dataset) throw createError.NotFound('Dataset not found');
-  return dataset.id;
-}
-
-/**
  * A download URL and token for one file.
  *
- * `dataset_id` is the dataset's resource UUID, the way every other v2 entry point addresses a
+ * `dataset_resource_id` is the dataset's resource UUID, the way every other v2 entry point addresses a
  * dataset. `dataset.id` and `dataset_file.dataset_id` are integers, so it is resolved here
  * rather than by each caller.
  */
-async function getFileDownloadInfo({ dataset_id, file_id, actor_id }) {
-  const dataset_row_id = await resolveDatasetRowId(dataset_id);
+async function getFileDownloadInfo({ dataset_resource_id, file_id, actor_id }) {
+  const dataset_row = await findDatasetRow(dataset_resource_id);
+  assertPossible('download', dataset_row);
+  const dataset_row_id = dataset_row.id;
 
   const val = await prisma.$transaction(async (tx) => {
     const file = await tx.dataset_file.findFirstOrThrow({
@@ -370,7 +385,7 @@ async function getFileDownloadInfo({ dataset_id, file_id, actor_id }) {
       },
     });
   } catch (e) {
-    logger.error(`Unable to record a file download for dataset ${dataset_id}: ${e.message}`);
+    logger.error(`Unable to record a file download for dataset ${dataset_resource_id}: ${e.message}`);
   }
 
   return val;
@@ -393,8 +408,10 @@ function getBundleDownloadPath(dataset) {
 /**
  * A download URL and token for the dataset's bundle. Takes the resource UUID, as above.
  */
-async function getBundleDownloadInfo({ dataset_id, actor_id }) {
-  const dataset_row_id = await resolveDatasetRowId(dataset_id);
+async function getBundleDownloadInfo({ dataset_resource_id, actor_id }) {
+  const dataset_row = await findDatasetRow(dataset_resource_id);
+  assertPossible('download', dataset_row);
+  const dataset_row_id = dataset_row.id;
 
   const val = await prisma.$transaction(async (tx) => {
     const dataset = await tx.dataset.findFirstOrThrow({
@@ -432,7 +449,7 @@ async function getBundleDownloadInfo({ dataset_id, actor_id }) {
       },
     });
   } catch (e) {
-    logger.error(`Unable to record a bundle download for dataset ${dataset_id}: ${e.message}`);
+    logger.error(`Unable to record a bundle download for dataset ${dataset_resource_id}: ${e.message}`);
   }
 
   return val;

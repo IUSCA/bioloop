@@ -15,13 +15,19 @@ export default {
   },
 
   /** Create a new collection. Requires `owner_group_id`. */
-  create({ name, description, owner_group_id, metadata, dataset_ids } = {}) {
+  create({
+    name,
+    description,
+    owner_group_id,
+    metadata,
+    dataset_resource_ids,
+  } = {}) {
     return api.post("/collections/", {
       name,
       description,
       owner_group_id,
       metadata,
-      dataset_ids,
+      dataset_resource_ids,
     });
   },
 
@@ -36,11 +42,6 @@ export default {
     return api.patch(`/collections/${id}`, { ...data, version });
   },
 
-  /** Permanently delete a collection. */
-  delete(id) {
-    return api.delete(`/collections/${id}`);
-  },
-
   /** Archive a collection. */
   archive(id) {
     return api.post(`/collections/${id}/archive`);
@@ -52,8 +53,8 @@ export default {
   },
 
   /**
-   * List datasets within the collection. Each row carries `_meta.can_view_metadata`,
-   * because a caller may browse a collection holding datasets they cannot open.
+   * List datasets within the collection. Each row carries `_meta.capabilities` and
+   * `_meta.standing`, because a caller may browse a collection holding datasets they cannot open.
    * @param {string} id
    * @param {{limit?: number, offset?: number, name?: string, sort_by?: string, sort_order?: string}} [params]
    */
@@ -66,10 +67,12 @@ export default {
    * Adding a dataset is a high-impact authorization operation — caller must hold admin authority
    * over the dataset's owning group.
    * @param {number|string} id - collection ID
-   * @param {number[]} datasetIds
+   * @param {string[]} datasetIds - dataset resource UUIDs
    */
   addDatasets(id, datasetIds) {
-    return api.post(`/collections/${id}/datasets`, { dataset_ids: datasetIds });
+    return api.post(`/collections/${id}/datasets`, {
+      dataset_resource_ids: datasetIds,
+    });
   },
 
   /** Remove a single dataset from the collection. */
@@ -80,15 +83,15 @@ export default {
   /** Bulk-remove datasets from the collection. */
   bulkRemoveDatasets(id, datasetIds) {
     return api.delete(`/collections/${id}/datasets`, {
-      data: { dataset_ids: datasetIds },
+      data: { dataset_resource_ids: datasetIds },
     });
   },
 
   /**
-   * Stage datasets in a collection. Omit dataset_ids to stage the whole collection.
+   * Stage datasets in a collection. Omit dataset_resource_ids to stage the whole collection.
    * Authorization is per dataset; the response reports staged, denied, and skipped.
    * @param {string} id - collection id
-   * @param {{ dataset_ids?: string[] }} body
+   * @param {{ dataset_resource_ids?: string[] }} body
    */
   stageDatasets(id, body = {}) {
     return api.post(`/collections/${id}/stage`, body);

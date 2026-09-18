@@ -4,7 +4,7 @@
 -- profile_visibility decides who may read the profile itself, and defaults to PRIVATE so
 -- every existing row stays private until an admin deliberately publishes it.
 --
--- @see docs/design/groups/profiles.md — Schema
+-- @see docs/design/groups/implementation/profiles.md — Schema
 
 -- CreateEnum
 CREATE TYPE "PROFILE_VISIBILITY" AS ENUM ('PRIVATE', 'AUTHENTICATED', 'PUBLIC');

@@ -8,18 +8,113 @@ const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const accessRequestsService = require('@/services/access_requests');
 const grantService = require('@/services/grants');
-const {
-  createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray,
-} = require('@/authorization');
+const authorization = require('@/authorization');
+
+const { createAuthorizationMiddleware: authorize, toCapabilitiesArray } = authorization;
 const { pickNonNil } = require('@/utils');
 const Expiry = require('@/utils/expiry');
 const prisma = require('@/db');
+const requestState = require('@/state').import('access_request');
+const { projectObject } = require('@/utils/expression');
+const baseAttributes = require('@/authorization/builtin/policies/base_attributes');
 
-// Which policy container governs a resource of each type.
-const POLICY_RESOURCE_TYPE = {
-  [RESOURCE_TYPE.DATASET]: 'dataset',
-  [RESOURCE_TYPE.COLLECTION]: 'collection',
+/**
+ * What one request's state admits, for a list row. The rows are fetched with their resource, its
+ * owning group, and the subject's group, so this reads no database.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ */
+const availableActionsFor = (request) => requestState.availableActions(request);
+
+// Viewing the resource a request names, by the resource's type. Bound at load, so an unknown
+// type or action fails at startup.
+const decideViewResource = {
+  [RESOURCE_TYPE.DATASET]: authorization.import('dataset').action('view_metadata'),
+  [RESOURCE_TYPE.COLLECTION]: authorization.import('collection').action('view_metadata'),
 };
+const decideReadRequests = authorization.import('access_request').rows('read');
+
+/** Validation for the items a request carries, shared by filing a request and previewing it. */
+const requestItemsValidation = [
+  body('resource_id').isUUID(),
+  body('subject_id').isUUID(), // Who/what this request is for
+  body('items').isArray({ min: 1 }),
+  body('items.*.access_type_id').optional().isInt(),
+  body('items.*.preset_id').optional().isInt(),
+  body('items.*.requested_expiry').customSanitizer((value) => Expiry.fromJSON(value)), // convert to Expiry instance; throws if invalid
+  // Custom validator: each item must have exactly one of access_type_id or preset_id
+  body('items.*').custom((item) => {
+    const hasAccessType = item.access_type_id !== undefined && item.access_type_id !== null;
+    const hasPreset = item.preset_id !== undefined && item.preset_id !== null;
+    if ((hasAccessType && hasPreset) || (!hasAccessType && !hasPreset)) {
+      throw new Error('Item must have exactly one of access_type_id or preset_id');
+    }
+    return true;
+  }),
+];
+
+/**
+ * The checks a request must pass before it is filed or previewed: its items are well-formed and
+ * requestable, and the caller can see the resource. Throws a 400, 403, or 404.
+ *
+ * @see docs/design/groups/design.md — Filing a request
+ * @returns {Promise<{id: string, type: string}>} the resource the request is for
+ */
+async function assertRequestable(req, { resource_id, items }) {
+  // Validate access_type_id items are unique within the request
+  const accessTypeIds = items
+    .filter((item) => item.access_type_id !== undefined)
+    .map((item) => item.access_type_id);
+  if (new Set(accessTypeIds).size !== accessTypeIds.length) {
+    throw createError.BadRequest('Items must have unique access_type_id within the request');
+  }
+
+  // Validate preset_id items are unique within the request
+  const presetIds = items
+    .filter((item) => item.preset_id !== undefined)
+    .map((item) => item.preset_id);
+  if (new Set(presetIds).size !== presetIds.length) {
+    throw createError.BadRequest('Items must have unique preset_id within the request');
+  }
+
+  // validate requested expiry is in the future
+  for (const item of items) {
+    if (item.requested_expiry.hasExpired()) {
+      throw createError.BadRequest('requested_expiry must be in the future');
+    }
+  }
+
+  // A request may only be filed against a resource the requester can already see. Posture
+  // B.5 in the use cases sets that bar: seeing the metadata is what makes asking possible.
+  // The body names a resource id and no resource type, so the container to authorize
+  // against is not known until the row is read, and an authorize() middleware cannot pick
+  // it. The policy context is threaded through so the caller is hydrated once.
+  const resource = await prisma.resource.findUnique({
+    where: { id: resource_id },
+    select: { id: true, type: true },
+  });
+  if (!resource) {
+    throw createError.NotFound('Resource not found');
+  }
+
+  const decision = await decideViewResource[resource.type]({
+    identifiers: { user: req.user?.subject_id, resource: resource.id },
+    policyExecutionContext: req.policyContext,
+    preFetched: { user: req.user, context: { req } },
+  });
+  if (!decision.granted) {
+    throw decision.status === 404
+      ? createError.NotFound('Resource not found')
+      : createError.Forbidden('Not permitted to request access to this resource');
+  }
+
+  // The same rule grant creation applies: a COLLECTION access type cannot be asked for on
+  // a dataset. Throws a 400 naming the offending access type or preset.
+  await grantService.assertGrantItemsApplicableToResourceType(prisma, resource.type, items);
+  // A type only an admin grants, such as sensitive metadata, cannot be asked for.
+  await grantService.assertItemsRequestable(prisma, items);
+
+  return resource;
+}
 
 const router = express.Router();
 
@@ -54,7 +149,14 @@ router.get(
       resource_type: req.query.resource_type,
     });
     // TODO: attribute filter
-    res.json(requests);
+    const metas = await decideReadRequests(requests.data, { req, idOf: (r) => r.id });
+    res.json({
+      ...requests,
+      data: requests.data.map((r, i) => ({
+        ...r,
+        _meta: { ...metas[i], available_actions: availableActionsFor(r) },
+      })),
+    });
   }),
 );
 
@@ -63,90 +165,27 @@ router.post(
   '/',
   validate([
     body('type').isIn(['NEW']), // 'RENEWAL' is not implemented yet
-    body('resource_id').isUUID(),
-    body('subject_id').isUUID(), // Who/what this request is for
     body('purpose').isString().notEmpty(),
-    body('items').isArray({ min: 1 }),
-    body('items.*.access_type_id').optional().isInt(),
-    body('items.*.preset_id').optional().isInt(),
-    body('items.*.requested_expiry').customSanitizer((value) => Expiry.fromJSON(value)), // convert to Expiry instance; throws if invalid
-    // Custom validator: each item must have exactly one of access_type_id or preset_id
-    body('items.*').custom((item) => {
-      const hasAccessType = item.access_type_id !== undefined && item.access_type_id !== null;
-      const hasPreset = item.preset_id !== undefined && item.preset_id !== null;
-      if ((hasAccessType && hasPreset) || (!hasAccessType && !hasPreset)) {
-        throw new Error('Item must have exactly one of access_type_id or preset_id');
-      }
-      return true;
-    }),
+    ...requestItemsValidation,
     // Submitting in the same call is what the UI does; see the handler for why.
     body('submit').optional().isBoolean().toBoolean(),
     // body('previous_grant_ids').optional().isArray({ min: 1 }).custom((arr) => arr.every(isUUID)), not implemented yet
   ]),
-  // The restriction half of authorization. `restrictionTargetFor` follows an access_request
-  // through to the resource it concerns, so this is what stops a request being filed against
-  // a dataset in an archived group. The policy half is `Policy.always`; the real check is on
-  // the resource and runs in the handler, because the body carries no resource type.
+  // The policy half is `Policy.always`; the real authorization check is on the resource and
+  // runs in the handler, because the body carries no resource type. What stops a request being
+  // filed against a dataset in an archived group is the request's own state rule, which the
+  // service asserts and which answers 409.
+  // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
   authorize('access_request', 'create', {
     preFetchedResourceFn: (req) => ({ resource_id: req.body.resource_id }),
   }),
-  asyncHandler(async (req, res, next) => {
+  asyncHandler(async (req, res) => {
     // #swagger.tags = ['Access Requests']
     // #swagger.summary = 'Create a new access request'
 
     const data = _.pick(['type', 'resource_id', 'subject_id', 'purpose', 'items'], req.body);
 
-    // Validate access_type_id items are unique within the request
-    const accessTypeIds = data.items
-      .filter((item) => item.access_type_id !== undefined)
-      .map((item) => item.access_type_id);
-    if (new Set(accessTypeIds).size !== accessTypeIds.length) {
-      return res.status(400).json({ message: 'Items must have unique access_type_id within the request' });
-    }
-
-    // Validate preset_id items are unique within the request
-    const presetIds = data.items
-      .filter((item) => item.preset_id !== undefined)
-      .map((item) => item.preset_id);
-    if (new Set(presetIds).size !== presetIds.length) {
-      return res.status(400).json({ message: 'Items must have unique preset_id within the request' });
-    }
-
-    // validate requested expiry is in the future
-    for (const item of data.items) {
-      if (item.requested_expiry.hasExpired()) {
-        return res.status(400).json({ message: 'requested_expiry must be in the future' });
-      }
-    }
-
-    // A request may only be filed against a resource the requester can already see. Posture
-    // B.5 in the use cases sets that bar: seeing the metadata is what makes asking possible.
-    // The body names a resource id and no resource type, so the container to authorize
-    // against is not known until the row is read, and an authorize() middleware cannot pick
-    // it. The policy context is threaded through so the caller is hydrated once.
-    // @see docs/design/groups/access-requests-plan.md — A1
-    const resource = await prisma.resource.findUnique({
-      where: { id: data.resource_id },
-      select: { id: true, type: true },
-    });
-    if (!resource) {
-      return next(createError.NotFound('Resource not found'));
-    }
-
-    const decision = await authorizeAction(POLICY_RESOURCE_TYPE[resource.type], 'view_metadata', {
-      identifiers: { user: req.user?.subject_id, resource: resource.id },
-      policyExecutionContext: req.policyContext,
-      preFetched: { user: req.user, context: { req } },
-    });
-    if (!decision.granted) {
-      return next(createError.Forbidden('Not permitted to request access to this resource'));
-    }
-
-    // The same rule grant creation applies: a COLLECTION access type cannot be asked for on
-    // a dataset. Throws a 400 naming the offending access type or preset.
-    await grantService.assertGrantItemsApplicableToResourceType(prisma, resource.type, data.items);
-    // A type only an admin grants, such as sensitive metadata, cannot be asked for.
-    await grantService.assertItemsRequestable(prisma, data.items);
+    await assertRequestable(req, data);
 
     // validated:
     // - the requester can see the resource, and no restriction blocks filing against it
@@ -156,11 +195,51 @@ router.post(
     // `submit: true` creates the request and puts it under review in one transaction. A
     // DRAFT is invisible — no surface lists one — so two client calls would strand a row
     // the requester could neither see nor resume if the second failed.
-    // @see docs/design/groups/access-requests-plan.md — B1
+    // @see docs/design/groups/design.md — Filing a request
     const record = req.body.submit
       ? await accessRequestsService.createAndSubmitAccessRequest(data, req.user.subject_id)
       : await accessRequestsService.createAccessRequest(data, req.user.subject_id);
     return res.status(201).json(req.permission.filter(record));
+  }),
+);
+
+// What filing this request and having it approved as asked would do, without writing anything.
+// The requester's form shows it, so nobody asks for access they already hold. It runs the checks
+// filing runs, and answers with the reviewer's computation narrowed to what a requester may see.
+// @see docs/design/groups/ui-information-architecture.md — Access types in forms
+router.post(
+  '/compute-effective-grants',
+  validate(requestItemsValidation),
+  // As on create, the policy half is `Policy.always`, and the real checks run in the handler.
+  authorize('access_request', 'create', {
+    preFetchedResourceFn: (req) => ({ resource_id: req.body.resource_id }),
+  }),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Access Requests']
+    // #swagger.summary = 'Preview the grants a request would confer if approved as asked'
+
+    const { resource_id, subject_id, items } = req.body;
+    const resource = await assertRequestable(req, { resource_id, items });
+    await accessRequestsService.assertMayRequestFor(req.user.subject_id, subject_id);
+
+    // A reviewer approving the request as asked issues each item with its requested expiry.
+    const rows = await grantService.previewIssue(
+      { subject_id, resource_id, resource_type: resource.type },
+      items.map(({ access_type_id, preset_id, requested_expiry }) => ({
+        access_type_id, preset_id, approved_expiry: requested_expiry,
+      })),
+    );
+
+    // The existing grant is a whole row, naming who issued it and why. The requester's preview
+    // needs only its expiry and access type.
+    return res.json(rows.map(({ existingGrant, indirect_coverage, ...row }) => ({
+      ...row,
+      existingGrant: existingGrant && {
+        expiry: existingGrant.expiry,
+        access_type: existingGrant.access_type && _.pick(['name', 'description'], existingGrant.access_type),
+      },
+      indirect_coverage: indirect_coverage.map((c) => projectObject(c, baseAttributes.coverage)),
+    })));
   }),
 );
 
@@ -192,7 +271,8 @@ router.get(
       resource_type,
     });
     // TODO: attribute filter
-    res.json({ metadata, data });
+    const metas = await decideReadRequests(data, { req, idOf: (r) => r.id });
+    res.json({ metadata, data: data.map((r, i) => ({ ...r, _meta: metas[i] })) });
   }),
 );
 
@@ -226,7 +306,8 @@ router.get(
       resource_type,
     });
     // TODO: attribute filter
-    res.json({ metadata, data });
+    const metas = await decideReadRequests(data, { req, idOf: (r) => r.id });
+    res.json({ metadata, data: data.map((r, i) => ({ ...r, _meta: metas[i] })) });
   }),
 );
 
@@ -249,6 +330,10 @@ router.get(
       ...req.permission.filter(request),
       _meta: {
         capabilities: toCapabilitiesArray(req.permission.capabilities),
+        // The request's status and the state of the resource it names, from the row already
+        // fetched with its resource. A reviewer holds `review` on a decided request; the
+        // request is what refuses it.
+        available_actions: requestState.availableActions(request),
       },
     });
   }),
@@ -312,7 +397,7 @@ router.put(
     // validated:
     // - user has permission to update request
     // - if purpose or items are provided, they are well-formed and items are unique
-    const request = await accessRequestsService.updateAccessRequest(req.params.id, data, req.user.subject_id);
+    const request = await accessRequestsService.updateAccessRequest(req.params.id, req.user.subject_id, data);
     res.json(req.permission.filter(request));
   }),
 );
@@ -323,7 +408,7 @@ router.post(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('access_request', 'update'),
+  authorize('access_request', 'submit'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Access Requests']
     // #swagger.summary = 'Submit an access request'
@@ -400,7 +485,7 @@ router.post(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('access_request', 'update'),
+  authorize('access_request', 'withdraw'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Access Requests']
     // #swagger.summary = 'Withdraw an access request'

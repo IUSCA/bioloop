@@ -1,36 +1,39 @@
+const { Prisma } = require('@prisma/client');
+
 const prisma = require('@/db');
+const { accessPathsQuery } = require('@/authorization');
 const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
+const { assertNotSystemPrincipal } = require('@/services/system_principals');
 const { normalize_name } = require('./create');
 
 /**
- * Which groups may own a dataset this user is about to create.
+ * The groups a user might create a dataset in, before the engine decides.
  *
- * Three rules admit a group, and each row says which one admitted it so the dialog can
- * explain the choice rather than presenting an unexplained list.
+ * A platform admin gets every group that is not a system principal. Anyone else gets the groups
+ * the path statement gives them an `admin` or `member` path on, each row carrying the path kinds
+ * found. `GET /v2/datasets/eligible-owner-groups` decides `dataset.contribute` on every
+ * candidate, so a closed group and a group the rule does not admit drop out there, by the rule
+ * itself rather than by a copy of it here.
  *
- *   PLATFORM_ADMIN — a platform admin may place a dataset in any active group.
- *   ADMIN          — an admin of the group, whether or not it accepts contributions.
- *   CONTRIBUTOR    — an effective member of a group that has allow_user_contributions set.
+ * An archived group is excluded here instead. Authorization no longer reads a resource's state,
+ * so `dataset.contribute` says nothing about whether the group is archived: that is the group's
+ * own state, and for a dataset that does not exist yet it is what the `dataset.create` rule
+ * reads. `getOwnerGroupForAuthorization` refuses the same group when a create actually arrives,
+ * so this list and that gate agree.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  *
- * The rules mirror the `dataset.contribute` policy exactly. A group listed here is one the
- * engine will admit, and a group the engine admits appears here; the creation routes still
- * authorize, so this list is a convenience rather than the control.
+ * The two system principals are excluded. `Public` and `Authenticated Users` are rows in the
+ * group table so a grant can name them as a subject, but neither has members nor a place in the
+ * hierarchy, so neither can own data. A platform admin passes `dataset.contribute` against any
+ * group, so the exclusion has to sit ahead of the engine.
  *
- * Archived groups are excluded. An archived group accepts no new datasets, because
- * dataset.contribute is classified as a mutating action.
- *
- * The two system principals are excluded as well. `Public` and `Authenticated Users` are
- * rows in the group table so a grant can name them as a subject, but neither has members
- * nor a place in the hierarchy, so neither can own data. `listGroups` excludes them for
- * the same reason.
- *
- * @see docs/design/groups/dataset-creation-plan.md — A2
- * @param {object} user - the authenticated user; needs subject_id and roles
- * @returns {Promise<Array<{id, name, slug, description, allow_user_contributions, admitted_by}>>}
+ * @see docs/design/groups/dataset-creation.md — Choosing the group
+ * @param {Object} params
+ * @param {string} params.user_id - the caller's subject id
+ * @param {boolean} params.everyGroup - true for a platform admin
+ * @returns {Promise<Array<{id, name, slug, description, allow_user_contributions, path_kinds: string[]}>>}
  */
-async function listEligibleOwnerGroups(user) {
-  const is_platform_admin = user?.roles?.includes('admin') === true;
-
+async function listOwnerGroupCandidates({ user_id, everyGroup }) {
   const select = {
     id: true,
     name: true,
@@ -39,65 +42,43 @@ async function listEligibleOwnerGroups(user) {
     allow_user_contributions: true,
   };
 
-  if (is_platform_admin) {
+  if (everyGroup) {
     const groups = await prisma.group.findMany({
-      where: { is_archived: false, id: { notIn: SYSTEM_PRINCIPAL_GROUP_IDS } },
+      where: { id: { notIn: SYSTEM_PRINCIPAL_GROUP_IDS }, is_archived: false },
       select,
       orderBy: { name: 'asc' },
     });
-    return groups.map((group) => ({ ...group, admitted_by: 'PLATFORM_ADMIN' }));
+    return groups.map((group) => ({ ...group, path_kinds: [] }));
   }
 
-  // Direct admin memberships. Reads the active view, so a membership that was removed or
-  // has expired confers nothing.
-  const adminRows = await prisma.$queryRaw`
-    SELECT DISTINCT group_id AS id
-    FROM active_group_user
-    WHERE user_id = ${user.subject_id} AND role = 'ADMIN'
-  `;
-  const adminGroupIds = new Set(adminRows.map((r) => r.id));
-
-  // Effective membership includes ancestors of the groups the user belongs to, matching
-  // isDatasetOwningGroupContributor.
-  const memberRows = await prisma.$queryRaw`
-    SELECT DISTINCT group_id AS id
-    FROM effective_user_groups
-    WHERE user_id = ${user.subject_id}
-  `;
-  const memberGroupIds = memberRows.map((r) => r.id);
-
-  const candidateIds = [...new Set([...adminGroupIds, ...memberGroupIds])];
-  if (candidateIds.length === 0) return [];
+  const rows = await prisma.$queryRaw(Prisma.sql`
+    SELECT p.resource_id, array_agg(DISTINCT p.path_kind) AS path_kinds
+    FROM (${accessPathsQuery({ userId: user_id, resourceType: 'group' })}) p
+    WHERE p.path_kind IN ('admin', 'member')
+    GROUP BY p.resource_id
+  `);
+  if (rows.length === 0) return [];
+  const kindsById = new Map(rows.map((row) => [row.resource_id, row.path_kinds]));
 
   const groups = await prisma.group.findMany({
-    where: {
-      id: { in: candidateIds, notIn: SYSTEM_PRINCIPAL_GROUP_IDS },
-      is_archived: false,
-    },
+    where: { id: { in: [...kindsById.keys()], notIn: SYSTEM_PRINCIPAL_GROUP_IDS }, is_archived: false },
     select,
     orderBy: { name: 'asc' },
   });
-
-  return groups
-    .map((group) => {
-      if (adminGroupIds.has(group.id)) return { ...group, admitted_by: 'ADMIN' };
-      if (group.allow_user_contributions) return { ...group, admitted_by: 'CONTRIBUTOR' };
-      return null;
-    })
-    .filter(Boolean);
+  return groups.map((group) => ({ ...group, path_kinds: kindsById.get(group.id) }));
 }
 
 /**
  * The owning group's contribution flag, for authorizing against a group that owns nothing
- * yet. Returns null when the group does not exist, is archived, or is a system principal.
+ * yet. Returns null when the group does not exist or is archived.
  *
- * Every v2 creation route resolves its owning group through here, so refusing the system
- * principals in one place refuses them for create, import, and upload alike. A platform
- * admin passes the `dataset.contribute` check against any group, so the exclusion has to
- * sit ahead of the policy engine rather than inside it.
+ * Every v2 creation route that decides `dataset.contribute` resolves its owning group through
+ * here, so create-by-import, upload, and the name check all refuse a system principal.
+ *
+ * @throws {HttpError} 409 when the id is a system principal
  */
 async function getOwnerGroupForAuthorization(owner_group_id) {
-  if (SYSTEM_PRINCIPAL_GROUP_IDS.includes(owner_group_id)) return null;
+  assertNotSystemPrincipal(owner_group_id, 'owner');
 
   return prisma.group.findFirst({
     where: { id: owner_group_id, is_archived: false },
@@ -116,7 +97,7 @@ async function getOwnerGroupForAuthorization(owner_group_id) {
  * The name is normalised the same way creation normalises it, so the answer is about the
  * name that would actually be stored.
  *
- * @see docs/design/groups/dataset-creation-plan.md — A3
+ * @see docs/design/groups/dataset-creation.md — Asking whether a name is free, without an oracle
  */
 async function isDatasetNameAvailable({ name, type, owner_group_id }) {
   const normalized_name = normalize_name(name);
@@ -132,7 +113,7 @@ async function isDatasetNameAvailable({ name, type, owner_group_id }) {
 }
 
 module.exports = {
-  listEligibleOwnerGroups,
+  listOwnerGroupCandidates,
   getOwnerGroupForAuthorization,
   isDatasetNameAvailable,
 };

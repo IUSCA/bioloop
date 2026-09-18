@@ -78,8 +78,16 @@ describe('each workflow a caller may launch maps to a real action', () => {
 });
 
 describe('staging several datasets at once', () => {
-  const dataset = (n, is_staged = false) => ({
-    id: n, resource_id: `r${n}`, name: `ds${n}`, is_staged,
+  // Each row carries what the `request_stage` state rule reads, because bulkStage checks the
+  // row it is given rather than querying for it. A caller that selected too little fails loudly.
+  const dataset = (n, is_staged = false, overrides = {}) => ({
+    id: n,
+    resource_id: `r${n}`,
+    name: `ds${n}`,
+    is_staged,
+    is_deleted: false,
+    owner_group: { is_archived: false },
+    ...overrides,
   });
 
   const startRun = () => Promise.resolve({ workflow_id: 'wf' });
@@ -99,6 +107,36 @@ describe('staging several datasets at once', () => {
     expect(result.skipped).toEqual([]);
     // A refused dataset never reaches the workflow service.
     expect(started).toEqual(['r1', 'r3']);
+  });
+
+  test('a dataset whose owning group is archived is skipped, not staged', async () => {
+    // A state refusal is not a permission refusal: the caller may stage it, and the dataset
+    // cannot be staged right now. Both answers land in the same bucket with their own reason.
+    // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+    const started = [];
+    const result = await workflowService.bulkStage(
+      [dataset(1, false, { owner_group: { is_archived: true } }), dataset(2)],
+      {
+        permits: async () => true,
+        startRun: (d) => { started.push(d.resource_id); return startRun(); },
+      },
+    );
+
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].resource_id).toBe('r1');
+    expect(result.skipped[0].reason).toMatch(/owning group is archived/);
+    expect(result.staged.map((d) => d.resource_id)).toEqual(['r2']);
+    expect(started).toEqual(['r2']);
+  });
+
+  test('a deleted dataset is skipped, because its files are gone', async () => {
+    const result = await workflowService.bulkStage(
+      [dataset(1, false, { is_deleted: true }), dataset(2)],
+      { permits: async () => true, startRun },
+    );
+
+    expect(result.skipped.map((d) => d.resource_id)).toEqual(['r1']);
+    expect(result.staged.map((d) => d.resource_id)).toEqual(['r2']);
   });
 
   test('an already staged dataset is skipped, not restaged', async () => {

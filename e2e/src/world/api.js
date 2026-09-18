@@ -6,7 +6,7 @@ const path = require('node:path');
  * assertion. Specs reach the API through Playwright's own request fixture instead; this one
  * exists so the builder can run outside a test.
  *
- * @see docs/design/groups/e2e-test-plan.md — How it is built
+ * @see docs/design/groups/e2e-test-flows.md — How the suite builds its world
  */
 
 const API_BASE = process.env.E2E_API_BASE || 'http://localhost:3030';

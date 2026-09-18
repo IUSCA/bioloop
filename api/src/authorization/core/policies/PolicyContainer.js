@@ -1,4 +1,46 @@
+const { compileProjection } = require('@/utils/expression');
 const Policy = require('./Policy');
+
+/**
+ * The restriction classes an action may declare. A restriction type blocks by class, so an
+ * action that declares none cannot be classified and the completeness checks refuse it.
+ * @see docs/design/groups/access-model.md — The decision rule
+ */
+const RESTRICTION_CLASS = Object.freeze({
+  MUTATING: 'mutating',
+  READING: 'reading',
+  // Reads the bytes of a resource rather than its record. A deleted dataset keeps its record
+  // and has no bytes, so a restriction can block this class and leave reading alone.
+  DATA: 'data',
+});
+
+/**
+ * Declares an action that changes state.
+ *
+ * Which states admit the action is not declared here: it is business logic owned by the
+ * resource, and `src/state/builtin/<resource>.js` states it.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ * @param {Policy} policy
+ */
+function mutating(policy) {
+  return { policy, restriction: RESTRICTION_CLASS.MUTATING };
+}
+
+/**
+ * Declares an action that only reads.
+ * @param {Policy} policy
+ */
+function reading(policy) {
+  return { policy, restriction: RESTRICTION_CLASS.READING };
+}
+
+/**
+ * Declares an action that reads a resource's bytes.
+ * @param {Policy} policy
+ */
+function readingData(policy) {
+  return { policy, restriction: RESTRICTION_CLASS.DATA };
+}
 
 /**
  * PolicyContainer - A singleton container for managing resource policies
@@ -12,8 +54,8 @@ class PolicyContainer {
       description,
     };
     this._actions = {};
+    this._actionMeta = {};
     this._attributeRules = {};
-    this._roles = [];
     this._frozen = false;
   }
 
@@ -21,14 +63,41 @@ class PolicyContainer {
    * Register a single action with its policy
    * Automatically names the policy as {resourceType}.{actionName}
    */
-  action(actionName, policy, renamePolicy = true) {
+  action(actionName, declaration, renamePolicy = true) {
     if (this._frozen) {
       throw new Error(`PolicyContainer for ${this.meta.resourceType} is frozen. Cannot register new actions.`);
     }
 
     const qualifiedName = `${this.meta.resourceType}.${actionName}`;
+    // A bare policy declares no restriction class. `mutating(policy)` and `reading(policy)`
+    // declare one beside it, which is what the restriction layer and the tables read.
+    const { policy, restriction = null } = declaration instanceof Policy
+      ? { policy: declaration }
+      : (declaration || {});
+    if (!(policy instanceof Policy)) {
+      throw new Error(`Action ${qualifiedName} must be a Policy or a declaration holding one`);
+    }
+    if (restriction !== null && !Object.values(RESTRICTION_CLASS).includes(restriction)) {
+      throw new Error(`Action ${qualifiedName}: unknown restriction class ${restriction}`);
+    }
     this._actions[actionName] = renamePolicy ? policy.cloneWithName(qualifiedName) : policy.clone();
+    this._actionMeta[actionName] = Object.freeze({ restriction });
     return this;
+  }
+
+  /**
+   * The restriction class an action declared, or null when it declared none.
+   * @param {string} actionName
+   * @returns {string|null}
+   */
+  getRestrictionClass(actionName) {
+    this.getPolicy(actionName);
+    return this._actionMeta[actionName].restriction;
+  }
+
+  /** Whether `freeze()` has been called. */
+  isFrozen() {
+    return this._frozen;
   }
 
   /**
@@ -44,7 +113,7 @@ class PolicyContainer {
 
   /**
    * Register attribute filtering rules for actions
-   * Rules are evaluated in order - first matching policy wins (short-circuit)
+   * Every rule whose policy matches contributes; the caller sees the union of their fields
    * Action-specific rules take precedence; '*' serves as fallback for any action
    *
    * @param {Object} rulesMap - Object mapping action names to arrays of rule objects
@@ -133,6 +202,12 @@ class PolicyContainer {
             );
           }
         });
+        // Parses every path now, so a malformed one fails at startup and a response reuses the parse.
+        try {
+          compileProjection(rule.attribute_filters);
+        } catch (err) {
+          throw new Error(`Rule at index ${index} for action '${actionName}': ${err.message}`);
+        }
       });
 
       // Store the rules for this action
@@ -140,90 +215,6 @@ class PolicyContainer {
     });
 
     return this;
-  }
-
-  /**
-   * Register caller role derivation rules.
-   * Each entry maps a policy to the role assigned to the caller when that policy evaluates to true.
-   * Rules are evaluated in order; multiple roles may be assigned (all matching policies apply).
-   *
-   * @param {Array<{policy: Policy, role: string}>} rolesArray
-   * @returns {PolicyContainer} this for chaining
-   *
-   * @example
-   * container.roles([
-   *   { policy: isPlatformAdmin, role: CallerRole.PLATFORM_ADMIN },
-   *   { policy: isGroupAdmin,    role: CallerRole.ADMIN },
-   * ])
-   */
-  roles(rolesArray) {
-    if (this._frozen) {
-      throw new Error(`PolicyContainer for ${this.meta.resourceType} is frozen. Cannot register caller roles.`);
-    }
-
-    if (!Array.isArray(rolesArray) || rolesArray.length === 0) {
-      throw new Error('Caller roles must be a non-empty array');
-    }
-
-    rolesArray.forEach((entry, index) => {
-      if (!entry || typeof entry !== 'object') {
-        throw new Error(`Caller role entry at index ${index} must be an object`);
-      }
-      if (!entry.policy || !(entry.policy instanceof Policy)) {
-        throw new Error(
-          `Caller role entry at index ${index} must have a 'policy' that is a Policy instance`,
-        );
-      }
-      if (typeof entry.role !== 'string' || !entry.role) {
-        throw new Error(`Caller role entry at index ${index} must have a non-empty 'role' string`);
-      }
-    });
-
-    this._roles = [...rolesArray];
-    return this;
-  }
-
-  /**
-   * Get caller role derivation rules
-   * @returns {Array<{policy: Policy, role: string}>}
-   */
-  getRoleDerivationRules() {
-    return this._roles;
-  }
-
-  /**
-   * Construct a single Policy that derives caller roles based on the registered rules.
-   * The resulting policy evaluates each rule's policy and returns the first matching role.
-   * If no policies match, returns null (no role).
-   *
-   * @returns {Policy} Role derivation policy
-   */
-  getRoleDerivationPolicy() {
-    const roleDerivationRules = this.getRoleDerivationRules();
-
-    if (roleDerivationRules.length === 0) {
-      return Policy.never;
-    }
-
-    const rolePolicies = roleDerivationRules.map((entry) => entry.policy);
-    const unionPolicy = Policy.or(rolePolicies);
-    return new Policy({
-      name: `${this.meta.resourceType}.role_derivation`,
-      resourceType: unionPolicy.resourceType,
-      requires: unionPolicy.requires,
-      evaluate: async (user, resource, context) => {
-        // evaluate each policy and return first matching role
-        // eslint-disable-next-line no-restricted-syntax
-        for (const entry of roleDerivationRules) {
-          // eslint-disable-next-line no-await-in-loop
-          const result = await entry.policy.evaluate(user, resource, context);
-          if (result) {
-            return entry.role;
-          }
-        }
-        return null; // no matching role
-      },
-    });
   }
 
   /**
@@ -278,10 +269,23 @@ class PolicyContainer {
    * Freeze the container to prevent further modifications
    */
   freeze() {
+    // A rule keyed by a name no action declares is never read, and its action silently falls
+    // back to '*'. An action with no rule at all projects every row to `{}`.
+    const { resourceType } = this.meta;
+    const stray = Object.keys(this._attributeRules).filter((key) => key !== '*' && !(key in this._actions));
+    if (stray.length) {
+      throw new Error(`PolicyContainer ${resourceType}: attribute rules name undeclared actions: ${stray.join(', ')}`);
+    }
+    const unprojected = Object.keys(this._actions).filter((action) => this.getAttributeRules(action).length === 0);
+    if (unprojected.length) {
+      throw new Error(
+        `PolicyContainer ${resourceType}: actions with no attribute rules and no '*' rule: ${unprojected.join(', ')}`,
+      );
+    }
     this._frozen = true;
     Object.freeze(this._actions);
+    Object.freeze(this._actionMeta);
     Object.freeze(this._attributeRules);
-    Object.freeze(this._roles);
     Object.freeze(this.meta);
     return this;
   }
@@ -293,10 +297,14 @@ class PolicyContainer {
     return {
       meta: { ...this.meta },
       actions: { ...this._actions },
+      actionMeta: { ...this._actionMeta },
       attributeRules: { ...this._attributeRules },
-      roles: [...this._roles],
     };
   }
 }
 
 module.exports = PolicyContainer;
+module.exports.RESTRICTION_CLASS = RESTRICTION_CLASS;
+module.exports.mutating = mutating;
+module.exports.reading = reading;
+module.exports.readingData = readingData;

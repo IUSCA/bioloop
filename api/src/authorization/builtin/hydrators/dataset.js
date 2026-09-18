@@ -14,7 +14,7 @@ const datasetHydrator = new PrismaHydrator({
  * A dataset has no such column; the flag lives on the owning group. The `contribute` action
  * needs it, and reading it here keeps the policy a pure in-memory check like every other.
  *
- * @see docs/design/groups/dataset-creation-plan.md — A1
+ * @see docs/design/groups/dataset-creation.md — Contribution is a policy, not a comment
  */
 datasetHydrator.registerVirtualAttribute(
   'owner_group_allows_contributions',

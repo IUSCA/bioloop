@@ -1,16 +1,18 @@
 const { withClient } = require('./db');
 const { prefixFor } = require('./build');
+const { removeImportSources } = require('./importSources');
 
 /**
  * Removes everything a run built, in one transaction.
  *
  * Through SQL rather than through the API, because the API deliberately offers no way:
- * there is no `DELETE /groups/:id`, and the dataset one is commented out. Archiving is not
- * deletion and history is preserved, so adding a destructive endpoint to serve a test suite
- * would put a hole in the model. Teardown is not a thing under test, so it goes around it.
+ * there is no `DELETE /groups/:id`, and `DELETE /v2/datasets/:id` keeps the dataset's record.
+ * Archiving is not deletion and history is preserved, so adding a destructive endpoint to serve
+ * a test suite would put a hole in the model. Teardown is not a thing under test, so it goes
+ * around it.
  *
  * Order follows the foreign keys that RESTRICT. Everything else cascades: `group_user`,
- * `group_closure`, `restriction`, and every `dataset_*` child go with their parent.
+ * `group_closure`, and every `dataset_*` child go with their parent.
  *
  * Nothing seeded is touched. Every statement is bounded by the run's own group ids, so a
  * seeded membership is never removed and a borrowed account is left exactly as it was found.
@@ -19,7 +21,7 @@ const { prefixFor } = require('./build');
  * `group.id`, `resource.id`, `subject.id`, and every id referencing them are `text` in
  * Postgres. A `uuid[]` cast fails with `operator does not exist: text = uuid`.
  *
- * @see docs/design/groups/e2e-test-plan.md — How it is torn down
+ * @see docs/design/groups/e2e-test-flows.md — How the suite builds its world
  */
 async function teardownWorld(runId) {
   const prefix = prefixFor(runId);
@@ -71,9 +73,33 @@ async function teardownWorld(runId) {
       await client.query('DELETE FROM dataset WHERE owner_group_id = ANY($1::text[])', [groupIds]);
       await client.query('DELETE FROM resource WHERE id = ANY($1::text[])', [resourceIds]);
 
-      // The group cascades its memberships, its closure rows, and any restriction on it. Its
-      // subject row holds a RESTRICT reference the other way, so it follows.
-      await client.query('DELETE FROM "group" WHERE id = ANY($1::text[])', [groupIds]);
+      // `import_source.owner_group` is RESTRICT. Its directories go with it.
+      await removeImportSources(client, { prefix, groupIds });
+
+      // The group cascades its memberships and its closure rows. Its subject row holds a
+      // RESTRICT reference the other way, so it follows.
+      //
+      // `group.parent_id` is ON DELETE RESTRICT and the check is immediate, so a parent and its
+      // children cannot go in one statement however the ids are ordered. They go one at a time,
+      // deepest first, with the depth read from the run's own closure rows.
+      //
+      // Clearing `parent_id` across the set first would be shorter, and it is wrong: it makes
+      // every group a root, and two groups in one run may share a name. The
+      // `(parent_id, name) NULLS NOT DISTINCT` index then refuses the update.
+      const { rows: ordered } = await client.query(
+        `SELECT g.id
+           FROM "group" g
+           LEFT JOIN (
+             SELECT descendant_id, max(depth) AS depth FROM group_closure GROUP BY descendant_id
+           ) d ON d.descendant_id = g.id
+          WHERE g.id = ANY($1::text[])
+          ORDER BY COALESCE(d.depth, 0) DESC`,
+        [groupIds],
+      );
+      for (const row of ordered) {
+        // eslint-disable-next-line no-await-in-loop
+        await client.query('DELETE FROM "group" WHERE id = $1', [row.id]);
+      }
       await client.query('DELETE FROM subject WHERE id = ANY($1::text[])', [groupIds]);
 
       await client.query('COMMIT');

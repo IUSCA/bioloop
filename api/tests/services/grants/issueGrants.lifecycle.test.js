@@ -7,7 +7,7 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const grantsService = require('@/services/grants');
-const { TARGET_TYPE } = require('@/authorization/builtin/audit');
+const { TARGET_TYPE } = require('@/services/audit');
 const Expiry = require('@/utils/expiry');
 const {
   createTestUser, createTestGroup, createTestDataset, createTestCollection, deleteUser, deleteGroup, deleteDataset, deleteGrants, deleteGrantsForResource, getAccessTypeId,
@@ -119,6 +119,7 @@ describe('issueGrants - lifecycle', () => {
 
     const audit = await prisma.authorization_audit.findFirst({ where: { target_type: TARGET_TYPE.GRANT, target_id: grant.id, event_type: 'GRANT_CREATED' } });
     expect(audit).toBeDefined();
+    expect(audit.target_name).toBe('DATASET:DOWNLOAD on DATASET for User');
   });
 
   // A preset lists DATASET:VIEW_METADATA, DATASET:LIST_FILES, and DATASET:DOWNLOAD. Download

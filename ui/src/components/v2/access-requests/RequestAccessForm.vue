@@ -32,7 +32,7 @@
 
           <div class="space-y-4">
             <!-- Presets are scoped to collections, so a dataset has none and skips this block.
-                 @see docs/design/groups/access-presets.md — 2.11 Presets are scoped to collections -->
+                 @see docs/design/groups/design.md — The seeded presets -->
             <template v-if="presets.length">
               <div>
                 <PresetSelector
@@ -120,8 +120,15 @@
         </ModernAlert>
       </div>
 
-      <!-- Right side: what the subject already has -->
-      <div class="col-span-1">
+      <!-- Right side: what the request adds, then what the subject already has -->
+      <div class="col-span-1 flex flex-col gap-6">
+        <EffectiveGrantsPreview
+          v-if="previewHasSelection"
+          perspective="requester"
+          :rows="previewRows"
+          :loading="previewLoading"
+          :error="previewError"
+        />
         <CurrentAccessPreview
           :subject="formState.subject"
           :resource="props.resource"
@@ -138,6 +145,8 @@
 <script setup>
 import { useAccessTypes } from "@/components/v2/grants/issue/useAccessTypes";
 import { useGrantPresets } from "@/components/v2/grants/issue/useGrantPresets";
+import EffectiveGrantsPreview from "@/components/v2/grants/issue/EffectiveGrantsPreview.vue";
+import { useRequestPreview } from "./useRequestPreview";
 import { coverageReason, useSubjectCoverage } from "./useSubjectCoverage";
 
 const props = defineProps({
@@ -181,6 +190,19 @@ const {
 } = useSubjectCoverage(
   computed(() => props.formState.subject),
   computed(() => props.resource),
+);
+
+// What the request would add, beside what the subject already has.
+// @see docs/design/groups/ui-information-architecture.md — Access types in forms
+const {
+  rows: previewRows,
+  loading: previewLoading,
+  error: previewError,
+  hasSelection: previewHasSelection,
+} = useRequestPreview(
+  props.formState,
+  computed(() => props.resource),
+  accessTypes,
 );
 
 // What the subject already holds, together with everything it implies, keyed by access type

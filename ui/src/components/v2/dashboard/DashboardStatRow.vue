@@ -30,7 +30,7 @@
  * - The cards themselves. `MetricCard` owns the surface, and `home.vue` owns the
  *   queries behind each value.
  *
- * @see docs/design/groups/dashboard-plan.md - Phase 1
+ * @see docs/design/groups/ui-information-architecture.md — Dashboard
  */
 import MetricCard from "@/components/v2/MetricCard.vue";
 import { computed } from "vue";

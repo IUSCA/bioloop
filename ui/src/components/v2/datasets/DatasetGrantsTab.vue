@@ -63,7 +63,7 @@
             icon="add"
             @click="openIssueGrantModal"
           >
-            Grant Access
+            Give Access
           </VaButton>
         </div>
       </VaCardContent>
@@ -89,7 +89,7 @@
           >
             <EmptyState
               title="No access configured"
-              message="Grant access to specific users or groups to give them permission to use this dataset."
+              message="Give specific users or groups permission to use this dataset."
               @reset="fetchGrants"
               :showClearFilters="false"
               :show-clear-filters="false"
@@ -160,9 +160,8 @@ import GrantService from "@/services/v2/grants";
 
 const router = useRouter();
 
-// A grant that came from a request links to the request that produced it. The page
-// exists now; before B3 this went to a path that did not.
-// @see docs/design/groups/access-requests-plan.md — C5
+// A grant that came from a request links to the request that produced it.
+// @see docs/design/groups/e2e-test-flows.md — F9 — Every grant row says where it came from
 function viewRequest(requestId) {
   router.push(`/v2/access-requests/${requestId}`).catch(() => {});
 }
@@ -280,8 +279,8 @@ async function fetchGrants() {
 //   }
 // }
 
-function onRevokeGrant({ grant, subject, siblingGrants }) {
-  revokeGrantModal.value?.show({ grant, subject, siblingGrants });
+function onRevokeGrant({ grant, subject }) {
+  revokeGrantModal.value?.show({ grant, subject });
 }
 
 function onRevokeAllGrants({ grants, subject, resourceType, resourceId }) {

@@ -14,7 +14,7 @@ const notify = require('@/notification/NotificationService');
  * must not undo the invitation — the row exists, an admin can see it pending, and the link
  * works whenever the message arrives.
  *
- * @see docs/design/groups/invitations.md — Email
+ * @see docs/design/groups/invitations.md — Authorization
  */
 
 /** Where the /invite page lives, or null when nobody has configured a portal URL. */

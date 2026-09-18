@@ -171,7 +171,7 @@ describe('download info resolves the dataset by resource id', () => {
     // validation error instead.
     await expect(
       datasetFileService.getBundleDownloadInfo({
-        dataset_id: dataset.resource_id,
+        dataset_resource_id: dataset.resource_id,
         actor_id: actor.id,
       }),
     ).rejects.toThrow(/not prepared for download/i);
@@ -185,7 +185,7 @@ describe('download info resolves the dataset by resource id', () => {
 
     await expect(
       datasetFileService.getFileDownloadInfo({
-        dataset_id: dataset.resource_id,
+        dataset_resource_id: dataset.resource_id,
         file_id: file.id,
         actor_id: actor.id,
       }),
@@ -197,7 +197,7 @@ describe('download info resolves the dataset by resource id', () => {
   test('an unknown dataset is a 404, not a database error', async () => {
     await expect(
       datasetFileService.getBundleDownloadInfo({
-        dataset_id: randomUUID(),
+        dataset_resource_id: randomUUID(),
         actor_id: actor.id,
       }),
     ).rejects.toMatchObject({ status: 404 });
@@ -206,7 +206,7 @@ describe('download info resolves the dataset by resource id', () => {
   test('the integer key is not accepted where a resource id belongs', async () => {
     await expect(
       datasetFileService.getBundleDownloadInfo({
-        dataset_id: String(dataset.id),
+        dataset_resource_id: String(dataset.id),
         actor_id: actor.id,
       }),
     ).rejects.toMatchObject({ status: 404 });
@@ -224,7 +224,9 @@ describe('the file tree resolves the dataset by resource id', () => {
     datasetsToDelete.push(filesDataset.id);
     await prisma.dataset_file.createMany({
       data: [
-        { dataset_id: filesDataset.id, name: 'reads', path: 'reads', filetype: 'directory' },
+        {
+          dataset_id: filesDataset.id, name: 'reads', path: 'reads', filetype: 'directory',
+        },
         {
           dataset_id: filesDataset.id,
           name: 'a.fastq',
@@ -242,7 +244,7 @@ describe('the file tree resolves the dataset by resource id', () => {
 
   test('builds the tree for a dataset addressed by its resource id', async () => {
     const tree = await datasetFileService.getFileTree({
-      dataset_id: filesDataset.resource_id,
+      dataset_resource_id: filesDataset.resource_id,
     });
     expect(Object.keys(tree.children)).toContain('reads');
     expect(Object.keys(tree.children.reads.children)).toContain('a.fastq');
@@ -250,18 +252,18 @@ describe('the file tree resolves the dataset by resource id', () => {
 
   test('the integer key is not accepted where a resource id belongs', async () => {
     await expect(
-      datasetFileService.getFileTree({ dataset_id: String(filesDataset.id) }),
+      datasetFileService.getFileTree({ dataset_resource_id: String(filesDataset.id) }),
     ).rejects.toMatchObject({ status: 404 });
   });
 
   test('an unknown dataset is a 404, not a database error', async () => {
     await expect(
-      datasetFileService.getFileTree({ dataset_id: randomUUID() }),
+      datasetFileService.getFileTree({ dataset_resource_id: randomUUID() }),
     ).rejects.toMatchObject({ status: 404 });
   });
 
   test('a dataset with no files has an empty tree rather than an error', async () => {
-    const tree = await datasetFileService.getFileTree({ dataset_id: dataset.resource_id });
+    const tree = await datasetFileService.getFileTree({ dataset_resource_id: dataset.resource_id });
     expect(tree.children).toEqual({});
   });
 });
@@ -288,25 +290,25 @@ describe('listing files tells an empty dataset from an unknown one', () => {
 
   test('a dataset with no files is an empty listing, not a 404', async () => {
     await expect(
-      datasetFileService.listFiles({ dataset_id: dataset.resource_id }),
+      datasetFileService.listFiles({ dataset_resource_id: dataset.resource_id }),
     ).resolves.toEqual([]);
   });
 
   test('an unknown dataset is still a 404', async () => {
     await expect(
-      datasetFileService.listFiles({ dataset_id: randomUUID() }),
+      datasetFileService.listFiles({ dataset_resource_id: randomUUID() }),
     ).rejects.toMatchObject({ status: 404 });
   });
 
   test('a base path with nothing under it is an empty listing', async () => {
     await expect(
-      datasetFileService.listFiles({ dataset_id: listDataset.resource_id, base: 'nowhere' }),
+      datasetFileService.listFiles({ dataset_resource_id: listDataset.resource_id, base: 'nowhere' }),
     ).resolves.toEqual([]);
   });
 
   test('the integer key is not accepted where a resource id belongs', async () => {
     await expect(
-      datasetFileService.listFiles({ dataset_id: String(listDataset.id) }),
+      datasetFileService.listFiles({ dataset_resource_id: String(listDataset.id) }),
     ).rejects.toMatchObject({ status: 404 });
   });
 });

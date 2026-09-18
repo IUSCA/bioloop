@@ -30,7 +30,7 @@ model dataset {
   // The group that governs this dataset. The database default is the seeded
   // 'Unassigned Datasets' group, so a caller that names no group still produces a row with
   // an owner. datasets_v2 refuses without an explicit group, so only legacy callers reach
-  // the default.
+  // the default. A CHECK (`dataset_owner_not_system_principal`) refuses a system principal.
   // @see docs/design/groups/dataset-storage.md — What group scoping changed
   // @see docs/design/groups/decisions.md — 2. Every dataset has an owning group
   owner_group_id    String   @default("ffffffff-0000-4000-8000-000000000001")
@@ -51,26 +51,29 @@ model dataset {
   bundle           bundle?
   src_instrument   instrument?         @relation(fields: [src_instrument_id], references: [id])
 
-  owner_group    group                       @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
-  collections    collection_dataset[]
-  contributions  user_dataset_contribution[]
-  resource_id    String                      @unique
+  owner_group        group                       @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
+  collection_history collection_dataset[]
+  collections        active_collection_dataset[]
+  contributions      user_dataset_contribution[]
+  resource_id        String                      @unique
   // Restrict: prevents deleting a resource row directly while this dataset still references it.
   // Reverse cascade (dataset deleted → resource deleted) is enforced via a DB trigger:
   //   AFTER DELETE ON "dataset" FOR EACH ROW: IF resource_id IS NOT NULL THEN DELETE FROM resource WHERE id = OLD.resource_id
-  resource       resource                    @relation(fields: [resource_id], references: [id], onDelete: Restrict)
+  resource           resource                    @relation(fields: [resource_id], references: [id], onDelete: Restrict)
   // @@index([resource_id])
-  create_method  DATASET_CREATE_METHOD?
-  upload_logs    dataset_upload_log[]
-  import_logs    dataset_import_log[]
-  use_conditions dataset_use_condition[]
-  funding        dataset_funding[]
-  affiliations   dataset_affiliation[]
+  create_method      DATASET_CREATE_METHOD?
+  upload_logs        dataset_upload_log[]
+  import_logs        dataset_import_log[]
+  use_conditions     dataset_use_condition[]
+  funding            dataset_funding[]
+  affiliations       dataset_affiliation[]
 
   // Names are unique within an owning group, not globally, so two groups may hold a dataset
   // of the same name without either being able to discover the other.
+  // Only live rows are constrained: partial unique index `dataset_live_name_key` on
+  // (owner_group_id, name, type) WHERE is_deleted = false, defined in migration
+  // 20260917030000_dataset_live_name_unique. Prisma cannot express a partial index.
   // @see docs/design/groups/dataset-storage.md — What group scoping changed
-  @@unique([owner_group_id, name, type, is_deleted])
   @@index([owner_group_id])
   @@index([resource_id])
 }
@@ -230,6 +233,7 @@ model user {
   // view under the attribute `group_memberships`.
   // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
   group_membership_history    group_user[]                @relation("user_memberships")
+  active_group_memberships    active_group_user[]         @relation("active_user_memberships")
   memberships_assigned        group_user[]                @relation("membership_assignor")
   memberships_removed         group_user[]                @relation("membership_remover")
   collection_datasets_added   collection_dataset[]        @relation("collection_dataset_adder")
@@ -474,7 +478,7 @@ enum RESOURCE_TYPE {
 
 /// Who may read a group's or a collection's profile. Informational: it never affects who
 /// may read data. PUBLIC includes people who are not signed in.
-/// @see docs/design/groups/profiles.md — 1. Visibility is a column, not a grant
+/// @see docs/design/groups/profiles.md — Two asymmetries
 enum PROFILE_VISIBILITY {
   PRIVATE
   AUTHENTICATED
@@ -494,31 +498,32 @@ model resource {
   collection      collection?
   grants          grant[]
   access_requests access_request[]
-  restrictions    restriction[]
 }
 
 model subject {
   id   String       @id @default(uuid())
   type SUBJECT_TYPE
 
-  user                 user?
-  group                group?
-  grants               grant[]
-  access_requests      access_request[]
-  applied_restrictions restriction[]    @relation("restriction_applier")
-  lifted_restrictions  restriction[]    @relation("restriction_lifter")
+  user            user?
+  group           group?
+  grants          grant[]
+  access_requests access_request[]
 
   recorded_use_conditions dataset_use_condition[] @relation("use_condition_recorder")
 }
 
-// created everyone group and added rules to protect modification in migration script
+// The system principals `Authenticated Users` and `Public` are rows of this table, inserted by
+// migrations. The rule `prevent_system_principal_delete` absorbs a DELETE of either, and the trigger
+// `system_principal_immutable` refuses an UPDATE.
+// @see docs/design/groups/decisions.md — 3. A public principal exists, and `Everyone` is renamed
 model group {
   id          String  @id @default(uuid())
-  name        String  @unique
+  name        String
   slug        String  @unique
   // Immutable directory name for this group's archives. Derived from the slug at creation
   // and never updated, because slug is regenerated whenever the group is renamed and an
-  // archive layout built on it would fragment on the first rename.
+  // archive layout built on it would fragment on the first rename. The trigger
+  // `group_archive_key_immutable` refuses any UPDATE that changes it.
   // @see docs/design/groups/dataset-storage.md — Archival
   archive_key String  @unique
   description String?
@@ -527,10 +532,11 @@ model group {
   created_at  DateTime  @default(now()) @db.Timestamp(6)
   updated_at  DateTime  @default(now()) @updatedAt @db.Timestamp(6)
   archived_at DateTime? @db.Timestamp(6)
-  // Denormalisation of "has an open ARCHIVED restriction", kept for listings, the archived
-  // filter, and the UI badge. The restriction table is what evaluation reads; these two are
-  // written in the same transaction and a test asserts they agree.
-  // @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
+  // Whether this group is archived. This column is the authority: the group's state rules
+  // read it, and every service asks them inside the transaction that makes a change, after
+  // taking the row FOR UPDATE. Archiving covers this group and the datasets and collections
+  // it owns; a sub-group keeps its own state until somebody archives it.
+  // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
   is_archived Boolean   @default(false)
   version     Int       @default(1) // For optimistic concurrency control
 
@@ -540,32 +546,48 @@ model group {
 
   // Profile. Informational only: none of these fields is read by any authorization policy
   // except profile_visibility, which decides who may read the profile itself.
-  // @see docs/design/groups/profiles.md — Schema
+  // @see docs/design/groups/profiles.md — The columns
   tagline            String?            @db.VarChar(120)
   about_md           String?
-  // Object-store key for the profile picture, not a URL. Null renders the group icon.
-  avatar_key         String?
   profile_visibility PROFILE_VISIBILITY @default(PRIVATE)
 
+  // The parent group, or null for a root. This column is the authority for parentage and
+  // group_closure is derived from it; createGroup writes both in one transaction. It is what
+  // the sibling-name uniqueness index is keyed on.
+  // @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+  parent_id String?
+
   // Relations
-  restrictions      restriction[]
-  members           group_user[]
-  ancestor_edges    group_closure[]             @relation("group_descendants")
-  descendant_edges  group_closure[]             @relation("group_ancestors")
-  owned_datasets    dataset[]
-  owned_collections collection[]
-  contributions     user_dataset_contribution[]
+  membership_history group_user[]
+  members            active_group_user[]
+  parent             group?                      @relation("group_parent", fields: [parent_id], references: [id], onDelete: Restrict)
+  children           group[]                     @relation("group_parent")
+  ancestor_edges     group_closure[]             @relation("group_descendants")
+  descendant_edges   group_closure[]             @relation("group_ancestors")
+  owned_datasets     dataset[]
+  owned_collections  collection[]
+  contributions      user_dataset_contribution[]
   // Restrict: prevents deleting a subject row directly while this group still references it.
   // Reverse cascade (group deleted → subject deleted) is enforced via a DB trigger:
   //   AFTER DELETE ON "group" FOR EACH ROW: DELETE FROM subject WHERE id = OLD.id
-  subject           subject                     @relation(fields: [id], references: [id], onDelete: Restrict)
-  issued_grants     grant[]                     @relation("grant_issuing_authority")
-  revoked_grants    grant[]                     @relation("grant_revoking_authority")
+  subject            subject                     @relation(fields: [id], references: [id], onDelete: Restrict)
+  issued_grants      grant[]                     @relation("grant_issuing_authority")
+  revoked_grants     grant[]                     @relation("grant_revoking_authority")
 
   affiliated_datasets dataset_affiliation[] @relation("dataset_affiliation_group")
   import_sources      import_source[]
   groupInvitations    group_invitation[]
 
+  // Names are unique among siblings, not system-wide, so two centres may each hold a group
+  // called "Microscopy Core" without either being able to discover the other.
+  // Unique index `group_parent_id_name_key` on (parent_id, name) NULLS NOT DISTINCT, defined
+  // in migration 20260917050000_group_sibling_name_uniqueness. Prisma cannot express
+  // NULLS NOT DISTINCT, which is what constrains root groups: without it Postgres treats each
+  // null parent as distinct and two roots could share a name. The @@unique below declares the
+  // index so that `migrate dev` does not drop it as drift; the clause itself is not drift.
+  // @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+  @@unique([parent_id, name], map: "group_parent_id_name_key")
+  @@index([parent_id])
   @@index([profile_visibility])
 }
 
@@ -596,7 +618,8 @@ model group_closure {
 // reviving the old one, so the gap in membership stays visible.
 //
 // Read through the `active_group_user` view rather than this table wherever the question is
-// "who is a member now?". The view applies both closing conditions.
+// "who is a member now?". The view applies both closing conditions. `group.members` reads the
+// view; `group.membership_history` reads this table.
 //
 // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
 model group_user {
@@ -664,7 +687,7 @@ enum GROUP_MEMBER_ROLE {
 
 // No EXPIRED member. Expiry is the computed condition `status = 'PENDING' AND expires_at <
 // now()`, so expires_at stays the only thing that decides, and no job has to catch up with it.
-// @see docs/design/groups/invitations.md — Data Model
+// @see docs/design/groups/invitations.md — Stale invitations and failures
 enum INVITATION_STATUS {
   PENDING
   ACCEPTED
@@ -673,6 +696,7 @@ enum INVITATION_STATUS {
 
 model user_dataset_contribution {
   id         Int      @id @default(autoincrement())
+  // A CHECK (`user_dataset_contribution_group_not_system_principal`) refuses a system principal.
   group_id   String
   user_id    String
   dataset_id String
@@ -699,7 +723,8 @@ model collection {
   description String?
   version     Int     @default(1) // For optimistic concurrency control
 
-  // Ownership (single owning group)
+  // Ownership (single owning group). A CHECK (`collection_owner_not_system_principal`) refuses
+  // a system principal.
   owner_group_id String
   owner_group    group  @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
 
@@ -714,17 +739,18 @@ model collection {
 
   // Profile. A collection carries no picture; it is displayed inside its owning group's
   // identity and a second logo competes with it.
-  // @see docs/design/groups/profiles.md — Schema
+  // @see docs/design/groups/profiles.md — The columns
   tagline            String?            @db.VarChar(120)
   about_md           String?
   profile_visibility PROFILE_VISIBILITY @default(PRIVATE)
 
   // Relations
-  datasets collection_dataset[]
+  dataset_history collection_dataset[]
+  datasets        active_collection_dataset[]
   // Restrict: prevents deleting a resource row directly while this collection still references it.
   // Reverse cascade (collection deleted → resource deleted) is enforced via a DB trigger:
   //   AFTER DELETE ON "collection" FOR EACH ROW: DELETE FROM resource WHERE id = OLD.id
-  resource resource             @relation(fields: [id], references: [id], onDelete: Restrict)
+  resource        resource                    @relation(fields: [id], references: [id], onDelete: Restrict)
 
   @@index([owner_group_id])
   @@index([is_archived])
@@ -740,6 +766,8 @@ model collection {
 // At most one open row per (collection_id, dataset_id), enforced by the partial unique index
 // `collection_dataset_one_open_membership` in the migration SQL. Read through the
 // `active_collection_dataset` view wherever the question is "what is in this collection now?".
+// `collection.datasets` and `dataset.collections` read the view; the `_history` relations read
+// this table.
 //
 // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
 model collection_dataset {
@@ -813,6 +841,8 @@ model grant {
   // Useful for: transfer review ("which grants were issued under the prior owner?"),
   // audit queries ("all grants issued under Group X's authority"), and provenance explanation.
   // NULL means the grant was issued by a platform admin acting outside any group's authority.
+  // A CHECK (`grant_authority_not_system_principal`) refuses a system principal here and in
+  // revoking_authority_id.
   issuing_authority_id String?
   issuing_authority    group?  @relation(fields: [issuing_authority_id], references: [id], onDelete: SetNull, name: "grant_issuing_authority")
 
@@ -892,23 +922,6 @@ model grant_access_type {
 /// Seeded, and effectively immutable after initial config. The graph must stay acyclic;
 /// a test asserts that.
 /// @see docs/design/groups/decisions.md — 7. Access types imply one another
-/// A reason some action is blocked, independent of any grant.
-///
-/// Evaluation is `allowed = no restriction blocks this AND some grant permits it`. A
-/// restriction never cancels a grant and never references one, so adding a restriction can
-/// only narrow access and the order two are applied in does not matter.
-///
-/// `liftable` is a property of the type rather than of a row. ARCHIVED can be lifted by a
-/// platform admin. A future agreement-based restriction should not be liftable at all,
-/// only satisfiable.
-/// @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
-model restriction_type {
-  name        String  @id
-  description String
-  liftable    Boolean
-
-  restrictions restriction[]
-}
 
 /// A condition the donors consented to, recorded on a dataset at registration.
 ///
@@ -974,7 +987,7 @@ model dataset_funding {
 
   /// One row per award per dataset, enforced by two partial unique indexes that exist only
   /// in the migration: Prisma does not model a partial unique index, and declaring a plain
-  /// three-column one here would produce permanent drift. The restriction table does the same.
+  /// three-column one here would produce permanent drift.
   @@index([funder])
 }
 
@@ -991,7 +1004,8 @@ model dataset_affiliation {
   id         String @id @default(dbgenerated("(gen_random_uuid())::text"))
   dataset_id Int
 
-  /// A group on this platform. Mutually exclusive with `organization`.
+  /// A group on this platform. Mutually exclusive with `organization`. A CHECK
+  /// (`dataset_affiliation_group_not_system_principal`) refuses a system principal.
   group_id     String?
   /// An organisation with no presence here. Mutually exclusive with `group_id`.
   organization String?
@@ -1006,39 +1020,6 @@ model dataset_affiliation {
 
   @@index([dataset_id])
   @@index([group_id])
-}
-
-/// One restriction in force, attached to either a group or a resource.
-///
-/// A restriction on a group applies to the group, its descendants, and the resources those
-/// groups govern. A restriction on a resource applies to that resource alone.
-///
-/// Rows are closed rather than deleted, the same way memberships are, so the history of
-/// what was restricted and by whom survives lifting.
-/// @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
-model restriction {
-  id        String @id @default(dbgenerated("(gen_random_uuid())::text"))
-  type_name String
-
-  /// Exactly one of these is set; a CHECK constraint enforces that.
-  group_id    String?
-  resource_id String?
-
-  applied_at DateTime  @default(now()) @db.Timestamp(6)
-  applied_by String?
-  lifted_at  DateTime? @db.Timestamp(6)
-  lifted_by  String?
-  reason     String?
-
-  type     restriction_type @relation(fields: [type_name], references: [name], onDelete: Restrict)
-  group    group?           @relation(fields: [group_id], references: [id], onDelete: Cascade)
-  resource resource?        @relation(fields: [resource_id], references: [id], onDelete: Cascade)
-  applier  subject?         @relation("restriction_applier", fields: [applied_by], references: [id], onDelete: SetNull)
-  lifter   subject?         @relation("restriction_lifter", fields: [lifted_by], references: [id], onDelete: SetNull)
-
-  @@index([group_id, lifted_at])
-  @@index([resource_id, lifted_at])
-  @@index([type_name])
 }
 
 model grant_access_type_implication {
@@ -1306,8 +1287,9 @@ model import_source {
 
   // The group whose members may browse and import from this source. Nullable: a source with
   // no group stays reachable through the legacy browse routes, which are global. The v2
-  // routes serve only sources that name a group.
-  // @see docs/design/groups/dataset-creation-plan.md — B1
+  // routes serve only sources that name a group. A CHECK
+  // (`import_source_owner_not_system_principal`) refuses a system principal.
+  // @see docs/design/groups/dataset-creation.md — Import sources are visible to everyone
   owner_group_id String?
   owner_group    group?  @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
 
@@ -1373,4 +1355,39 @@ enum ALERT_TYPE {
   INFO
   WARNING
   ERROR
+}
+
+// The views below are created by migrations. These blocks only let Prisma read them, so a
+// relation named for current state (`group.members`, `collection.datasets`,
+// `dataset.collections`) reads the view, and history is asked for by its own name.
+// @see docs/design/groups/access-model.md — Derived relations
+
+// Memberships in force: not removed, and not past valid_until.
+view active_group_user {
+  id          String            @unique
+  group_id    String
+  user_id     String
+  role        GROUP_MEMBER_ROLE
+  assigned_at DateTime          @db.Timestamp(6)
+  assigned_by String?
+  valid_until DateTime?         @db.Timestamp(6)
+  removed_at  DateTime?         @db.Timestamp(6)
+  removed_by  String?
+
+  group group @relation(fields: [group_id], references: [id])
+  user  user  @relation("active_user_memberships", fields: [user_id], references: [subject_id])
+}
+
+// Datasets currently in a collection: not removed.
+view active_collection_dataset {
+  id            String    @unique
+  collection_id String
+  dataset_id    String
+  added_at      DateTime  @db.Timestamp(6)
+  added_by      String?
+  removed_at    DateTime? @db.Timestamp(6)
+  removed_by    String?
+
+  collection collection @relation(fields: [collection_id], references: [id])
+  dataset    dataset    @relation(fields: [dataset_id], references: [resource_id])
 }

@@ -16,7 +16,7 @@ const {
  * so a crashed run leaves rows that are obviously orphaned and a later run cannot collide
  * with them.
  *
- * @see docs/design/groups/e2e-test-plan.md — Build the world, borrow the people
+ * @see docs/design/groups/e2e-test-flows.md — How the suite builds its world
  */
 
 /** Six accounts to borrow, and the number is the size of the assigned cast. */
@@ -170,10 +170,9 @@ async function buildWorld(runId) {
       name: `${prefix}-${spec.suffix}`,
       description: `Fixture collection for end-to-end run ${runId}.`,
       owner_group_id: groups[spec.group].id,
-      // `dataset_ids` are dataset *resource* UUIDs despite the name — the route validates
-      // `isUUID` and the handler matches on `resource_id`. `dataset.id` is an integer and is
-      // rejected here.
-      dataset_ids: spec.datasets.map((k) => datasets[k].resource_id),
+      // The route validates `isUUID` and matches on `resource_id`. `dataset.id` is an integer
+      // and is rejected here.
+      dataset_resource_ids: spec.datasets.map((k) => datasets[k].resource_id),
     });
   }
 

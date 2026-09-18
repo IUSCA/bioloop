@@ -2,13 +2,13 @@ const { test, expect } = require('../fixtures');
 const { expectRefused, expectAllowed } = require('../assertions/parity');
 
 /**
- * Phase 1 — the harness.
+ * The harness.
  *
  * Proves the three things every later spec rests on: a world gets built, a person signs in
  * as themselves rather than as a platform admin, and the API agrees with the page about who
  * may reach what. It is not a flow from the flows page; it is the floor those flows stand on.
  *
- * @see docs/design/groups/e2e-test-plan.md — Phase 1
+ * @see docs/design/groups/e2e-test-flows.md — How the suite builds its world
  */
 
 test('the world is built, and its shape is what the flows assume', async ({ world }) => {
@@ -36,22 +36,25 @@ test('the world is built, and its shape is what the flows assume', async ({ worl
 test('a group admin signs in as themselves, not as a platform admin', async ({ as }) => {
   const alice = await as('alice');
 
-  // `/v2/users/me` answers `{ user, uiPersona }` — the profile is nested, and the persona
-  // is the server's own answer to "what kind of caller is this".
+  // `/v2/users/me` answers `{ user, is_platform_admin, admin_group_count, oversight_group_count }`.
+  // The profile is nested, and the three facts are the server's answer to "what kind of caller is this".
   const me = await alice.api.get('/v2/users/me');
   expect(me.user.username).toBe(alice.person.username);
 
   // The engine allows a platform admin every action before any policy runs, so a suite
   // driven as one exercises nothing. Alice must not be one.
   expect(me.user.roles || []).not.toContain('admin');
-  expect(me.uiPersona).toBe('group_admin');
+  expect(me.is_platform_admin).toBe(false);
+  expect(me.admin_group_count).toBeGreaterThan(0);
 });
 
 test('the zero-access user reaches none of this run\'s resources', async ({ world, as }) => {
   const quinn = await as('quinn');
 
   const me = await quinn.api.get('/v2/users/me');
-  expect(me.uiPersona).toBe('standard_user');
+  expect(me.is_platform_admin).toBe(false);
+  expect(me.admin_group_count).toBe(0);
+  expect(me.oversight_group_count).toBe(0);
 
   // Scoped to this run's own dataset rather than to an empty listing. The seed grants both
   // system principals access to seeded datasets on purpose, so "sees nothing at all" is not
@@ -75,7 +78,7 @@ test('membership rises through the hierarchy, and authority does not', async ({ 
   const [carol, alice] = await Promise.all([as('carol'), as('alice')]);
 
   // Carol is a direct member of the sub-lab only, and a transitive member above it.
-  const carolGroups = await carol.api.post('/groups/search', { scope: 'all', limit: 100 });
+  const carolGroups = await carol.api.post('/groups/search', { scope: 'visible', limit: 100 });
   const carolNames = carolGroups.data.map((g) => g.name);
   expect(carolNames).toEqual(expect.arrayContaining([
     world.groups.subLab.name, world.groups.lab.name, world.groups.center.name,

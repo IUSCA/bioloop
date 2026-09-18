@@ -2,55 +2,14 @@ const createError = require('http-errors');
 const _ = require('lodash/fp');
 
 const asyncHandler = require('@/middleware/asyncHandler');
-const { authorizeWithFilters } = require('./authorize');
-const Policy = require('./policies/Policy');
-const { evaluateCapabilitySet, deriveCallerRole } = require('./capabilities');
+const { PrismaHydrator } = require('./hydrators/PrismaHydrator');
+const { createDecisionPipeline, filterRestrictedCapabilities } = require('./pipeline');
 
 /**
  * Initializes the policy execution context with request-scoped caches.
  * This middleware should be added early in the request processing pipeline
  * to ensure all authorization checks can benefit from caching.
  */
-/**
- * Turn off the capabilities a restriction blocks.
- *
- * `evaluateCapabilitySet` returns a map of action name to boolean, not a list, and the
- * shape has to survive: `toCapabilitiesArray` and the caller-role derivation both read it.
- * So a blocked action is set to false rather than removed.
- *
- * Only actions that are currently true are checked, because a capability the policy already
- * denied cannot be blocked any further. The checker short-circuits on reading actions
- * without touching the database, so most entries cost nothing.
- *
- * @param {Object} params
- * @param {Object<string, boolean>} params.capabilities
- * @returns {Promise<Object<string, boolean>>}
- */
-async function filterRestrictedCapabilities({
-  capabilities, resourceType, resourceId, preFetchedResource, restrictionChecker,
-}) {
-  const filtered = { ...capabilities };
-
-  for (const [action, granted] of Object.entries(filtered)) {
-    if (granted) {
-      // eslint-disable-next-line no-await-in-loop
-      const blockedBy = await restrictionChecker({
-        resourceType, action, resourceId, preFetchedResource,
-      });
-      if (blockedBy) filtered[action] = false;
-    }
-  }
-  return filtered;
-}
-
-/**
- * The attribute rule the platform-admin short-circuit evaluates with: everything, always.
- *
- * `createFilterFunction` treats an empty filter list as deny-all, so a short-circuit that
- * passed no rules would grant the action and then hand back an object with no fields.
- */
-const ALL_ATTRIBUTES = [{ policy: Policy.always, attribute_filters: ['*'] }];
-
 function initializePolicyContext(req, res, next) {
   // check if req has policyContext and if not initialize it to an empty object
   if (!req.policyContext) {
@@ -63,25 +22,37 @@ function initializePolicyContext(req, res, next) {
     };
     if (req.user) {
       // pre-populate user cache with the requester if available
-      req.policyContext.cache.user.set(req.user.subject_id, req.user);
+      req.policyContext.cache.user.set(PrismaHydrator.cacheKey('user', req.user.subject_id), req.user);
     }
   }
   next();
 }
 
 /**
+ * The message a refusal carries. A 404 says nothing a missing resource would not.
+ *
+ * `blockedBy` is set by whatever restriction checker the application injects. No builtin
+ * checker sets it, so the message is `Forbidden` until a restriction type is specified. A
+ * resource whose state refuses the action is answered by the service with 409, not here.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ */
+function refusalMessage({ status, blockedBy }) {
+  if (status === 404) return 'Not Found';
+  return blockedBy ? `Blocked by a ${blockedBy} restriction` : 'Forbidden';
+}
+
+/**
+ * The authorization middleware factory. Every decision goes through `createDecisionPipeline`,
+ * the same function `authorizeAction` calls.
+ *
  * @param {PolicyRegistry} policyRegistry
  * @param {HydratorRegistry} hydratorRegistry
  * @param {Object} [events]
- * @param {Function} [restrictionChecker] - Optional
- *   `async ({resourceType, action, resourceId, preFetchedResource}) => string|null`.
- *   Returns the name of a restriction that blocks this action, or null. Injected rather
- *   than imported so the core engine stays free of any knowledge of restrictions.
- *   @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
- * @param {Object} [platformAdmin] - Optional `{ policy, callerRole }`. When the policy grants,
- *   every action is allowed without consulting the action's own policy. Injected for the same
- *   reason as the restriction checker: the role name and the policy are application facts.
- *   @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
+ * @param {Function} [restrictionChecker] - see `createDecisionPipeline`
+ * @param {Object} [platformAdmin] - see `createDecisionPipeline`
+ * @param {Function} [expandPath] - see `createDecisionPipeline`
+ * @param {Object} [options]
+ * @param {string[]} [options.concealRefusalsWithoutStanding] - see `createDecisionPipeline`
  */
 function createAuthorizationMiddlewareFunction(
   policyRegistry,
@@ -89,27 +60,32 @@ function createAuthorizationMiddlewareFunction(
   events,
   restrictionChecker = null,
   platformAdmin = null,
+  expandPath = null,
+  { concealRefusalsWithoutStanding = [] } = {},
 ) {
+  const decide = createDecisionPipeline({
+    policyRegistry,
+    hydratorRegistry,
+    events,
+    restrictionChecker,
+    platformAdmin,
+    expandPath,
+    concealRefusalsWithoutStanding,
+  });
+
   return _.curry((resourceType, action, {
     requesterFn = (req) => req.user, // default requester extractor from req.user
     resourceIdFn = (req) => req.params?.id, // default resource ID extractor from req.params.id
     preFetchedResourceFn = null, // optional fn(req) => object with pre-fetched resource attributes (e.g. for create actions where the resource does not yet exist)
     shouldDeriveCapabilities = false, // whether to derive capabilities and include them in the policy execution context
-    shouldDeriveCallerRole = false, // whether to derive caller role and include it in the policy execution context
+    shouldDeriveStanding = false, // whether to derive the caller's standing, as req.permission.standing
   } = {}) => {
-    // get the policy
-    // fail fast if policy container or policy is not found to avoid returning a middleware that always fails at runtime
+    // Fail at setup when the container or the action is missing, rather than returning a
+    // middleware that fails on every request.
     const policyContainer = policyRegistry.get(resourceType);
-    const policy = policyContainer.getPolicy(action);
-    const attributeRules = policyContainer.getAttributeRules(action);
+    policyContainer.getPolicy(action);
 
     const middleware = asyncHandler(async (req, res, next) => {
-    // extract identifiers from the request
-      const user = requesterFn(req);
-      const userId = user?.subject_id;
-      const resourceId = resourceIdFn(req);
-      const identifiers = { user: userId, resource: resourceId };
-
       const policyExecutionContext = req.policyContext ?? {
         cache: {
           user: new Map(),
@@ -118,109 +94,22 @@ function createAuthorizationMiddlewareFunction(
         },
       };
 
-      const preFetchedResource = preFetchedResourceFn ? preFetchedResourceFn(req) : undefined;
-
-      // allowed = no restriction blocks this AND some grant permits it.
-      // The restriction half runs first, because it is cheaper and because a blocked action
-      // should say what blocked it rather than report a generic authorization failure.
-      if (restrictionChecker) {
-        const blockedBy = await restrictionChecker({
-          resourceType, action, resourceId, preFetchedResource,
-        });
-        if (blockedBy) {
-          return next(createError(403, `Blocked by a ${blockedBy} restriction`));
-        }
-      }
-
-      // A platform admin is allowed every action, so the action's own policy is not
-      // consulted. This runs after the restriction check on purpose: an archived group is
-      // archived for a platform admin too.
-      //
-      // The result of this evaluation is used as the permission directly. It is given one
-      // attribute rule matching everything, because an empty rule set produces a filter that
-      // strips every field rather than one that passes them through.
-      // @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
-      if (platformAdmin) {
-        const adminResult = await authorizeWithFilters({
-          policy: platformAdmin.policy,
-          attributeRules: ALL_ATTRIBUTES,
-          identifiers,
-          registry: hydratorRegistry,
-          policyExecutionContext,
-          preFetched: {
-            user: req.user,
-            resource: preFetchedResource,
-            context: { req },
-          },
-        });
-
-        if (adminResult.granted) {
-          req.permission = adminResult;
-
-          if (shouldDeriveCapabilities) {
-            const capabilities = Object.fromEntries(
-              policyContainer.getActionNames().map((name) => [name, true]),
-            );
-            // Restrictions still bite. An admin is offered no button an archived
-            // resource would refuse.
-            req.permission.capabilities = restrictionChecker
-              ? await filterRestrictedCapabilities({
-                capabilities, resourceType, resourceId, preFetchedResource, restrictionChecker,
-              })
-              : capabilities;
-          }
-          if (shouldDeriveCallerRole) {
-            req.permission.callerRole = platformAdmin.callerRole;
-          }
-
-          return next();
-        }
-      }
-
-      // call authorizeWithFilters
-      const result = await authorizeWithFilters({
-        policy,
-        attributeRules,
-        identifiers,
-        registry: hydratorRegistry,
+      const permission = await decide(resourceType, action, {
+        identifiers: { user: requesterFn(req)?.subject_id, resource: resourceIdFn(req) },
         policyExecutionContext,
         preFetched: {
           user: req.user,
-          resource: preFetchedResource,
-          context: {
-            req,
-          },
+          resource: preFetchedResourceFn ? preFetchedResourceFn(req) : undefined,
+          context: { req },
         },
-        events,
+        shouldDeriveCapabilities,
+        shouldDeriveStanding,
       });
-      if (!result.granted) {
-        return next(createError(403, 'Forbidden'));
+      if (!permission.granted) {
+        return next(createError(permission.status, refusalMessage(permission)));
       }
-      req.permission = result;
-
-      if (shouldDeriveCapabilities) {
-        const capabilities = await evaluateCapabilitySet({
-          policyContainer,
-          identifiers,
-          hydratorRegistry,
-          policyExecutionContext,
-        });
-        // A capability the caller could exercise but a restriction blocks is not a
-        // capability. Filtering here keeps the UI from offering a button that 403s.
-        req.permission.capabilities = restrictionChecker
-          ? await filterRestrictedCapabilities({
-            capabilities, resourceType, resourceId, preFetchedResource, restrictionChecker,
-          })
-          : capabilities;
-      }
-      if (shouldDeriveCallerRole) {
-        const callerRole = await deriveCallerRole({
-          policyContainer, identifiers, hydratorRegistry, policyExecutionContext,
-        });
-        req.permission.callerRole = callerRole;
-      }
-
-      next();
+      req.permission = permission;
+      return next();
     });
 
     // Which policy this middleware enforces, readable from the router stack. An
@@ -237,4 +126,5 @@ module.exports = {
   filterRestrictedCapabilities,
   initializePolicyContext,
   createAuthorizationMiddlewareFunction,
+  refusalMessage,
 };

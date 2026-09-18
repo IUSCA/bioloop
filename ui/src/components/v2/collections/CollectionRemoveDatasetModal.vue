@@ -46,8 +46,8 @@
             class="mt-0.5 text-sm text-amber-700 dark:text-amber-400/80 leading-5"
           >
             Removing a dataset narrows this collection's authorization
-            footprint. Subjects whose access is <em>solely</em> derived from
-            this collection's grants will
+            footprint. Users and groups whose access is <em>solely</em> derived
+            from this collection's permissions will
             <strong class="font-semibold">immediately lose access</strong> to
             the dataset. This operation is audited.
           </p>
@@ -97,9 +97,9 @@
               class="shrink-0 mt-0.5 text-base"
             />
             <span>
-              Subjects whose access derives <em>exclusively</em> from this
-              collection's access permissions will lose access to this dataset
-              immediately.
+              Users and groups whose access derives <em>exclusively</em> from
+              this collection's access permissions will lose access to this
+              dataset immediately.
             </span>
           </li>
           <li
@@ -110,8 +110,8 @@
               class="shrink-0 mt-0.5 text-base"
             />
             <span>
-              Dataset ownership and direct grants are unaffected — only this
-              collection's membership is changed.
+              Dataset ownership and direct permissions are unaffected — only
+              this collection's membership is changed.
             </span>
           </li>
           <li

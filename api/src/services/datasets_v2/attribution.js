@@ -1,4 +1,5 @@
 const prisma = require('@/db');
+const { assertNotSystemPrincipal } = require('@/services/system_principals');
 
 /**
  * Attribution: who to credit for a dataset, and who funded the work.
@@ -17,17 +18,17 @@ const prisma = require('@/db');
 /**
  * Everything a citation for this dataset needs.
  *
- * @param {number} dataset_id
+ * @param {number} dataset_row_id
  * @returns {Promise<{funding: Array, affiliations: Array}>}
  */
-async function listAttribution(dataset_id) {
+async function listAttribution(dataset_row_id) {
   const [funding, affiliations] = await Promise.all([
     prisma.dataset_funding.findMany({
-      where: { dataset_id },
+      where: { dataset_id: dataset_row_id },
       orderBy: [{ funder: 'asc' }, { award_number: 'asc' }],
     }),
     prisma.dataset_affiliation.findMany({
-      where: { dataset_id },
+      where: { dataset_id: dataset_row_id },
       orderBy: { created_at: 'asc' },
       include: { group: { select: { id: true, name: true, slug: true } } },
     }),
@@ -40,16 +41,16 @@ async function listAttribution(dataset_id) {
  * Record who funded the work. Recording the same award twice is a mistake rather than a
  * second fact, so a repeat is skipped.
  *
- * @param {number} dataset_id
+ * @param {number} dataset_row_id
  * @param {Array<{funder: string, award_number?: string, note?: string}>} sources
  * @returns {Promise<number>} how many rows were added
  */
-async function recordFunding(dataset_id, sources) {
+async function recordFunding(dataset_row_id, sources) {
   if (!sources?.length) return 0;
 
   const { count } = await prisma.dataset_funding.createMany({
     data: sources.map(({ funder, award_number, note }) => ({
-      dataset_id,
+      dataset_id: dataset_row_id,
       funder,
       award_number: award_number ?? null,
       note: note ?? null,
@@ -62,25 +63,27 @@ async function recordFunding(dataset_id, sources) {
 /**
  * Record an organisation to credit.
  *
- * Exactly one of `group_id` and `organization` may be given. A database CHECK enforces it as
- * well; this reports the mistake as an argument error rather than as a constraint violation.
+ * Exactly one of `group_id` and `organization` may be given, and the group may not be a system
+ * principal. A database CHECK enforces each as well. This reports the first as an argument error
+ * and the second as a 409, rather than either as a constraint violation.
  *
- * @param {number} dataset_id
+ * @param {number} dataset_row_id
  * @param {Array<{group_id?: string, organization?: string, role?: string}>} affiliations
  * @returns {Promise<number>} how many rows were added
  */
-async function recordAffiliations(dataset_id, affiliations) {
+async function recordAffiliations(dataset_row_id, affiliations) {
   if (!affiliations?.length) return 0;
 
   affiliations.forEach(({ group_id, organization }) => {
     if ((group_id == null) === (organization == null)) {
       throw new Error('An affiliation names exactly one of a group or an organization');
     }
+    assertNotSystemPrincipal(group_id, 'affiliation');
   });
 
   const { count } = await prisma.dataset_affiliation.createMany({
     data: affiliations.map(({ group_id, organization, role }) => ({
-      dataset_id,
+      dataset_id: dataset_row_id,
       group_id: group_id ?? null,
       organization: organization ?? null,
       role: role ?? null,

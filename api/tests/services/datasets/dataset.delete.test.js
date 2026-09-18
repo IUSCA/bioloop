@@ -88,6 +88,48 @@ describe('soft delete leaves the row in place', () => {
     expect(resource).not.toBeNull();
   });
 
+  // Names are unique among live rows only, so deleted rows of one name may accumulate.
+  // @see docs/design/groups/dataset-storage.md — What group scoping changed
+  test('a second dataset with the same name in the same group can be deleted too', async () => {
+    const name = `Test Dataset ${Date.now()}_del_same_name`;
+
+    const first = await createTestDataset(group.id, '', { name });
+    datasetsToDelete.push(first.id);
+    await datasetService.softDelete(first.id, actor.id);
+
+    // The name is free again once the first is deleted, so the group may register it anew.
+    const second = await createTestDataset(group.id, '', { name });
+    datasetsToDelete.push(second.id);
+    await datasetService.softDelete(second.id, actor.id);
+
+    const after = await prisma.dataset.findMany({
+      where: { id: { in: [first.id, second.id] } },
+      select: { name: true, is_deleted: true },
+    });
+    // Both deleted, and neither renamed to make room for the other.
+    expect(after).toEqual([
+      { name, is_deleted: true },
+      { name, is_deleted: true },
+    ]);
+  });
+
+  test('two live datasets of the same name and type in one group are still refused', async () => {
+    const name = `Test Dataset ${Date.now()}_del_live_dup`;
+    const first = await createTestDataset(group.id, '', { name });
+    datasetsToDelete.push(first.id);
+
+    // One nested create, so the refused insert takes its resource row with it. The helper
+    // creates the resource first and would leave it behind.
+    await expect(prisma.dataset.create({
+      data: {
+        name,
+        type: first.type,
+        owner_group: { connect: { id: group.id } },
+        resource: { create: { id: randomUUID(), type: RESOURCE_TYPE.DATASET } },
+      },
+    })).rejects.toMatchObject({ code: 'P2002' });
+  });
+
   test('an archived dataset starts a delete workflow instead of being marked', async () => {
     // Bytes live in the archive, so removing the row without removing them would strand
     // them. The workflow marks the dataset deleted when it succeeds.

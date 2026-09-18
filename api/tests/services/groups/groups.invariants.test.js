@@ -193,8 +193,14 @@ describe('groups - invariants', () => {
     // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
     it('group_memberships drops the row as soon as the member is removed', async () => {
       const g = await newGroup('_closed_authority');
+      // A second admin stays, because removing the last one is refused. @see lastAdmin.test.js
+      const otherAdmin = await createTestUser('_closed_authority_other');
+      usersToDelete.push(otherAdmin.id);
       await groupsService.addGroupMembers(g.id, {
-        user_ids: [memberUser.subject_id], actor_id: actor.subject_id,
+        user_ids: [memberUser.subject_id, otherAdmin.subject_id], actor_id: actor.subject_id,
+      });
+      await groupsService.promoteGroupMemberToAdmin(g.id, {
+        user_id: otherAdmin.subject_id, actor_id: actor.subject_id,
       });
       await groupsService.promoteGroupMemberToAdmin(g.id, {
         user_id: memberUser.subject_id, actor_id: actor.subject_id,
@@ -272,7 +278,9 @@ describe('groups - invariants', () => {
       });
       groupsToDelete.push(g1.id);
 
-      // Second group must fail because `name` has a @unique constraint in the schema
+      // Both groups are roots, and no two roots may share a name: the unique index over
+      // (parent_id, name) carries NULLS NOT DISTINCT, so the two null parents collide.
+      // @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
       await expect(
         groupsService.createGroup({
           data: { name: sameName, description: 'second' },
@@ -285,6 +293,59 @@ describe('groups - invariants', () => {
       const g = await newGroup('_slug_format', { name: `My Test Group Slug${Date.now()}` });
       expect(g.slug).not.toMatch(/\s/);
       expect(g.slug).toBe(g.slug.toLowerCase());
+    });
+  });
+
+  // The key names the directory a group's bundles live in. The slug is regenerated on every
+  // rename, so a layout built on it would fragment; the key is taken from the slug once and
+  // then frozen by the trigger `group_archive_key_immutable`.
+  // @see docs/design/groups/dataset-storage.md — Archival
+  describe('archive_key is frozen at creation', () => {
+    it('refuses an update that changes it, and the row keeps its key', async () => {
+      const g = await newGroup('_archive_key_frozen');
+
+      await expect(
+        prisma.group.update({
+          where: { id: g.id },
+          data: { archive_key: `moved-${Date.now()}` },
+        }),
+      ).rejects.toThrow(/frozen at creation/);
+
+      const after = await prisma.group.findUniqueOrThrow({
+        where: { id: g.id },
+        select: { archive_key: true },
+      });
+      expect(after.archive_key).toBe(g.archive_key);
+    });
+
+    it('does not stand in the way of a rename, which regenerates the slug', async () => {
+      // The guard has to refuse the one write and allow the one it sits next to. A rename is
+      // the operation that moves the slug, and it must leave the key where it was.
+      const g = await newGroup('_archive_key_rename');
+
+      const renamed = await groupsService.updateGroupMetadata(g.id, {
+        data: { name: `Renamed Group ${Date.now()}` },
+        expected_version: g.version,
+        actor_id: actor.subject_id,
+      });
+
+      expect(renamed.slug).not.toBe(g.slug);
+      expect(renamed.archive_key).toBe(g.archive_key);
+    });
+
+    it('allows the same key to be written back', async () => {
+      // The trigger is keyed on the value changing rather than on the column being named, so
+      // an upsert whose update branch carries the whole row is unaffected. All three seeds
+      // write the column in their create branch only, and this is what keeps them free to
+      // stop doing that.
+      const g = await newGroup('_archive_key_rewrite');
+
+      await expect(
+        prisma.group.update({
+          where: { id: g.id },
+          data: { archive_key: g.archive_key },
+        }),
+      ).resolves.toMatchObject({ archive_key: g.archive_key });
     });
   });
 });

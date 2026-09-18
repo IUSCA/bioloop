@@ -395,3 +395,158 @@ describe('projectObject — property-based tests', () => {
     );
   });
 });
+
+describe('projectObject keeps value types and copies containers', () => {
+  it('a negation leaves BigInt and Date values as they are', () => {
+    const when = new Date('2026-09-15T00:00:00Z');
+    const source = { id: 1n, created_at: when, secret: 'x' };
+    const result = projectObject(source, ['*', '!secret']);
+    expect(result).toEqual({ id: 1n, created_at: when });
+    expect(result.created_at).toBeInstanceOf(Date);
+  });
+
+  it("'*' does not share a nested object with the source", () => {
+    const source = { owner: { name: 'lab', email: 'a@b' } };
+    const result = projectObject(source, ['*']);
+    delete result.owner.email;
+    expect(source.owner.email).toBe('a@b');
+  });
+
+  it('a whole subtree named by a path is a copy', () => {
+    const source = { owner: { name: 'lab' }, tags: [{ label: 't' }] };
+    const result = projectObject(source, ['owner', 'tags[*]']);
+    result.owner.name = 'changed';
+    result.tags[0].label = 'changed';
+    expect(source).toEqual({ owner: { name: 'lab' }, tags: [{ label: 't' }] });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Shapes the path does not expect
+//
+// The properties above only generate sources whose shape matches every path. These generate
+// arbitrary trees, where a path can meet null, a primitive, an array, a Date, or a key that
+// exists only on the prototype.
+// ---------------------------------------------------------------------------
+
+const KEYS = ['a', 'b', 'c'];
+const INHERITED_KEYS = ['toString', 'constructor', 'hasOwnProperty', '__proto__', 'length'];
+
+// cSpell: ignore letrec
+/** A tree of plain objects and arrays with null, primitive, and Date leaves. */
+const { tree: arbitraryTree } = fc.letrec((tie) => ({
+  leaf: fc.oneof(
+    fc.constant(null),
+    fc.integer(),
+    fc.string({ maxLength: 3 }),
+    fc.boolean(),
+    fc.date({ noInvalidDate: true }),
+  ),
+  node: fc.oneof(
+    { depthSize: 'small', withCrossShrink: true },
+    tie('leaf'),
+    fc.array(tie('node'), { maxLength: 3 }),
+    fc.dictionary(fc.constantFrom(...KEYS), tie('node'), { maxKeys: 3 }),
+  ),
+  tree: fc.dictionary(fc.constantFrom(...KEYS), tie('node'), { minKeys: 1, maxKeys: 3 }),
+}));
+
+/** A path over the same keys, where any segment may carry `[*]`. */
+const arbitraryPath = fc
+  .array(
+    fc.record({
+      key: fc.constantFrom(...KEYS, ...INHERITED_KEYS),
+      array: fc.boolean(),
+    }),
+    { minLength: 1, maxLength: 3 },
+  )
+  .map((segs) => segs.map(({ key, array }) => (array ? `${key}[*]` : key)).join('.'));
+
+const arbitraryPaths = fc.array(arbitraryPath, { minLength: 1, maxLength: 4 });
+
+function kindOf(value) {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  if (typeof value !== 'object') return 'other';
+  const proto = Object.getPrototypeOf(value);
+  if (proto === Object.prototype || proto === null) return 'record';
+  return 'other';
+}
+
+/**
+ * Asserts that every position present in `result` exists in `source` as an own key and holds
+ * the same kind of value. Returns the first mismatch as a string, or null.
+ */
+function firstKindMismatch(result, source, where = '$') {
+  if (kindOf(result) !== kindOf(source)) {
+    return `${where}: result is ${kindOf(result)}, source is ${kindOf(source)}`;
+  }
+  if (kindOf(result) !== 'record' && kindOf(result) !== 'array') return null;
+  for (const key of Object.keys(result)) {
+    if (!Object.hasOwn(source, key)) return `${where}.${key}: not an own key of the source`;
+    const mismatch = firstKindMismatch(result[key], source[key], `${where}.${key}`);
+    if (mismatch) return mismatch;
+  }
+  return null;
+}
+
+describe('projectObject — shapes the path does not expect', () => {
+  it('never throws, for positive paths or negations', () => {
+    fc.assert(
+      fc.property(arbitraryTree, arbitraryPaths, (source, paths) => {
+        expect(() => projectObject(source, paths)).not.toThrow();
+        expect(() => projectObject(source, ['*', ...paths.map((p) => `!${p}`)])).not.toThrow();
+      }),
+    );
+  });
+
+  it('every value in the result is an own key of the source and the same kind of value', () => {
+    fc.assert(
+      fc.property(arbitraryTree, arbitraryPaths, (source, paths) => {
+        let result;
+        try {
+          result = projectObject(source, paths);
+        } catch {
+          return; // reported by the property above
+        }
+        expect(firstKindMismatch(result, source)).toBeNull();
+      }),
+    );
+  });
+
+  it('a path that reaches null keeps the null', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...KEYS),
+        fc.constantFrom('', '.a', '[*]', '[*].a'),
+        (key, rest) => {
+          expect(projectObject({ [key]: null }, [`${key}${rest}`])).toStrictEqual({ [key]: null });
+        },
+      ),
+    );
+  });
+
+  it('a null array element stays null when a path reaches through it', () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.option(fc.record({ id: fc.integer(), secret: fc.string() }), { nil: null }),
+          { minLength: 1, maxLength: 5 },
+        ),
+        (items) => {
+          const result = projectObject({ items }, ['items[*].id']);
+          expect(result.items).toHaveLength(items.length);
+          items.forEach((item, i) => {
+            expect(result.items[i]).toStrictEqual(item === null ? null : { id: item.id });
+          });
+        },
+      ),
+    );
+  });
+
+  it('a grant with no preset projects source_preset as null, not {}', () => {
+    const grant = { id: 'g1', source_preset: null, source_access_request: null };
+    const paths = ['id', 'source_preset.id', 'source_preset.name', 'source_access_request.requester.name'];
+    expect(projectObject(grant, paths)).toStrictEqual(grant);
+  });
+});

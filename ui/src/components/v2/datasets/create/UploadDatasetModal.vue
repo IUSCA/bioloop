@@ -6,7 +6,7 @@
   A reload still ends the transfer, and the dialog says so rather than leaving the user to
   discover it.
 
-  @see docs/design/groups/dataset-creation-plan.md — C4
+  @see docs/design/groups/dataset-creation.md — The transfer does not live in the dialog
 -->
 <template>
   <VaModal
@@ -334,8 +334,14 @@ async function submit() {
     hide();
   } catch (err) {
     const status = err?.response?.status;
+    // A 409 is not only a name collision any more: an archived owning group refuses the
+    // upload with the same status, so the message decides which happened.
+    // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
     if (status === 409) {
-      toast.error("A dataset with that name already exists in this group");
+      toast.error(
+        err.response.data?.message ||
+          "A dataset with that name already exists in this group",
+      );
     } else if (status === 403) {
       toast.error("You cannot add datasets to that group");
     } else {

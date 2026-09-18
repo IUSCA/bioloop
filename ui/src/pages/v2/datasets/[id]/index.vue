@@ -74,7 +74,7 @@
       >
         <template #tabs>
           <VaTab name="overview">Overview</VaTab>
-          <VaTab name="files" v-if="can('list_files')">
+          <VaTab name="files" v-if="shows('list_files')">
             <span class="flex items-center gap-1.5">
               Files
               <span v-if="counts.files !== null" class="tab-count-badge">
@@ -115,10 +115,7 @@
               </span>
             </span>
           </VaTab>
-          <VaTab
-            name="grants"
-            v-if="can('manage_grants') || callerRole === 'GRANT_HOLDER'"
-          >
+          <VaTab name="grants">
             <span class="flex items-center gap-1.5">
               Access
               <span v-if="counts.grants !== null" class="tab-count-badge">
@@ -161,12 +158,14 @@
           v-if="activeTab === 'overview'"
           :dataset="dataset"
           :counts="counts"
-          :can-edit="can('edit_metadata')"
-          :can-archive="can('archive')"
-          :can-issue-grants="can('manage_grants')"
-          :can-download="can('download')"
-          :can-request-stage="can('request_stage')"
+          :can-edit="shows('edit_metadata')"
+          :can-delete="shows('delete')"
+          :can-issue-grants="shows('manage_grants')"
+          :can-request-access="can('request_access')"
+          :can-download="shows('download')"
+          :can-request-stage="shows('request_stage')"
           :can-view-workflows="can('view_workflows')"
+          :available-actions="availableActionList"
           :can-view-source-datasets="can('view_source_datasets')"
           :can-view-derived-datasets="can('view_derived_datasets')"
           @update="fetchDatasetData"
@@ -178,7 +177,7 @@
         <DatasetFilesTab
           v-else-if="activeTab === 'files'"
           :dataset="dataset"
-          :can-download="can('download')"
+          :can-download="enabled('download')"
         />
 
         <DatasetAssociatedDatasetsTab
@@ -204,29 +203,30 @@
           ref="grantsTabRef"
           v-else-if="activeTab === 'grants' && can('manage_grants')"
           :dataset="dataset"
-          :can-manage-grants="can('manage_grants')"
+          :can-manage-grants="enabled('manage_grants')"
           @count-changed="fetchGrantsCount"
         />
 
-        <!-- A grant holder sees why they can see this dataset, never the grant table. -->
+        <!-- Every other viewer sees why they can see this dataset, never the grant table. -->
         <MyAccessTab
           v-else-if="activeTab === 'grants'"
           resource-type="DATASET"
           :resource-id="dataset.resource_id"
+          :standing="dataset._meta?.standing"
         />
 
         <DatasetRequestsTab
           ref="requestTabRef"
           v-else-if="activeTab === 'requests'"
           :dataset="dataset"
-          :can-review="can('review_access_requests')"
+          :can-review="enabled('review_access_requests')"
           @count-changed="fetchRequestCount"
         />
 
         <DatasetWorkflowsTab
           v-else-if="activeTab === 'workflows'"
           :dataset="dataset"
-          :can-act="can('request_stage') || can('compute')"
+          :can-act="enabled('request_stage') || enabled('compute')"
           @count-changed="(n) => (counts.workflows = n)"
         />
 
@@ -241,8 +241,8 @@
         />
       </div>
 
-      <!-- Archive confirm modal -->
-      <DatasetArchiveConfirmModal
+      <!-- Delete confirm modal -->
+      <DatasetDeleteConfirmModal
         ref="deleteModal"
         :dataset-id="dataset.resource_id"
         :dataset-name="dataset.name"
@@ -255,11 +255,13 @@
 
 <script setup>
 import DatasetType from "@/components/dataset/DatasetType.vue";
+import { useCapabilities } from "@/composables/useCapabilities";
 import constants from "@/constants";
 import AccessRequestService from "@/services/v2/access-requests";
 import CollectionService from "@/services/v2/collections";
 import DatasetService from "@/services/v2/datasets";
 import GrantService from "@/services/v2/grants";
+import { badgeFor } from "@/services/v2/standing";
 import { useNavStore } from "@/stores/nav";
 
 // const route = useRoute();
@@ -287,19 +289,48 @@ const counts = ref({
 const grantsTabRef = ref(null);
 const requestTabRef = ref(null);
 
-const capabilities = computed(
-  () => new Set(dataset.value?._meta?.capabilities ?? []),
+// `can` is the caller's authority and `enabled` adds what the dataset's state admits.
+// @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+const { can, enabled, availableActions } = useCapabilities(dataset);
+
+const callerRole = computed(() =>
+  badgeFor(dataset.value?._meta?.standing, "dataset"),
 );
-const callerRole = computed(() => dataset.value?._meta?.caller_role);
 
 const isUpload = computed(
   () =>
     dataset.value?.create_method === constants.DATASET_CREATE_METHODS.UPLOAD,
 );
 
-function can(action) {
-  return capabilities.value.has(action);
+/**
+ * Whether a control the state withholds is hidden rather than disabled.
+ *
+ * Two states reach a dataset and they want different treatment. An archived owning group is
+ * reversible, so its controls stay visible and disabled: the caller still holds the authority
+ * and will hold it again. Deletion is final — a dataset has no unarchive — so a control that
+ * can never work again is not worth showing, and a disabled Download that will stay disabled
+ * forever reads as a fault in the page.
+ *
+ * `is_deleted` chooses the presentation only. Whether an action is permitted is
+ * `available_actions`, and this never re-derives it: a deleted dataset still shows every
+ * control whose action the state admits, such as viewing metadata or the audit log.
+ *
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ */
+const stateIsFinal = computed(() => dataset.value?.is_deleted === true);
+
+/**
+ * A control's authority, under the display rule: hidden once deletion has settled the
+ * question, and otherwise left to `enabled` to disable.
+ */
+function shows(action) {
+  return stateIsFinal.value ? enabled(action) : can(action);
 }
+
+/** The state's answer as the Overview tab takes it: a list, or null when unanswered. */
+const availableActionList = computed(() =>
+  availableActions.value ? [...availableActions.value] : null,
+);
 
 function setNavBreadcrumbs() {
   const items = [{ label: "Datasets", to: "/v2/datasets" }];
@@ -316,7 +347,7 @@ async function fetchDatasetData() {
     setNavBreadcrumbs(data);
     // A caller who may list files receives num_files. A dataset never counted has none, and
     // reads as 0. Everyone else gets no count, so no badge and no card.
-    counts.value.files = can("list_files") ? (data.num_files ?? 0) : null;
+    counts.value.files = shows("list_files") ? (data.num_files ?? 0) : null;
     await fetchCounts();
   } catch (err) {
     error.value = err;

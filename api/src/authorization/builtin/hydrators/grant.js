@@ -27,4 +27,42 @@ grantHydrator.registerVirtualAttribute('resource_type', async ({ id, hydrator })
   return grant.resource.type;
 });
 
+/**
+ * Whether the grant's subject is a user or a group.
+ *
+ * `isSubject`, `isAdminOfSubjectGroup`, and `hasOversightOfSubjectGroup` read it, and it is not
+ * a column on `grant`: the type lives on the `subject` row. A route that pre-fetches
+ * `subject_type` from its URL never calls this loader. The boot check still requires it, because
+ * every declared requirement must be one a hydrator can supply.
+ * @see docs/contributing/techniques/authorization-engine.md — Requirements no hydrator can supply
+ */
+grantHydrator.registerVirtualAttribute('subject_type', async ({ id, hydrator }) => {
+  const grant = await hydrator.prisma.grant.findUniqueOrThrow({
+    where: { id },
+    select: { subject: { select: { type: true } } },
+  });
+  return grant.subject.type;
+});
+
+/**
+ * The group that owns the dataset or collection the grant is on.
+ *
+ * `isAdminOfResourceGroup` and `hasOversightOfResourceGroup` compare the caller's groups with
+ * it. Routes that authorize before a grant exists pre-fetch `resource_id`, and the grant
+ * routes keyed by a resource do the same, so the loader reads `resource_id` from the record
+ * and fetches the grant row only when nothing supplied it.
+ * @see docs/contributing/techniques/authorization-engine.md — Terms read `access_paths`
+ */
+grantHydrator.registerVirtualAttribute('resource_owner_group_id', async ({ id, recordCache, hydrator }) => {
+  const resourceId = recordCache.resource_id ?? (await hydrator.prisma.grant.findUniqueOrThrow({
+    where: { id },
+    select: { resource_id: true },
+  })).resource_id;
+  const resource = await hydrator.prisma.resource.findUniqueOrThrow({
+    where: { id: resourceId },
+    select: { dataset: { select: { owner_group_id: true } }, collection: { select: { owner_group_id: true } } },
+  });
+  return resource.dataset?.owner_group_id ?? resource.collection?.owner_group_id;
+});
+
 module.exports = { grantHydrator };

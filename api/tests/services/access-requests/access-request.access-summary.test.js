@@ -4,7 +4,7 @@
  * An APPROVED request whose grants were all revoked reads as access the requester does not
  * have. The summary is derived from the live grants so no client has to infer it.
  *
- * @see docs/design/groups/access-requests-plan.md — C4
+ * @see docs/design/groups/trust-and-communication.md — 1. An `APPROVED` request whose grants are all revoked — mostly built
  */
 
 const path = require('path');
@@ -15,7 +15,7 @@ require('module-alias/register');
 const prisma = require('@/db');
 // Submitting and reviewing write an in-app notification, which pulls in the SSE
 // manager's two long-lived Redis connections. Without closing them the process never
-// exits. @see docs/design/groups/access-requests-plan.md — D1
+// exits. @see docs/contributing/techniques/api-tests.md — The SSE manager keeps Jest alive
 const { sseManager } = require('@/notification/inApp/sseManager');
 const arService = require('@/services/access_requests');
 const grantsService = require('@/services/grants');
@@ -44,7 +44,7 @@ let listFilesTypeId;
 let viewMetadataTypeId;
 // No seeded preset applies to a dataset, so the preset paths here run against one made for
 // the test. Its two types are comparable, so a wider group grant has something to cover.
-// @see docs/design/groups/access-presets.md — 2.11 Presets are scoped to collections
+// @see docs/design/groups/design.md — The seeded presets
 let datasetPreset;
 // Leaves a request under review, so it asks as its own subject rather than colliding with
 // the in-flight checks of the tests that use `requester`.
@@ -151,7 +151,7 @@ describe('grant provenance', () => {
   // A grant issued from an approved preset item carries both the request and the preset,
   // so the Access tab can say "via Standard Research Use" rather than listing five access
   // types with no shape.
-  // @see docs/design/groups/access-requests-plan.md — C5
+  // @see docs/design/groups/design.md — What a preset expands to
   test('a preset request stamps the preset on every grant it expands to', async () => {
     const preset = datasetPreset;
 
@@ -215,7 +215,7 @@ describe('the access type order', () => {
   // covered_elsewhere reads the approved items, and a preset item leaves access_type_id
   // null. It also has to widen: the group holds DOWNLOAD and the request asked for
   // LIST_FILES, which no exact match would find.
-  // @see docs/design/groups/access-type-order-plan.md — Phase 1
+  // @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
   test('covered_elsewhere finds a group grant of a wider type behind a preset request', async () => {
     const preset = datasetPreset;
 

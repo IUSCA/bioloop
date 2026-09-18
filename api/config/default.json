@@ -199,9 +199,6 @@
   "citation": {
     "publisher": "Bioloop"
   },
-  "profiles": {
-    "avatar_dir": "data/avatars"
-  },
   "notify": {
     "worker": {
       "concurrency": 5

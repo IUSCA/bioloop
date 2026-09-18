@@ -45,14 +45,14 @@
           {{
             isAdmin
               ? `You are about to revoke admin rights from ${memberName}.`
-              : `You are about to grant admin rights to ${memberName}.`
+              : `You are about to give admin rights to ${memberName}.`
           }}
         </p>
         <p class="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300">
           {{
             isAdmin
-              ? "They will remain a member but will no longer be able to manage group membership, settings, or access grants."
-              : "Admins can manage group membership, settings, and access grants for this group."
+              ? "They will remain a member but will no longer be able to manage group membership, settings, or access permissions."
+              : "Admins can manage group membership, settings, and access permissions for this group."
           }}
         </p>
       </div>

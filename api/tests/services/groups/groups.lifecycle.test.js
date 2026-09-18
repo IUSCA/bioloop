@@ -8,7 +8,7 @@
 
 const path = require('path');
 const { GROUP_MEMBER_ROLE } = require('@prisma/client');
-const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
+const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/services/audit');
 
 global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
@@ -378,7 +378,17 @@ describe('groups - lifecycle', () => {
 
     it('demotion changes role back to MEMBER', async () => {
       const g = await newGroup('_demote');
-      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
+      // A second admin stays, because demoting the last one is refused. @see lastAdmin.test.js
+      const otherAdmin = await createTestUser('_demote_other_admin');
+      usersToDelete.push(otherAdmin.id);
+      await groupsService.addGroupMembers(g.id, {
+        user_ids: [memberUser.subject_id, otherAdmin.subject_id],
+        actor_id: actor.subject_id,
+      });
+      await groupsService.promoteGroupMemberToAdmin(g.id, {
+        user_id: otherAdmin.subject_id,
+        actor_id: actor.subject_id,
+      });
       await groupsService.promoteGroupMemberToAdmin(g.id, {
         user_id: memberUser.subject_id,
         actor_id: actor.subject_id,
@@ -469,14 +479,14 @@ describe('groups - lifecycle', () => {
       ]));
     });
 
-    it('scope: direct returns only groups where user has a direct role', async () => {
+    it('scope: member_of returns only groups where user has a direct role', async () => {
       const result = await groupsService.searchGroupsForUser({
         user_id: actor.subject_id,
         sort_by: 'name',
         sort_order: 'asc',
         limit: 100,
         offset: 0,
-        scope: 'direct',
+        scope: 'member_of',
       });
       const ids = result.data.map((g) => g.id);
       expect(ids).toEqual(expect.arrayContaining([
@@ -487,14 +497,14 @@ describe('groups - lifecycle', () => {
       expect(ids).not.toContain(child.id);
     });
 
-    it('scope: oversight returns at least the transitive child but never the bare member-only group', async () => {
+    it('scope: overseen returns at least the transitive child but never the bare member-only group', async () => {
       const result = await groupsService.searchGroupsForUser({
         user_id: actor.subject_id,
         sort_by: 'name',
         sort_order: 'asc',
         limit: 100,
         offset: 0,
-        scope: 'oversight',
+        scope: 'overseen',
       });
       const ids = result.data.map((g) => g.id);
 
@@ -503,14 +513,14 @@ describe('groups - lifecycle', () => {
       expect(ids).not.toContain(directGroup.id);
     });
 
-    it('scope: admin returns only groups where user role is ADMIN', async () => {
+    it('scope: administered returns only groups where user role is ADMIN', async () => {
       const result = await groupsService.searchGroupsForUser({
         user_id: actor.subject_id,
         sort_by: 'name',
         sort_order: 'asc',
         limit: 100,
         offset: 0,
-        scope: 'admin',
+        scope: 'administered',
       });
       const ids = result.data.map((g) => g.id);
       expect(ids).toEqual(expect.arrayContaining([

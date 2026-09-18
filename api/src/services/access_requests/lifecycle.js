@@ -2,8 +2,9 @@ const { ACCESS_REQUEST_STATUS } = require('@prisma/client');
 const createError = require('http-errors');
 
 const prisma = require('@/db');
-const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
-const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
+const { assertPossible, withStateFields } = require('@/state').import('access_request');
+const { AUTH_EVENT_TYPE } = require('@/services/audit');
+const AuditBuilder = require('@/services/audit/AuditBuilder');
 const { _getRequestById } = require('./fetch');
 
 /**
@@ -15,13 +16,14 @@ const { _getRequestById } = require('./fetch');
 async function withdrawRequest({ request_id, requester_id }) {
   return prisma.$transaction(async (tx) => {
     // Fetch current request
-    const currentRequest = await tx.access_request.findUniqueOrThrow({
+    const currentRequest = await tx.access_request.findUniqueOrThrow(withStateFields({
       where: { id: request_id },
-      include: {
-        resource: { include: { dataset: true, collection: true } },
-        subject: { include: { user: true, group: true } },
-      },
-    });
+      select: { resource_id: true, subject_id: true },
+    }));
+
+    // Archiving freezes the request, withdrawal included, so this reads the resource and the
+    // group it is for as well as the status.
+    assertPossible('withdraw', currentRequest);
 
     // Update status to WITHDRAWN
     const updated = await tx.access_request.updateMany({

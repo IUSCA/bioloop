@@ -8,7 +8,7 @@
  * client would strand a row the requester could neither see nor resume if the second failed,
  * so the two steps commit together or not at all.
  *
- * @see docs/design/groups/access-requests-plan.md — B1
+ * @see docs/design/groups/design.md — Filing a request
  */
 
 const path = require('path');
@@ -19,10 +19,10 @@ require('module-alias/register');
 const prisma = require('@/db');
 // Submitting and reviewing write an in-app notification, which pulls in the SSE
 // manager's two long-lived Redis connections. Without closing them the process never
-// exits. @see docs/design/groups/access-requests-plan.md — D1
+// exits. @see docs/contributing/techniques/api-tests.md — The SSE manager keeps Jest alive
 const { sseManager } = require('@/notification/inApp/sseManager');
 const arService = require('@/services/access_requests');
-const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
+const { AUTH_EVENT_TYPE } = require('@/services/audit');
 const {
   createTestUser,
   createTestGroup,

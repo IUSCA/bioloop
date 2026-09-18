@@ -25,7 +25,7 @@
         The status is the whole point of this panel. An upload that fails for good is
         tombstoned, so the dataset itself reads as deleted everywhere else and this is the
         only place that says why.
-        @see docs/design/groups/dataset-creation-plan.md — C5
+        @see docs/design/groups/dataset-creation.md — Watching an upload afterwards
       -->
       <div class="flex items-center gap-3 flex-wrap">
         <Badge :color="badgeColor">{{ readableStatus }}</Badge>

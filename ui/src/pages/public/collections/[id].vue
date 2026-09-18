@@ -112,7 +112,7 @@ import PublicProfileService from "@/services/v2/publicProfiles";
 /**
  * A collection profile, readable without an account.
  *
- * @see docs/design/groups/profiles.md — The UI
+ * @see docs/design/groups/profiles.md — The public router
  */
 const props = defineProps({ id: { type: String, required: true } });
 

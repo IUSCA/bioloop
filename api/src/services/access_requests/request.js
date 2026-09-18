@@ -4,10 +4,47 @@ const {
 const createError = require('http-errors');
 
 const prisma = require('@/db');
-const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
-const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
+const requestState = require('@/state').import('access_request');
+const restrictions = require('@/authorization/builtin/restrictions');
+const { AUTH_EVENT_TYPE } = require('@/services/audit/events');
+const AuditBuilder = require('@/services/audit/AuditBuilder');
 const { _getRequestById } = require('./fetch');
 const { notifyReviewersOfSubmission } = require('./notify');
+
+/**
+ * Whether filing an access request on this resource would succeed for this caller, so a page
+ * offers Request Access only where it would.
+ *
+ * `POST /access-requests` admits a signed-in caller who can view the resource, and the detail
+ * route asking this has already decided the view. Two things can still refuse the filing: a
+ * restriction the application injects, and the request's own `create` state rule, which reads
+ * the resource the request would name. This asks both, the same way `_createAccessRequest` does
+ * when the request is filed.
+ *
+ * The request is the caller's own until they choose a group on the form, and a user has no
+ * archived state, so the subject is read as a user here. A group chosen later is checked when
+ * the request is filed.
+ *
+ * @param {Object} params
+ * @param {Object} params.user - the signed-in caller, `req.user`
+ * @param {string} params.resource_id - a dataset's resource id or a collection's id
+ * @returns {Promise<boolean>}
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ */
+async function mayFileRequest({ user, resource_id }) {
+  if (!user?.subject_id || user.is_anonymous) return false;
+  const blockedBy = await restrictions.checkRestriction({
+    resourceType: 'access_request',
+    action: 'create',
+    resourceId: null,
+    preFetchedResource: { resource_id },
+  });
+  if (blockedBy) return false;
+
+  const resource = await prisma.resource.findUnique({ where: { id: resource_id }, ...requestState.select().resource });
+  // A user subject has no group, so no archived state.
+  return resource === null || requestState.check('create', { resource, subject: { group: null } }) === null;
+}
 
 /**
  * Validates that the requester can create an access request for the specified subject.
@@ -26,26 +63,21 @@ async function _validateAccessRequestSubject(tx, requester_id, subject_id) {
   });
 
   if (!subject) {
-    throw createError.NotFound('Subject not found');
+    throw createError.NotFound('User or group not found');
   }
 
   // Self-request: subject must exactly match requester subject and must be a USER subject
   if (subject_id === requester_id) {
     if (subject.type !== SUBJECT_TYPE.USER) {
-      throw createError.Forbidden('Self access request must target a user subject');
+      throw createError.Forbidden('A request for yourself must name a user, not a group');
     }
     return;
   }
 
   // Group request: subject must be a GROUP and requester must be ADMIN of that group
   if (subject.type === SUBJECT_TYPE.GROUP) {
-    const isAdmin = await tx.group_user.findFirst({
-      where: {
-        group_id: subject_id,
-        user_id: requester_id,
-        role: GROUP_MEMBER_ROLE.ADMIN,
-        removed_at: null,
-      },
+    const isAdmin = await tx.active_group_user.findFirst({
+      where: { group_id: subject_id, user_id: requester_id, role: GROUP_MEMBER_ROLE.ADMIN },
     });
 
     if (isAdmin) {
@@ -73,6 +105,14 @@ async function _validateAccessRequestSubject(tx, requester_id, subject_id) {
  */
 async function _createAccessRequest(tx, data, requester_id) {
   await _validateAccessRequestSubject(tx, requester_id, data.subject_id);
+
+  // A request is worth filing only on a resource whose state still admits access changes.
+  // The request does not exist yet, so its row is the resource and the subject it would name.
+  const { resource: resourceSelect, subject: subjectSelect } = requestState.select();
+  requestState.assertPossible('create', {
+    resource: await tx.resource.findUniqueOrThrow({ where: { id: data.resource_id }, ...resourceSelect }),
+    subject: await tx.subject.findUniqueOrThrow({ where: { id: data.subject_id }, ...subjectSelect }),
+  });
 
   // Create the access request
   const accessRequest = await tx.access_request.create({
@@ -139,7 +179,7 @@ async function updateAccessRequest(request_id, actor_id, data) {
     // get a row-level lock on the request to prevent concurrent updates
     // Ensure request is still in DRAFT to prevent updates on requests that are already submitted or closed
     const rows = await tx.$queryRaw`
-      SELECT id, status
+      SELECT id, status, resource_id, subject_id
       FROM access_request 
       WHERE 
         id = ${request_id}
@@ -149,10 +189,10 @@ async function updateAccessRequest(request_id, actor_id, data) {
     if (rows.length === 0) {
       throw createError.NotFound();
     }
-    const { status } = rows[0];
-    if (status !== ACCESS_REQUEST_STATUS.DRAFT) {
-      throw createError.Conflict('Request is not in DRAFT status');
-    }
+    // The WHERE guards below keep the write atomic; this names the state first.
+    requestState.assertPossible('update', await tx.access_request.findUniqueOrThrow(
+      requestState.withStateFields({ where: { id: request_id }, select: { id: true } }),
+    ));
 
     if (data.purpose) {
       await tx.access_request.update({
@@ -289,9 +329,9 @@ async function _assertNoInFlightRequests(tx, request) {
 async function _submitRequest(tx, request_id, actor_id) {
   // Fetch the request with items for pre-flight validation
   const request = await _getRequestById(tx, request_id);
-  if (!request || request.status !== ACCESS_REQUEST_STATUS.DRAFT) {
-    throw createError.Conflict('Request is no longer in DRAFT status');
-  }
+  if (!request) throw createError.NotFound('Request not found');
+  // `_getRequestById` includes the resource with its owning group and the subject with its group.
+  requestState.assertPossible('submit', request);
 
   // assert request has at least one item
   if (!request.access_request_items || request.access_request_items.length === 0) {
@@ -340,7 +380,7 @@ async function _submitRequest(tx, request_id, actor_id) {
 async function submitRequest(request_id, actor_id) {
   const request = await prisma.$transaction((tx) => _submitRequest(tx, request_id, actor_id));
   // After the commit, and never able to fail it: a notification that cannot be delivered
-  // must not undo a submission. @see docs/design/groups/access-requests-plan.md — D1
+  // must not undo a submission. @see docs/design/groups/design.md — Notifications and expiry
   await notifyReviewersOfSubmission(request);
   return request;
 }
@@ -353,7 +393,7 @@ async function submitRequest(request_id, actor_id) {
  * requester could neither see nor resume. Both states and both audit events are kept — only
  * the round trip disappears.
  *
- * @see docs/design/groups/access-requests-plan.md — B1
+ * @see docs/design/groups/design.md — Filing a request
  * @param {Object} data - as for createAccessRequest
  * @param {string} requester_id - UUID of the user creating the request
  * @returns {Promise<Object>} the request, UNDER_REVIEW
@@ -367,7 +407,18 @@ async function createAndSubmitAccessRequest(data, requester_id) {
   return request;
 }
 
+/**
+ * Refuses a requester who may not ask for access on behalf of this subject. Throws a 404 or 403.
+ * @param {string} requester_id
+ * @param {string} subject_id
+ */
+function assertMayRequestFor(requester_id, subject_id) {
+  return _validateAccessRequestSubject(prisma, requester_id, subject_id);
+}
+
 module.exports = {
+  assertMayRequestFor,
+  mayFileRequest,
   createAccessRequest,
   createAndSubmitAccessRequest,
   updateAccessRequest,

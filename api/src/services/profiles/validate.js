@@ -8,11 +8,32 @@ const createError = require('http-errors');
  * malformed link or an unbounded list is a defect that reaches the widest audience the
  * system has.
  *
- * @see docs/design/groups/profiles.md — Schema
+ * @see docs/design/groups/profiles.md — The columns
  */
 
 /** The link kinds the UI knows how to label and give an icon. */
 const LINK_TYPES = Object.freeze(['website', 'ror', 'protocols', 'contact_email', 'other']);
+
+/**
+ * The group types `GroupIcon` draws its own icon and colour for.
+ *
+ * Not an enum, and not enforced. A group may carry any short word here; one that is not on
+ * this list simply gets the default icon. The list exists so the edit form can offer the
+ * four that look like something, and so a reader of this file can see which words the UI
+ * treats specially.
+ * @see docs/design/groups/profiles.md — The columns
+ */
+const GROUP_TYPES = Object.freeze(['lab', 'project', 'center', 'core']);
+
+/** A word on a card, not a sentence. Long enough for "sequencing facility". */
+const GROUP_TYPE_MAX_CHARS = 32;
+
+/**
+ * A group type is one word shown under the name, so it holds letters, digits, spaces, and
+ * hyphens and nothing else. The value is rendered on a public profile, and refusing
+ * punctuation here is what keeps it a label rather than a place to put markup.
+ */
+const GROUP_TYPE_PATTERN = /^[\p{L}\p{N} -]+$/u;
 
 /** Mirrors the VarChar(120) on the column, so the API refuses before Postgres does. */
 const TAGLINE_MAX_CHARS = 120;
@@ -82,6 +103,27 @@ function validateCitation(value) {
   return value.trim() === '' ? null : value.trim();
 }
 
+/**
+ * The short word under a group's name, such as `lab` or `core`.
+ *
+ * Stored lower case, because the cards capitalise it for display and a value typed as
+ * "CORE" would otherwise keep its shouting through `text-transform: capitalize`, which
+ * upper-cases a first letter and never lowers the rest.
+ *
+ * Null clears it, and so does a blank string: the edit form's "No type" sends one or the
+ * other and both mean the same thing.
+ */
+function validateGroupType(value) {
+  if (value === null) return null;
+  assertString(value, 'type', GROUP_TYPE_MAX_CHARS);
+  const trimmed = value.trim();
+  if (trimmed === '') return null;
+  if (!GROUP_TYPE_PATTERN.test(trimmed)) {
+    bad('type must hold only letters, digits, spaces, and hyphens');
+  }
+  return trimmed.toLowerCase();
+}
+
 function validateLinks(value) {
   if (value === null) return [];
   if (!Array.isArray(value)) bad('links must be an array');
@@ -143,6 +185,8 @@ function validatePublications(value) {
 
 module.exports = {
   LINK_TYPES,
+  GROUP_TYPES,
+  GROUP_TYPE_MAX_CHARS,
   TAGLINE_MAX_CHARS,
   ABOUT_MAX_CHARS,
   LINKS_MAX,
@@ -150,6 +194,7 @@ module.exports = {
   validateTagline,
   validateAboutMd,
   validateCitation,
+  validateGroupType,
   validateLinks,
   validatePublications,
 };

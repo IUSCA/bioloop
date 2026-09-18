@@ -17,7 +17,7 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const auditService = require('@/services/audit');
-const { TARGET_TYPE } = require('@/authorization/builtin/audit/types');
+const { TARGET_TYPE } = require('@/services/audit/types');
 
 // Rows are written straight to the table rather than through a service, because the point
 // under test is which column a record is found by, and no single service writes all three

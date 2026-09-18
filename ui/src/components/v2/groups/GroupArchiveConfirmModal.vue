@@ -11,10 +11,10 @@
         <VaButton
           :loading="loading"
           :disabled="!confirmationValid"
-          :color="props.isArchived ? 'success' : 'danger'"
+          :color="unarchiving ? 'success' : 'danger'"
           @click="confirm"
         >
-          {{ props.isArchived ? "Unarchive Group" : "Archive Group" }}
+          {{ unarchiving ? "Unarchive Group" : "Archive Group" }}
         </VaButton>
       </div>
     </template>
@@ -22,7 +22,7 @@
     <VaInnerLoading :loading="loading">
       <div class="space-y-6">
         <!-- Unarchive variant -->
-        <template v-if="props.isArchived">
+        <template v-if="unarchiving">
           <div
             class="rounded-lg border border-solid border-green-200 bg-green-50/70 p-4 shadow-sm dark:border-green-800 dark:bg-green-950/40"
           >
@@ -44,7 +44,7 @@
                 </p>
                 <p class="text-sm text-gray-600 dark:text-gray-300">
                   The group will return to active state and members, resources,
-                  and grants can be managed again.
+                  and access can be managed again.
                 </p>
               </div>
             </div>
@@ -88,7 +88,7 @@
                       <span
                         class="mt-1 inline-block h-2 w-2 rounded-full bg-emerald-800 dark:bg-emerald-200"
                       />
-                      All existing grants
+                      All existing permissions
                     </li>
                     <li class="flex items-start gap-2">
                       <span
@@ -132,35 +132,15 @@
                   <ul
                     class="space-y-1 text-sm text-rose-800 dark:text-rose-200"
                   >
-                    <li class="flex items-start gap-2">
+                    <li
+                      v-for="label in prohibited"
+                      :key="label"
+                      class="flex items-start gap-2"
+                    >
                       <span
                         class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
                       />
-                      Add / remove members
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span
-                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
-                      />
-                      Create new grants or revoke existing grants
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span
-                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
-                      />
-                      Create new datasets
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span
-                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
-                      />
-                      Create collections
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span
-                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
-                      />
-                      Modify collection contents
+                      {{ label }}
                     </li>
                   </ul>
                 </div>
@@ -223,6 +203,8 @@
 import toast from "@/services/toast";
 import { maybePluralize } from "@/services/utils";
 import GroupService from "@/services/v2/groups";
+import StateService from "@/services/v2/states";
+import { prohibitedLabels } from "@/services/v2/stateLabels";
 
 const props = defineProps({
   /** ID of the group being archived/unarchived. */
@@ -231,8 +213,20 @@ const props = defineProps({
   groupName: { type: String, default: "" },
   /** Slug of the group, used for confirmation input. */
   groupSlug: { type: String, default: "" },
-  /** If true, shows unarchive wording. */
-  isArchived: { type: Boolean, default: false },
+  /**
+   * Which action this dialog confirms: `archive` or `unarchive`.
+   *
+   * The action the toggle offered, rather than the group's archived column. The two agree
+   * today, and taking the action keeps the dialog from confirming one thing while the page
+   * offered another: what the page offers comes from `_meta.available_actions`.
+   *
+   * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+   */
+  action: {
+    type: String,
+    default: "archive",
+    validator: (value) => ["archive", "unarchive"].includes(value),
+  },
   /** Number of affected members (optional, shown in summary). */
   affectedMembers: { type: Number, default: null },
   /** Number of affected datasets (optional, shown in summary). */
@@ -245,14 +239,49 @@ const props = defineProps({
 
 const emit = defineEmits(["update"]);
 
+/** Whether this dialog is confirming the way back out. */
+const unarchiving = computed(() => props.action === "unarchive");
+
 const visible = ref(false);
 const confirmationText = ref("");
 const confirmationInput = ref(null);
 const loading = ref(false);
 
+// What archiving stops, from each resource type's own state rules. A group's archive dialog
+// lists the group itself and what it owns.
+const ARCHIVE_SCOPE = [
+  "group",
+  "collection",
+  "dataset",
+  "grant",
+  "access_request",
+];
+const forbiddenActions = ref([]);
+const prohibited = computed(() =>
+  prohibitedLabels(forbiddenActions.value, ARCHIVE_SCOPE),
+);
+
+async function loadForbiddenActions() {
+  try {
+    // One call per resource type, because what archiving forbids is the resource's answer.
+    const answers = await Promise.all(
+      ARCHIVE_SCOPE.map((type) =>
+        StateService.forbiddenActions(type, "archived"),
+      ),
+    );
+    forbiddenActions.value = answers.flatMap((res, i) =>
+      res.data.forbidden_actions.map((f) => `${ARCHIVE_SCOPE[i]}.${f.action}`),
+    );
+  } catch {
+    // Nothing is listed rather than a list that may be wrong.
+    forbiddenActions.value = [];
+  }
+}
+
 function show() {
   confirmationText.value = "";
   visible.value = true;
+  if (!unarchiving.value) loadForbiddenActions();
 
   nextTick(() => {
     confirmationInput.value?.focus?.();
@@ -268,14 +297,14 @@ async function confirm() {
   loading.value = true;
 
   try {
-    if (props.isArchived) {
+    if (unarchiving.value) {
       await GroupService.unarchive(props.groupId);
     } else {
       await GroupService.archive(props.groupId);
     }
 
     hide();
-    toast.success(props.isArchived ? "Group unarchived." : "Group archived.");
+    toast.success(unarchiving.value ? "Group unarchived." : "Group archived.");
     emit("update");
   } catch (err) {
     toast.error(
@@ -292,13 +321,13 @@ defineExpose({ show, hide });
 const intl = new Intl.NumberFormat();
 
 const modalTitle = computed(() =>
-  props.isArchived
+  unarchiving.value
     ? `UNARCHIVE GROUP: ${props.groupName}`
     : `ARCHIVE GROUP: ${props.groupName}`,
 );
 
 const confirmationValid = computed(() => {
-  if (props.isArchived) return true;
+  if (unarchiving.value) return true;
   if (!props.groupSlug) return true;
   return confirmationText.value === props.groupSlug;
 });

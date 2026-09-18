@@ -4,11 +4,12 @@ const {
 const createError = require('http-errors');
 const _ = require('lodash/fp');
 
-const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
+const { resolveEntityName } = require('@/services/audit/helpers');
 const Expiry = require('@/utils/expiry');
-const audit = require('@/authorization/builtin/audit');
-const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
+const audit = require('@/services/audit');
+const AuditBuilder = require('@/services/audit/AuditBuilder');
 const prisma = require('@/db');
+const grantState = require('@/state').import('grant');
 const accessTypeClosure = require('./accessTypeClosure');
 const { getPrismaGrantValidityFilter } = require('./fetch');
 const {
@@ -19,8 +20,8 @@ const {
 // Grant Creation
 // ============================================================================
 
-const GRANT_OVERLAP_ERROR_MSG = 'An active grant with overlapping validity already exists'
-  + ' for this subject, resource, and access type';
+const GRANT_OVERLAP_ERROR_MSG = 'An active permission with overlapping validity already exists'
+  + ' for this user or group, resource, and access type';
 
 /**
  * Create a grant (direct authorization)
@@ -198,45 +199,6 @@ async function createGrant(data, granted_by) {
   return prisma.$transaction((tx) => _createGrant(tx, grantData));
 }
 
-/**
- * Check whether a non-revoked grant already exists that would overlap with the requested validity window.
- * Uses half-open interval semantics [valid_from, valid_until) matching the DB exclusion constraint.
- * Kept as an explicit pre-flight helper for callers that want early ORM-level feedback before hitting the DB.
- */
-// eslint-disable-next-line no-unused-vars
-async function _assertNoOverlappingGrant(tx, data) {
-  const newFrom = data.valid_from ? new Date(data.valid_from) : new Date();
-  const newUntil = data.valid_until ? new Date(data.valid_until) : null;
-
-  // Overlap condition for [newFrom, newUntil) vs [existingFrom, existingUntil):
-  //   existingFrom < newUntil  (infinity if newUntil is null → always true)
-  //   newFrom < existingUntil  (infinity if existingUntil is null → always true)
-  const conflicting = await tx.grant.findFirst({
-    where: {
-      subject_id: data.subject_id,
-      resource_id: data.resource_id,
-      access_type_id: Number(data.access_type_id),
-      revoked_at: null,
-      AND: [
-        // existingFrom < newUntil (skip if newUntil is null → ∞, so always overlaps)
-        ...(newUntil ? [{ valid_from: { lt: newUntil } }] : []),
-        // newFrom < existingUntil (existingUntil null → ∞, so always overlaps)
-        {
-          OR: [
-            { valid_until: null },
-            { valid_until: { gt: newFrom } },
-          ],
-        },
-      ],
-    },
-    select: { id: true },
-  });
-
-  if (conflicting) {
-    throw createError.Conflict(GRANT_OVERLAP_ERROR_MSG);
-  }
-}
-
 // ============================================================================
 // Grant Bulk Creation
 // ============================================================================
@@ -358,7 +320,7 @@ class GrantIssueService {
     // Both may be set. An approved preset item inside a request produces a grant that came
     // from a request *and* from a preset, and the Access tab needs to say so: without the
     // preset, "Standard Research Use" decays into a flat list of access types.
-    // @see docs/design/groups/access-requests-plan.md — C5
+    // @see docs/design/groups/design.md — What a preset expands to
     this.creation_type = access_request_id ? GRANT_CREATION_TYPE.ACCESS_REQUEST : GRANT_CREATION_TYPE.MANUAL;
 
     this.subject_id = subject_id;
@@ -446,7 +408,7 @@ class GrantIssueService {
    * in one issuance has no single answer, so it maps to null too: a label that names one of
    * two presets is worse than no label.
    *
-   * @see docs/design/groups/access-requests-plan.md — C5
+   * @see docs/design/groups/design.md — What a preset expands to
    */
   async _buildAccessTypeIdToPresetIdMap(tx) {
     const presetIds = this.items.filter((i) => i.preset_id).map((i) => i.preset_id);
@@ -569,6 +531,14 @@ class GrantIssueService {
    * @param {Object} options - Additional options for issuing grants.
    */
   async issue(tx, items) {
+    // Issuing changes who reaches the resource, so the resource's state decides whether it may.
+    // The grant does not exist yet, so its row is the resource and the subject it would join.
+    const { resource: resourceSelect, subject: subjectSelect } = grantState.select();
+    grantState.assertPossible('create', {
+      resource: await tx.resource.findUniqueOrThrow({ where: { id: this.resource_id }, ...resourceSelect }),
+      subject: await tx.subject.findUniqueOrThrow({ where: { id: this.subject_id }, ...subjectSelect }),
+    });
+
     const effectiveGrants = await this.buildEffectiveGrants(tx, items);
     await this._hydrateMetadata(tx);
     this.accessTypeIdToPresetId = await this._buildAccessTypeIdToPresetIdMap(tx);

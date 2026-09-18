@@ -371,7 +371,7 @@ const COLLECTIONS = Object.freeze([
  * `import.sources_dir`, which `IMPORT_SOURCES_DIR` points at `data/import` on a native setup.
  * A member of the owning group, or of a group overseeing it, sees the source when importing.
  *
- * @see docs/design/groups/dataset-creation-plan.md — B1
+ * @see docs/design/groups/dataset-creation.md — Import sources are visible to everyone
  */
 const IMPORT_SOURCES = Object.freeze([
   {

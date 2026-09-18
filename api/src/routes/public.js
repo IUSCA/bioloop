@@ -2,14 +2,12 @@ const express = require('express');
 const { param } = require('express-validator');
 const createError = require('http-errors');
 const rateLimit = require('express-rate-limit');
-const fsPromises = require('fs/promises');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const { optionalAuthenticate } = require('@/middleware/auth');
 const { createAuthorizationMiddleware: authorize } = require('@/authorization');
 const profileService = require('@/services/profiles');
-const avatarService = require('@/services/profiles/avatar');
 
 /**
  * The only routes reachable without a token.
@@ -24,7 +22,7 @@ const avatarService = require('@/services/profiles/avatar');
  *  - A refusal is a 404, never a 403. A 403 on a private group confirms the group exists,
  *    so an unpublished profile and an id that was never issued answer identically.
  *
- * @see docs/design/groups/profiles.md — API
+ * @see docs/design/groups/profiles.md — The public router
  */
 
 const router = express.Router();
@@ -109,25 +107,6 @@ router.get(
       ...req.permission.filter(collection),
       citation: profileService.resolveCitation(collection, 'collections'),
     });
-  }),
-);
-
-// ── Group avatar ────────────────────────────────────────────────────────────
-router.get(
-  '/groups/:id/avatar',
-  validate([param('id').isUUID()]),
-  authorize('group', 'view_profile'),
-  asyncHandler(async (req, res) => {
-    const group = await profileService.getGroupForProfile(req.params.id);
-    if (!group?.avatar_key) throw createError.NotFound();
-
-    const file = avatarService.avatarPath(group.avatar_key);
-    if (!avatarService.isInsideAvatarDir(file)) throw createError.NotFound();
-    await fsPromises.access(file).catch(() => { throw createError.NotFound(); });
-
-    setPublicCacheHeaders(res);
-    res.type(avatarService.contentTypeFor(group.avatar_key));
-    res.sendFile(file);
   }),
 );
 

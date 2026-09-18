@@ -13,13 +13,18 @@ const datasetService = require('@/services/datasets_v2');
 const workflowService = require('@/services/datasets_v2/workflows');
 const prisma = require('@/db');
 const auditService = require('@/services/audit');
-const {
-  createAuthorizationMiddleware: authorize, toCapabilitiesArray, authorizeAction,
-} = require('@/authorization');
+const accessRequestsService = require('@/services/access_requests');
+const authorization = require('@/authorization');
+
+const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin } = authorization;
+const datasetAuth = authorization.import('dataset');
+const decideRequestStage = datasetAuth.action('request_stage');
+const decideDatasetRows = datasetAuth.rows('view_metadata');
 const { pickNonNil, setsEqual } = require('@/utils');
-const { isPlatformAdmin } = require('@/services/auth');
 const { RESOURCE_SCOPES } = require('@/services/resources');
+const { assertNotSystemPrincipal } = require('@/services/system_principals');
 const { dataset: DATASET_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/base_attributes');
+const { buildMeta } = require('@/services/meta');
 
 const router = express.Router();
 
@@ -27,7 +32,7 @@ const router = express.Router();
 // find collections that a dataset belongs to ?dataset_id=xxx
 
 // find all collections that I have access to
-// search collections by name/description
+// search collections by name, tagline, or description
 router.post(
   '/search',
   validate([
@@ -44,7 +49,7 @@ router.post(
   authorize('collection', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
-    // #swagger.summary = 'Search collections by name or description'
+    // #swagger.summary = 'Search collections by name, tagline, or description'
 
     const params = _.pick([
       'search_term', 'limit', 'offset', 'sort_by', 'sort_order', 'is_archived', 'owner_group_id', 'dataset_id',
@@ -53,7 +58,7 @@ router.post(
     // if user is platform admin, search all groups, otherwise search only groups the user has access to
 
     let promise;
-    if (isPlatformAdmin(req)) {
+    if (await callerIsPlatformAdmin(req)) {
       promise = collectionService.searchAllCollections(params);
     } else {
       promise = collectionService.searchCollectionsForUser({
@@ -64,8 +69,8 @@ router.post(
     }
 
     const { metadata, data } = await promise;
-    const filteredData = data.map((collection) => req.permission.filter(collection));
-    res.json({ metadata, data: filteredData });
+    // The query scopes the rows, and the list decision's filter picks every row's fields.
+    res.json({ metadata, data: data.map((collection) => req.permission.filter(collection)) });
   }),
 );
 
@@ -75,7 +80,7 @@ router.get(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('collection', 'view_metadata', { shouldDeriveCapabilities: true, shouldDeriveCallerRole: true }),
+  authorize('collection', 'view_metadata', { shouldDeriveCapabilities: true, shouldDeriveStanding: true }),
   asyncHandler(async (req, res) => {
     const collection = await collectionService.getCollectionById(req.params.id, req.user.subject_id);
     // res.json(req.permission.filter(collection));
@@ -83,12 +88,12 @@ router.get(
       ...req.permission.filter(collection),
       // Derived from the owning group's name, the year, and the public URL, so it carries
       // nothing the caller could not already see.
-      // @see docs/design/groups/profiles.md — Schema
+      // @see docs/design/groups/profiles.md — The columns
       citation: profileService.resolveCitation(collection, 'collections'),
-      _meta: {
-        caller_role: req.permission.callerRole,
-        capabilities: toCapabilitiesArray(req.permission.capabilities),
-      },
+      _meta: buildMeta('collection', collection, req.permission, {
+        extraCapabilities: await accessRequestsService.mayFileRequest({ user: req.user, resource_id: req.params.id })
+          ? ['request_access'] : [],
+      }),
     });
   }),
 );
@@ -96,42 +101,48 @@ router.get(
 // create collection
 router.post(
   '/',
-  authorize('collection', 'create', {
-    resourceIdFn: () => null,
-    preFetchedResourceFn: (req) => ({ owner_group_id: req.body.owner_group_id }),
-  }),
+  // Validated first: the restriction check resolves a create to the owning group the body
+  // names, so a body without one must be refused as malformed before authorization asks.
   validate([
     body('name').isString().notEmpty(),
     body('description').optional().isString(),
     body('owner_group_id').isUUID(),
     body('metadata').optional().isObject(),
-    body('dataset_ids').optional().isArray({ min: 1 }),
-    body('dataset_ids.*').isUUID(),
+    body('dataset_resource_ids').optional().isArray({ min: 1 }),
+    body('dataset_resource_ids.*').isUUID(),
   ]),
+  asyncHandler(async (req, res, next) => {
+    assertNotSystemPrincipal(req.body.owner_group_id, 'owner');
+    next();
+  }),
+  authorize('collection', 'create', {
+    resourceIdFn: () => null,
+    preFetchedResourceFn: (req) => ({ owner_group_id: req.body.owner_group_id }),
+  }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Create a new collection'
 
-    const data = pickNonNil(['name', 'description', 'owner_group_id', 'metadata', 'dataset_ids'])(req.body);
+    const data = pickNonNil(['name', 'description', 'owner_group_id', 'metadata', 'dataset_resource_ids'])(req.body);
 
-    // validate that if dataset_ids are provided, they all belong to the same owner group as the collection and are not archived
-    if (data.dataset_ids) {
+    // validate that if dataset_resource_ids are provided, they all belong to the same owner group as the collection and are not archived
+    if (data.dataset_resource_ids) {
       const validDatasets = await prisma.dataset.findMany({
         where: {
-          resource_id: { in: data.dataset_ids },
+          resource_id: { in: data.dataset_resource_ids },
           owner_group_id: data.owner_group_id,
           is_deleted: false,
         },
         select: { resource_id: true },
       });
-      if (!setsEqual(new Set(validDatasets.map((d) => d.resource_id)), new Set(data.dataset_ids))) {
+      if (!setsEqual(new Set(validDatasets.map((d) => d.resource_id)), new Set(data.dataset_resource_ids))) {
         return next(createError(
           400,
           'All datasets must exist, not be archived, and belong to the specified owner group',
         ));
       }
       // deduplicate dataset IDs
-      data.dataset_ids = [...new Set(data.dataset_ids)];
+      data.dataset_resource_ids = [...new Set(data.dataset_resource_ids)];
     }
 
     const newCollection = await collectionService.createCollection(data, { actor_id: req.user.subject_id });
@@ -171,7 +182,7 @@ router.patch(
 );
 
 // Update the collection profile.
-// @see docs/design/groups/profiles.md — API
+// @see docs/design/groups/profiles.md — The public router
 router.patch(
   '/:id/profile',
   validate([
@@ -197,34 +208,17 @@ router.patch(
   }),
 );
 
-// delete collection
-router.delete(
-  '/:id',
-  validate([
-    param('id').isUUID(),
-  ]),
-  authorize('collection', 'delete'),
-  asyncHandler(async (req, res) => {
-    // #swagger.tags = ['Collections']
-    // #swagger.summary = 'Delete a collection'
-
-    await collectionService.deleteCollection(req.params.id, req.user.subject_id);
-    res.status(204).send();
-  }),
-);
-
 /**
  * Whether the caller may stage one dataset.
  *
- * The collection datasets list and the stage route both ask this, so the staging a row offers
- * and the answer the stage route gives cannot disagree. The policy context is shared across
- * calls in one request, so the caller is hydrated once however many datasets are checked.
+ * The bulk stage route asks this for each dataset. The policy context is shared across calls in
+ * one request, so the caller is hydrated once however many datasets are checked.
  * @param {import('express').Request} req
  * @param {string} resource_id
  * @returns {Promise<boolean>}
  */
 async function canRequestStage(req, resource_id) {
-  const decision = await authorizeAction('dataset', 'request_stage', {
+  const decision = await decideRequestStage({
     identifiers: { user: req.user?.subject_id, resource: resource_id },
     policyExecutionContext: req.policyContext,
     preFetched: { user: req.user, context: { req } },
@@ -237,10 +231,9 @@ async function canRequestStage(req, resource_id) {
  *
  * Browsing a collection does not mean every dataset in it opens: a bare
  * COLLECTION:LIST_CONTENTS grant confers the first and not the second. Each row carries
- * `_meta.can_view_metadata`, so the page shows a row that will not open as plain text and offers a
- * request on the collection rather than a link onto a refusal. Each row also carries
- * `_meta.can_request_stage`, from the check the stage route makes, so the page offers staging
- * only where that route would accept it.
+ * `_meta.capabilities` and `_meta.standing` from `decideRows`. A row without `view_metadata`
+ * shows as plain text, and the page offers a request on the collection rather than a link onto
+ * a refusal. A row offers staging only with `request_stage`, the action the stage route checks.
  *
  * Rows carry the dataset's public attributes whoever the caller is, the rule `dataset.list`
  * applies.
@@ -271,27 +264,10 @@ router.get(
       sort_order: req.query.sort_order,
     });
 
-    const resourceIds = data.map((d) => d.resource_id);
-    const viewable = isPlatformAdmin(req)
-      ? new Set(resourceIds)
-      : await datasetService.viewableDatasetIds(req.user.subject_id, resourceIds);
-
-    // One at a time, as bulkStage does, so the first call fills the shared policy context.
-    const stageable = new Set();
-    for (const d of data) {
-      // eslint-disable-next-line no-await-in-loop
-      if (await canRequestStage(req, d.resource_id)) stageable.add(d.resource_id);
-    }
-
+    const metas = await decideDatasetRows(data, { req, idOf: (d) => d.resource_id });
     res.json({
       metadata,
-      data: data.map((d) => ({
-        ..._.pick(DATASET_PUBLIC_ATTRIBUTES)(d),
-        _meta: {
-          can_view_metadata: viewable.has(d.resource_id),
-          can_request_stage: stageable.has(d.resource_id),
-        },
-      })),
+      data: data.map((d, i) => ({ ..._.pick(DATASET_PUBLIC_ATTRIBUTES)(d), _meta: metas[i] })),
     });
   }),
 );
@@ -345,19 +321,19 @@ router.post(
   '/:id/datasets',
   validate([
     param('id').isUUID(),
-    body('dataset_ids').isArray({ min: 1 }),
-    body('dataset_ids.*').isUUID(),
+    body('dataset_resource_ids').isArray({ min: 1 }),
+    body('dataset_resource_ids.*').isUUID(),
   ]),
   authorize('collection', 'add_dataset'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Add one or more datasets to a collection'
 
-    const { dataset_ids } = req.body;
+    const { dataset_resource_ids } = req.body;
     await collectionService.addDatasets(
       req.params.id,
       {
-        dataset_ids,
+        dataset_resource_ids,
         actor_id: req.user.subject_id,
       },
     );
@@ -367,18 +343,21 @@ router.post(
 
 // remove dataset from collection
 router.delete(
-  '/:id/datasets/:datasetId',
+  '/:id/datasets/:dataset_resource_id',
   validate([
     param('id').isUUID(),
-    param('datasetId').isUUID(),
+    param('dataset_resource_id').isUUID(),
   ]),
   authorize('collection', 'remove_dataset'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Remove a dataset from a collection'
 
-    const { id, datasetId } = req.params;
-    await collectionService.removeDatasets(id, { dataset_ids: [datasetId], actor_id: req.user.subject_id });
+    const { id, dataset_resource_id } = req.params;
+    await collectionService.removeDatasets(id, {
+      dataset_resource_ids: [dataset_resource_id],
+      actor_id: req.user.subject_id,
+    });
     res.status(204).send();
   }),
 );
@@ -388,16 +367,16 @@ router.delete(
   '/:id/datasets',
   validate([
     param('id').isUUID(),
-    body('dataset_ids').isArray({ min: 1 }),
-    body('dataset_ids.*').isUUID(),
+    body('dataset_resource_ids').isArray({ min: 1 }),
+    body('dataset_resource_ids.*').isUUID(),
   ]),
   authorize('collection', 'remove_dataset'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Bulk remove datasets from a collection'
 
-    const { dataset_ids } = req.body;
-    await collectionService.removeDatasets(req.params.id, { dataset_ids, actor_id: req.user.subject_id });
+    const { dataset_resource_ids } = req.body;
+    await collectionService.removeDatasets(req.params.id, { dataset_resource_ids, actor_id: req.user.subject_id });
     res.status(204).send();
   }),
 );
@@ -416,22 +395,24 @@ router.post(
   '/:id/stage',
   validate([
     param('id').isUUID(),
-    body('dataset_ids').optional().isArray({ min: 1, max: workflowService.MAX_BULK_STAGE }),
-    body('dataset_ids.*').isUUID(),
+    body('dataset_resource_ids').optional().isArray({ min: 1, max: workflowService.MAX_BULK_STAGE }),
+    body('dataset_resource_ids.*').isUUID(),
   ]),
   authorize('collection', 'view_metadata'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Stage datasets in a collection'
 
+    // The owning group comes along because each row's state is checked before it is staged,
+    // and the rule reads that group's archived column. One query for the page, not one per row.
     const { data: members } = await datasetService.getDatasetsByCollection(req.params.id, {
       filters: { is_deleted: false },
       pagination: { limit: workflowService.MAX_BULK_STAGE + 1 },
       sort: { sort_by: 'name', sort_order: 'asc' },
-      includes: {},
+      includes: { owner_group: true },
     });
 
-    const requested = req.body.dataset_ids;
+    const requested = req.body.dataset_resource_ids;
     const datasets = requested
       ? members.filter((d) => requested.includes(d.resource_id))
       : members;

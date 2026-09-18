@@ -2,20 +2,24 @@ const { Client } = require('pg');
 const { databaseConfig } = require('./api');
 
 /**
- * Direct database access, for the two jobs the API cannot do.
+ * Direct database access, for the three jobs the API cannot do.
  *
- * **Teardown**, because the API deliberately offers no way to delete a group or a dataset —
- * archiving is not deletion, and adding a destructive endpoint to serve a test suite would
- * put a hole in the model.
+ * **Teardown**, because the API deliberately offers no way to remove a group or a dataset row —
+ * archiving is not deletion, a dataset delete keeps its record, and adding a destructive
+ * endpoint to serve a test suite would put a hole in the model.
  *
  * **Choosing which accounts to borrow**, because no route answers "which users belong to no
  * group". That is a read, so it bypasses no creation path and the world is still built
  * through the API.
  *
+ * **Registering an import source**, because no route creates one. A platform admin inserts the
+ * row by hand in the product too, so the insert is the act the product expects rather than a way
+ * around a creation path.
+ *
  * Nothing else may use this. A spec that reads the database to check an outcome is asserting
  * against rows rather than against what a person can see, which is the API suites' job.
  *
- * @see docs/design/groups/e2e-test-plan.md — How it is torn down
+ * @see docs/design/groups/e2e-test-flows.md — How the suite builds its world
  */
 async function withClient(fn) {
   const client = new Client(databaseConfig());

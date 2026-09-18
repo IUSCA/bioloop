@@ -5,7 +5,7 @@
  * name taken in one group is still free in another, and the answer never reveals anything
  * about a group the caller cannot contribute to.
  *
- * @see docs/design/groups/dataset-creation-plan.md — A3
+ * @see docs/design/groups/dataset-creation.md — Asking whether a name is free, without an oracle
  */
 
 const path = require('path');

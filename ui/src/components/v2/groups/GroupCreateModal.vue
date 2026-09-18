@@ -69,6 +69,8 @@
                 label="Group Name"
                 required-mark
                 :rules="nameRules"
+                :error="!!nameError"
+                :error-messages="nameError ? [nameError] : []"
                 @blur="validate"
               />
             </div>
@@ -145,8 +147,16 @@
               </label>
 
               <div v-if="!formData.selectedParentGroup">
-                <AdminGroupSearchSelect
-                  :disabled="false"
+                <!--
+                  Creating a root group is platform-admin only, and this branch is only
+                  reachable from that button, so the parent may be any group in the system. A
+                  group admin creates a subgroup from inside the group instead, where the
+                  parent is fixed and there is no picker.
+                  @see docs/design/groups/access-model.md — What each search scope shows
+                -->
+                <GroupSelect
+                  scope="visible"
+                  placeholder="Search all groups…"
                   @select="(group) => (formData.selectedParentGroup = group)"
                 />
               </div>
@@ -179,8 +189,8 @@
                 <span class="font-semibold">
                   {{ props.parentGroup.name }}
                 </span>
-                and all ancestor groups. Any grants assigned to parent groups
-                automatically apply to this subgroup. This is structural and
+                and all ancestor groups. Any access given to parent groups
+                automatically applies to this subgroup. This is structural and
                 cannot be restricted.
               </ModernAlert>
 
@@ -292,6 +302,15 @@ watch(
   },
 );
 
+// The server's refusal of a taken name, shown on the field until the name changes.
+const nameError = ref(null);
+watch(
+  () => formData.value.name,
+  () => {
+    nameError.value = null;
+  },
+);
+
 const nameRules = [
   (v) => !!v || "Group name is required",
   (v) => v.length >= 2 || "Group name must be at least 2 characters",
@@ -333,7 +352,7 @@ const adminIds = computed(() => {
 });
 
 const confirmationValid = computed(() => {
-  if (!isValid.value) return false;
+  if (!isValid.value || nameError.value) return false;
   if (isChildTarget.value) {
     const selectedParent = props.isSubgroup
       ? props.parentGroup
@@ -347,6 +366,7 @@ const confirmationValid = computed(() => {
 function show() {
   visible.value = true;
   resetValidation();
+  nameError.value = null;
   // Reset form when opening
   formData.value = {
     name: "",
@@ -399,6 +419,10 @@ async function confirm() {
     emit("update", newGroupRes.data);
   } catch (error) {
     console.error("Failed to create group:", error);
+    if (error?.response?.data?.field === "name") {
+      nameError.value = error.response.data.message;
+      return;
+    }
     toast.error(
       error?.response?.data?.message ??
         "Failed to create group. Please try again.",

@@ -11,11 +11,13 @@ const Policy = require('../../../core/policies/Policy');
  */
 const isPlatformAdmin = new Policy({
   name: 'isPlatformAdmin',
-  resourceType: null, // this policy is not tied to a specific resource type
+  resourceType: null,
+  meta: { pathKind: 'platform_admin' }, // this policy is not tied to a specific resource type
   requires: {
-    user: ['roles'],
+    // From user_role on every request, never from the session. @see hydrators/user.js
+    user: ['current_roles'],
   },
-  evaluate: (user) => user?.roles?.includes('admin') === true,
+  evaluate: (user) => user?.current_roles?.includes('admin') === true,
 });
 
 /**
@@ -30,12 +32,22 @@ const isPlatformAdmin = new Policy({
 const platformAdminOnly = new Policy({
   name: 'platformAdminOnly',
   resourceType: null,
+  // Confers no path. The action is reachable only through the platform-admin short-circuit.
+  meta: { pathKind: null, rule: 'platform_admin_only' },
   requires: {
     user: [],
   },
   evaluate: () => false,
 });
 
+/**
+ * Reads whether a group or a collection is archived, for the transition table. Archiving leaves
+ * an active resource archived and unarchiving the reverse, so neither is offered in the state
+ * it would refuse.
+ * @param {string[]} from - `ACTIVE`, `ARCHIVED`, or both
+ * @param {string[]} to
+ * @see docs/design/groups/access-model.md — The transition table
+ */
 module.exports = {
   isPlatformAdmin,
   platformAdminOnly,

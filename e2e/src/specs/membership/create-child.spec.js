@@ -10,6 +10,16 @@ const { test, expect } = require('../../fixtures');
  * somebody else. The creator never appears in the admin search, because the checkbox is how
  * they put themselves in.
  *
+ * The person named as the other admin is Dana, and must stay a borrowed persona rather than
+ * Quinn. Quinn is the fixed account `ajohnson`, shared by every worker, so making him the
+ * admin of this subgroup put another worker's `harness.spec.js` at `admin_group_count: 1`
+ * and failed its zero-access assertion. Borrowed accounts are drawn per worker, so the same
+ * mutation stays inside this run's world.
+ *
+ * Dana rather than one of the others because she already administers the centre above
+ * `requestLab` and can already read this branch, so the direct admin row she gains on a
+ * throwaway child flips no refusal or visibility assertion elsewhere in the suite.
+ *
  * @see docs/design/groups/e2e-test-flows.md — A1
  */
 
@@ -58,9 +68,9 @@ test('the creator chooses whether they govern the subgroup they create', async (
   await expect(modal.getByText(/no results found/i)).toBeVisible();
 
   // Naming somebody else turns the checkbox into a choice, still checked until she clears it.
-  const quinnLabel = await displayNameOf(alice.api, world.people.quinn.username);
-  await search.fill(world.people.quinn.username);
-  await modal.getByText(quinnLabel, { exact: false }).first().click();
+  const danaLabel = await displayNameOf(alice.api, world.people.dana.username);
+  await search.fill(world.people.dana.username);
+  await modal.getByText(danaLabel, { exact: false }).first().click();
   await expect(checkbox).toBeEnabled();
   await expect(checkbox).toBeChecked();
 
@@ -72,7 +82,7 @@ test('the creator chooses whether they govern the subgroup they create', async (
   await modal.getByRole('button', { name: /^Create Subgroup$/i }).click();
   await expect(modal).toBeHidden();
 
-  // The group exists with Quinn governing it, and Alice is not in it at all. She keeps the
+  // The group exists with Dana governing it, and Alice is not in it at all. She keeps the
   // oversight that owning the parent gives her, and holds no authority inside the child.
   const found = await alice.api.get(
     `/groups/${world.groups.requestLab.id}/descendants?max_depth=1`
@@ -83,9 +93,9 @@ test('the creator chooses whether they govern the subgroup they create', async (
   expect(child, `the subgroup ${name} was not created`).toBeTruthy();
 
   const rows = await directMembers(alice.api, child.id);
-  const quinnRow = rowFor(rows, world.people.quinn.subject_id);
-  expect(quinnRow, 'the named admin is not in the subgroup').toBeTruthy();
-  expect(quinnRow.role).toBe('ADMIN');
+  const danaRow = rowFor(rows, world.people.dana.subject_id);
+  expect(danaRow, 'the named admin is not in the subgroup').toBeTruthy();
+  expect(danaRow.role).toBe('ADMIN');
   expect(rowFor(rows, alice.person.subject_id), 'the creator put herself in after all')
     .toBeFalsy();
 });
@@ -97,9 +107,9 @@ test('losing the last other admin puts the creator back in', async ({ world, as 
   const checkbox = modal.getByTestId(CREATOR_CHECKBOX).locator('input[type="checkbox"]');
   const search = modal.getByPlaceholder(/search users to add as admins/i);
 
-  const quinnLabel = await displayNameOf(alice.api, world.people.quinn.username);
-  await search.fill(world.people.quinn.username);
-  await modal.getByText(quinnLabel, { exact: false }).first().click();
+  const danaLabel = await displayNameOf(alice.api, world.people.dana.username);
+  await search.fill(world.people.dana.username);
+  await modal.getByText(danaLabel, { exact: false }).first().click();
   await modal.getByTestId(CREATOR_CHECKBOX).click();
   await expect(checkbox).not.toBeChecked();
 
@@ -109,4 +119,65 @@ test('losing the last other admin puts the creator back in', async ({ world, as 
 
   await expect(checkbox).toBeChecked();
   await expect(checkbox).toBeDisabled();
+});
+
+test('a taken name is refused on the name field, and the form keeps what was typed', async ({ world, as }) => {
+  const alice = await as('alice');
+  // Names are unique among siblings, so the collision has to come from a group under the same
+  // parent. `subLab` is the run's only child of `lab`, which makes it the one name a second
+  // child of `lab` cannot have.
+  const modal = await openCreateSubgroupForm(alice.page, world.groups.lab.id);
+
+  const taken = world.groups.subLab.name;
+  const nameInput = modal.getByPlaceholder(/Computational Genomics Lab/i);
+  const submit = modal.getByRole('button', { name: /^Create Subgroup$/i });
+
+  await nameInput.fill(taken);
+  const refused = alice.page.waitForResponse(
+    (res) => res.url().endsWith(`/groups/${world.groups.lab.id}/children`)
+      && res.request().method() === 'POST',
+  );
+  await submit.click();
+  const response = await refused;
+  expect(response.status()).toBe(409);
+  expect((await response.json()).field).toBe('name');
+
+  await expect(modal).toBeVisible();
+  await expect(modal.getByText(/already taken/i)).toBeVisible();
+  await expect(nameInput).toHaveValue(taken);
+  await expect(submit).toBeDisabled();
+
+  // Editing the name withdraws the refusal, and the form can be sent again.
+  await nameInput.fill(`${world.prefix}-ui-renamed-${Math.random().toString(36).slice(2, 8)}`);
+  await expect(modal.getByText(/already taken/i)).toBeHidden();
+  await expect(submit).toBeEnabled();
+});
+
+test('the same name is accepted under a different parent', async ({ world, as }) => {
+  // The other half of sibling scoping. `subLab` is a child of `lab`, so its name is free for a
+  // child of `requestLab`, which is a different branch of the same centre. Alice administers
+  // both, so the refusal above and the acceptance here differ only in where the group goes.
+  const alice = await as('alice');
+  const modal = await openCreateSubgroupForm(alice.page, world.groups.requestLab.id);
+
+  const reused = world.groups.subLab.name;
+  await modal.getByPlaceholder(/Computational Genomics Lab/i).fill(reused);
+
+  const created = alice.page.waitForResponse(
+    (res) => res.url().endsWith(`/groups/${world.groups.requestLab.id}/children`)
+      && res.request().method() === 'POST',
+  );
+  await modal.getByRole('button', { name: /^Create Subgroup$/i }).click();
+  expect((await created).status()).toBeLessThan(300);
+  await expect(modal).toBeHidden();
+
+  // Two groups now carry the name, distinguished by parent and by slug.
+  const found = await alice.api.get(
+    `/groups/${world.groups.requestLab.id}/descendants?max_depth=1`
+    + `&search_term=${encodeURIComponent(reused)}`,
+  );
+  const children = found.data || found.groups || found;
+  const child = children.find((g) => g.name === reused);
+  expect(child, `the subgroup ${reused} was not created`).toBeTruthy();
+  expect(child.slug).not.toBe(world.groups.subLab.slug);
 });

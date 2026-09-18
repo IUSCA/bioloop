@@ -232,8 +232,11 @@ run_eslint_async() {
       exit 1
     fi
     
-    # Check if eslint is available
-    local eslint_path="$dir/node_modules/.bin/eslint"
+    # Absolute, because this path is used after the `cd "$dir"` below. A relative
+    # "$dir/node_modules/.bin/eslint" passes the -x test here, at the repository root, and
+    # then resolves to "$dir/$dir/node_modules/..." once we have changed directory, so
+    # ESLint never runs and the check reports success in zero seconds.
+    local eslint_path="$REPO_ROOT/$dir/node_modules/.bin/eslint"
     if [[ ! -x "$eslint_path" ]]; then
       local end_time=$(date +%s)
       local duration=$((end_time - start_time))
@@ -247,12 +250,11 @@ run_eslint_async() {
     current_dir=$(pwd)
     cd "$dir" || exit 1
     
-    # Use proper error handling
+    # `|| eslint_status=$?`, never `if ! …; then eslint_status=$?; fi`. The `!` inverts the
+    # status, so inside that branch `$?` is 0 and every failure was recorded as a pass.
     local eslint_output
     local eslint_status=0
-    if ! eslint_output=$("$eslint_path" "${files[@]}" 2>&1); then
-      eslint_status=$?
-    fi
+    eslint_output=$("$eslint_path" "${files[@]}" 2>&1) || eslint_status=$?
     
     cd "$current_dir" || exit 1
     

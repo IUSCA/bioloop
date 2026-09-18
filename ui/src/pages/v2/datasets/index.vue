@@ -12,7 +12,7 @@
             <!--
               The group is selectable here, unlike on a group's own page, because this list
               spans every group the user can reach.
-              @see docs/design/groups/dataset-creation-plan.md — A7
+              @see docs/design/groups/dataset-creation.md — Where a user starts
             -->
             <VaButton v-if="canCreate" @click="openAddDataset">
               <div class="flex items-center justify-between gap-2 mx-1">
@@ -53,21 +53,6 @@
               color="primary"
               size="sm"
             />
-
-            <!--
-              An upload that fails for good is tombstoned, so it drops out of the ordinary
-              listing. Choosing anything but "All" here reaches those rows.
-              @see docs/design/groups/dataset-creation-plan.md — C5
-            -->
-            <ModernButtonToggle
-              v-model="activeUpload"
-              label="Upload"
-              :options="uploadFilters"
-              text-by="label"
-              value-by="value"
-              color="primary"
-              size="sm"
-            />
           </div>
         </div>
       </VaCardContent>
@@ -95,7 +80,11 @@
             />
           </div>
 
-          <div v-else-if="datasets.length > 0">
+          <div
+            v-else-if="datasets.length > 0"
+            class="v2-table-page"
+            :style="tablePageStyle"
+          >
             <VaDataTable
               :items="datasets"
               :columns="columns"
@@ -139,23 +128,7 @@
               </template>
 
               <template #cell(status)="{ rowData }">
-                <!--
-                  While the upload filter is on, the upload's own state is the answer the
-                  reader came for. A tombstoned failed upload is a deleted dataset, and
-                  labelling it only "Archived" would hide the failure it is there to show.
-                -->
-                <Badge
-                  v-if="uploadStatusOf(rowData)"
-                  :color="uploadBadgeColor(uploadStatusOf(rowData))"
-                >
-                  {{
-                    uploadStatusOf(rowData).replaceAll("_", " ").toLowerCase()
-                  }}
-                </Badge>
-                <Badge
-                  v-else
-                  :color="rowData.is_deleted ? 'neutral' : 'success'"
-                >
+                <Badge :color="rowData.is_deleted ? 'neutral' : 'success'">
                   {{ rowData.is_deleted ? "Archived" : "Active" }}
                 </Badge>
               </template>
@@ -202,11 +175,17 @@ import DatasetService from "@/services/v2/datasets";
 
 const addDatasetModal = ref(null);
 
-// Whether to offer the button at all. The list of groups the user may create in is fetched
-// by the picker inside the modal; asking here as well would be a second round trip to show
-// or hide one button, so the button is always offered and the picker explains when there is
-// no group to choose. A user with no eligible group sees the reason rather than a dead end.
-const canCreate = ref(true);
+// Offered when some group would accept a dataset from this user. The picker inside the modal
+// lists those groups; this asks the same endpoint so the button is never a dead end.
+const canCreate = ref(false);
+onMounted(async () => {
+  try {
+    const { data } = await DatasetService.eligibleOwnerGroups();
+    canCreate.value = (data ?? []).length > 0;
+  } catch {
+    canCreate.value = false;
+  }
+});
 
 const datasets = ref([]);
 const error = ref(null);
@@ -216,11 +195,14 @@ const searchTerm = ref("");
 const activeScope = ref("all");
 const activeStatus = ref("all");
 const activeType = ref("all");
-const activeUpload = ref("all");
 
 const total = ref(0);
 const currentPage = ref(1);
 const itemsPerPage = ref(20);
+
+// Reserves one page of rows on the table container, so the pagination keeps its
+// place when the last page is short.
+const tablePageStyle = useTablePageStyle(total, itemsPerPage);
 const sortBy = ref("updated_at");
 const sortOrder = ref("desc");
 
@@ -233,7 +215,7 @@ function openAddDataset() {
 const scopeFilters = [
   { label: "All", value: "all" },
   { label: "Ownership", value: "ownership" },
-  { label: "Grants", value: "grants" },
+  { label: "Access", value: "grants" },
   { label: "Oversight", value: "oversight" },
 ];
 
@@ -249,32 +231,6 @@ const typeFilters = [
   { label: "Data Product", value: "DATA_PRODUCT" },
 ];
 
-// The three group names the API accepts in `upload_status`, plus the off position.
-const uploadFilters = [
-  { label: "All", value: "all" },
-  { label: "In progress", value: "IN_PROGRESS" },
-  { label: "Failed", value: "FAILED" },
-  { label: "Complete", value: "COMPLETE" },
-];
-
-const FAILED_UPLOAD_STATUSES = [
-  "UPLOAD_FAILED",
-  "VERIFICATION_FAILED",
-  "PROCESSING_FAILED",
-  "PERMANENTLY_FAILED",
-];
-
-// The list carries at most one upload log per row, and only when the filter asked for it.
-function uploadStatusOf(row) {
-  return row.upload_logs?.[0]?.status ?? null;
-}
-
-function uploadBadgeColor(status) {
-  if (FAILED_UPLOAD_STATUSES.includes(status)) return "danger";
-  if (status === "COMPLETE") return "success";
-  return "warning";
-}
-
 const columns = [
   { key: "name", label: "Name", sortable: true },
   { key: "type", label: "Type", sortable: true },
@@ -289,8 +245,7 @@ const areFiltersActive = computed(() => {
     searchTerm.value !== "" ||
     activeStatus.value !== "all" ||
     activeScope.value !== "all" ||
-    activeType.value !== "all" ||
-    activeUpload.value !== "all"
+    activeType.value !== "all"
   );
 });
 
@@ -299,7 +254,6 @@ watch(
     activeScope,
     activeStatus,
     activeType,
-    activeUpload,
     itemsPerPage,
     searchTerm,
     sortBy,
@@ -328,9 +282,6 @@ async function fetchDatasets() {
             : undefined,
       scope: activeScope.value !== "all" ? activeScope.value : undefined,
       type: activeType.value !== "all" ? activeType.value : undefined,
-      upload_status:
-        activeUpload.value !== "all" ? activeUpload.value : undefined,
-      include_upload_log: activeUpload.value !== "all" ? true : undefined,
       // The Owner column is always shown, so the join is always wanted.
       include_owner_group: true,
       limit: itemsPerPage.value,
@@ -356,7 +307,6 @@ function resetFilters() {
   activeScope.value = "all";
   activeStatus.value = "all";
   activeType.value = "all";
-  activeUpload.value = "all";
 }
 
 onMounted(() => {

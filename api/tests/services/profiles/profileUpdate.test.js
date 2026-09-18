@@ -7,7 +7,7 @@
  * enforced on write and asserted here. A profile is shown to people who are not signed in,
  * which makes a malformed link the defect with the widest audience in the system.
  *
- * @see docs/design/groups/profiles.md — Schema
+ * @see docs/design/groups/profiles.md — The columns
  */
 
 const path = require('path');
@@ -55,6 +55,8 @@ describe('what a profile write refuses', () => {
     ['a tagline over 120 characters', { tagline: 'x'.repeat(121) }],
     ['an unknown visibility', { profile_visibility: 'SEMI_PUBLIC' }],
     ['a link with an unknown type', { links: [{ type: 'ftp', url: 'https://x.test' }] }],
+    // The literal scheme is the point of the case: the validator must reject it.
+    // eslint-disable-next-line no-script-url
     ['a link that is not http', { links: [{ type: 'website', url: 'javascript:alert(1)' }] }],
     ['a link that is not a URL', { links: [{ type: 'website', url: 'not a url' }] }],
     ['a contact link that is not an address', { links: [{ type: 'contact_email', url: 'nope' }] }],
@@ -66,6 +68,9 @@ describe('what a profile write refuses', () => {
     ['a publication from the far future', {
       publications: [{ doi: '10.1000/x', year: 3000 }],
     }],
+    ['a type with punctuation in it', { type: 'core/facility' }],
+    ['a type carrying markup', { type: '<b>lab</b>' }],
+    ['a type over 32 characters', { type: 'x'.repeat(33) }],
     ['a body with no profile field in it', {}],
   ])('refuses %s', async (_label, body) => {
     const { version } = await currentGroup();
@@ -110,8 +115,10 @@ describe('what a profile write stores', () => {
 
   test('replaces a list outright, so an entry can be removed', async () => {
     const before = await currentGroup();
-    const updated = await update({ links: [{ type: 'website', url: 'https://only.test' }] },
-      before.version);
+    const updated = await update(
+      { links: [{ type: 'website', url: 'https://only.test' }] },
+      before.version,
+    );
 
     expect(updated.metadata.links).toHaveLength(1);
     expect(updated.metadata.links[0].url).toBe('https://only.test');
@@ -120,12 +127,49 @@ describe('what a profile write stores', () => {
   test('leaves metadata keys the profile does not own alone', async () => {
     await prisma.group.update({
       where: { id: group.id },
-      data: { metadata: { type: 'core', links: [] } },
+      data: { metadata: { imported_from: 'legacy-directory', links: [] } },
     });
     const before = await currentGroup();
 
-    const updated = await update({ tagline: 'still a core' }, before.version);
+    const updated = await update({ tagline: 'still itself' }, before.version);
+    expect(updated.metadata.imported_from).toBe('legacy-directory');
+  });
+
+  test('stores the type lower case, whatever case it arrived in', async () => {
+    const before = await currentGroup();
+    // `text-transform: capitalize` on the cards raises a first letter and lowers nothing, so
+    // a shouted value would stay shouted everywhere it is rendered.
+    const updated = await update({ type: '  CORE  ' }, before.version);
+
     expect(updated.metadata.type).toBe('core');
+  });
+
+  test('takes a word the icon map does not know', async () => {
+    const before = await currentGroup();
+    // The four types with icons are an offer in the form, not the set of legal values. A
+    // group that is none of them still gets to say what it is; it just wears the default icon.
+    const updated = await update({ type: 'consortium' }, before.version);
+
+    expect(updated.metadata.type).toBe('consortium');
+  });
+
+  test('a blank type clears it, the same as null', async () => {
+    let before = await currentGroup();
+    await update({ type: 'lab' }, before.version);
+
+    before = await currentGroup();
+    const updated = await update({ type: '   ' }, before.version);
+    expect(updated.metadata.type).toBeNull();
+  });
+
+  test('a collection cannot set a type, because nothing renders one', async () => {
+    // Shared with `updateGroupProfile` through `buildProfileUpdate`, which reads the key only
+    // for a group. The body is not refused; the key is ignored like any other unknown one.
+    const body = { type: 'lab', tagline: 'A panel of landraces' };
+    const update_ = profileService.buildProfileUpdate(body, {}, 'collection');
+
+    expect(update_.metadata).toBeUndefined();
+    expect(update_.changedFields).toEqual(['tagline']);
   });
 
   test('null clears a field', async () => {

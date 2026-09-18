@@ -6,7 +6,7 @@
   and is easy to get wrong. Import registers a directory and copies nothing; upload moves
   bytes out of this browser.
 
-  @see docs/design/groups/dataset-creation-plan.md — A6
+  @see docs/design/groups/dataset-creation.md — What the creation dialogs look like
   @see docs/public/mockups/dataset-creation-screens.html
 -->
 <template>

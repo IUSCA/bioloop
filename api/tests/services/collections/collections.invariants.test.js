@@ -106,7 +106,10 @@ describe('collections - invariants', () => {
     it('addDatasets rejects dataset owned by a different group (status 400)', async () => {
       const c = await newCollection('_cross_fgn');
       await expect(
-        collectionsService.addDatasets(c.id, { dataset_ids: [foreignDs.resource_id], actor_id: actor.subject_id }),
+        collectionsService.addDatasets(c.id, {
+          dataset_resource_ids: [foreignDs.resource_id],
+          actor_id: actor.subject_id,
+        }),
       ).rejects.toMatchObject({ status: 400 });
 
       const count = await prisma.collection_dataset.count({
@@ -118,7 +121,10 @@ describe('collections - invariants', () => {
     it('addDatasets rejects soft-deleted dataset (status 400)', async () => {
       const c = await newCollection('_cross_del');
       await expect(
-        collectionsService.addDatasets(c.id, { dataset_ids: [deletedDs.resource_id], actor_id: actor.subject_id }),
+        collectionsService.addDatasets(c.id, {
+          dataset_resource_ids: [deletedDs.resource_id],
+          actor_id: actor.subject_id,
+        }),
       ).rejects.toMatchObject({ status: 400 });
     });
 
@@ -127,7 +133,7 @@ describe('collections - invariants', () => {
       const c = await newCollection('_cross_agroup');
       await expect(
         collectionsService.addDatasets(c.id, {
-          dataset_ids: [archivedGroupDs.resource_id],
+          dataset_resource_ids: [archivedGroupDs.resource_id],
           actor_id: actor.subject_id,
         }),
       ).rejects.toMatchObject({ status: 400 });
@@ -138,7 +144,7 @@ describe('collections - invariants', () => {
     it('addDatasets on archived collection throws 409', async () => {
       const c = await archived('_inv_arch_add');
       await expect(
-        collectionsService.addDatasets(c.id, { dataset_ids: [ownDs.resource_id], actor_id: actor.subject_id }),
+        collectionsService.addDatasets(c.id, { dataset_resource_ids: [ownDs.resource_id], actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 409 });
 
       const count = await prisma.collection_dataset.count({
@@ -150,11 +156,17 @@ describe('collections - invariants', () => {
     it('removeDatasets on archived collection throws 409', async () => {
       // Add dataset first while not archived
       const c = await newCollection('_inv_arch_rm');
-      await collectionsService.addDatasets(c.id, { dataset_ids: [ownDs.resource_id], actor_id: actor.subject_id });
+      await collectionsService.addDatasets(c.id, {
+        dataset_resource_ids: [ownDs.resource_id],
+        actor_id: actor.subject_id,
+      });
       await collectionsService.archiveCollection(c.id, actor.subject_id);
 
       await expect(
-        collectionsService.removeDatasets(c.id, { dataset_ids: [ownDs.resource_id], actor_id: actor.subject_id }),
+        collectionsService.removeDatasets(c.id, {
+          dataset_resource_ids: [ownDs.resource_id],
+          actor_id: actor.subject_id,
+        }),
       ).rejects.toMatchObject({ status: 409 });
 
       // Dataset must still be in the collection

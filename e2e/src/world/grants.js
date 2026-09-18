@@ -10,7 +10,7 @@
  *
  * `limit` is not accepted here; passing one is a 400.
  *
- * @see docs/design/groups/e2e-test-plan.md — Phase 3
+ * @see docs/contributing/techniques/e2e-tests.md — API shapes that are not what they look like
  */
 
 /** The URL, so a refusal assertion and a read agree about which route they mean. */

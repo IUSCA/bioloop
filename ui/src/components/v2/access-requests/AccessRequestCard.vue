@@ -36,7 +36,7 @@
         <!--
           A decided request is not the same as access the subject still has. Say which,
           rather than letting APPROVED stand for both.
-          @see docs/design/groups/access-requests-plan.md — C4
+          @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
         -->
         <p v-if="accessNote" class="text-sm" :class="accessNoteClass">
           {{ accessNote }}
@@ -70,25 +70,21 @@
  * One row in a list of access requests, on the queue page and on both resource tabs.
  *
  * It carries the requester, the subject, the resource, the status, and the item count, and
- * nothing else: the decision detail belongs on the request detail page. The three call sites
- * previously passed `canAct` and `canReview` for the same idea and the component read
- * neither, so both are `canAct` now.
+ * nothing else: the decision detail belongs on the request detail page. The Review button reads
+ * the row's `_meta.capabilities` and `_meta.available_actions`, which every access-request list
+ * sends.
  *
- * @see docs/design/groups/access-requests-plan.md — B2
+ * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
  */
 import Badge from "@/components/v2/Badge.vue";
 import ResourceChip from "@/components/v2/ResourceChip.vue";
+import { admits, holds } from "@/composables/useCapabilities";
 import * as datetime from "@/services/datetime";
 
 const props = defineProps({
   request: {
     type: Object,
     required: true,
-  },
-  /** Whether the viewer may decide this request. The Review button is offered only then. */
-  canAct: {
-    type: Boolean,
-    default: false,
   },
 });
 
@@ -136,8 +132,12 @@ const timeLabel = computed(() => {
   return datetime.fromNowShort(at);
 });
 
+// `review` arrives only while the request is under review and the viewer may decide it, and
+// the request's own state says whether a review can still happen at all. Hidden rather than
+// disabled: a decided request is never reviewed again.
+// @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
 const canReviewThis = computed(
-  () => props.canAct && props.request.status === "UNDER_REVIEW",
+  () => holds(props.request, "review") && admits(props.request, "review"),
 );
 
 const DECIDED = ["APPROVED", "PARTIALLY_APPROVED"];
@@ -151,7 +151,7 @@ const accessNote = computed(() => {
   if (summary.issued === 0) return null;
   if (summary.live === 0) return "No live access from this request";
   if (summary.live < summary.issued) {
-    return `${summary.live} of ${summary.issued} grants still live`;
+    return `${summary.live} of ${summary.issued} permissions still live`;
   }
   return null;
 });

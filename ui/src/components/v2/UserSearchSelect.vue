@@ -33,12 +33,17 @@ const props = defineProps({
 const emit = defineEmits(["select"]);
 
 const RESULT_COUNT = 5;
+// The directory answers any term, however short. It used to refuse anything under three
+// characters, which the search bar could only render as "No results found" — the same thing
+// it shows for a name nobody has.
+// @see docs/design/groups/user-directory.md — Who may search, and what a search returns
+const MAX_ROWS = 10;
 
 async function searchUsers(searchQuery) {
   try {
     const res = await UserService.getAll({
-      search: searchQuery,
-      take: RESULT_COUNT + props.excludeIds.length,
+      search: searchQuery.trim(),
+      take: Math.min(RESULT_COUNT + props.excludeIds.length, MAX_ROWS),
     });
     const value = res.data?.users || [];
     return value

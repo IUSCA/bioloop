@@ -1,12 +1,7 @@
 <template>
   <div class="flex items-start justify-between flex-wrap gap-4">
     <div class="flex items-start gap-3.5 min-w-0">
-      <ProfileAvatar
-        :kind="props.kind"
-        :name="props.name"
-        :avatar-url="props.avatarUrl"
-        :size="56"
-      />
+      <ProfileAvatar :kind="props.kind" :name="props.name" :size="56" />
       <div class="flex flex-col gap-1.5 pt-0.5 min-w-0">
         <div class="flex items-center gap-2.5 flex-wrap">
           <h1 class="text-xl font-semibold">{{ props.name }}</h1>
@@ -36,16 +31,15 @@
 import ProfileAvatar from "@/components/v2/profiles/ProfileAvatar.vue";
 
 /**
- * The identity block at the top of a profile: picture, name, and the one line under it.
+ * The identity block at the top of a profile: kind icon, name, and the one line under it.
  *
  * @see docs/design/groups/profiles.md — The UI
  */
 const props = defineProps({
   name: { type: String, required: true },
-  /** "group" or "collection" — picks the icon shown when there is no picture. */
+  /** "group" or "collection" — picks the icon drawn beside the name. */
   kind: { type: String, default: "group" },
   tagline: { type: String, default: null },
-  avatarUrl: { type: String, default: null },
   /** `metadata.type` — a short word such as "core" or "lab". */
   type: { type: String, default: null },
   isArchived: { type: Boolean, default: false },

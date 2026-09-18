@@ -9,24 +9,25 @@ This is an **Attribute-Based Access Control (ABAC)** implementation with a three
 ```
 authorization/
 ├── core/              # FRAMEWORK LAYER - Never edit in derived apps
-│   ├── policies/      # Policy and PolicyContainer classes
+│   ├── policies/      # Policy, PolicyContainer, PolicyRegistry
 │   ├── hydrators/     # Hydrator base classes and registry
-│   ├── authorize.js   # Core authorization engine
-│   ├── attributeFilters.js
-│   ├── middlewares.js
+│   ├── pipeline.js    # The decision pipeline the middleware and handlers share
+│   ├── capabilities.js
+│   ├── requiresCheck.js
 │   └── index.js       # Framework exports
 │
 ├── builtin/           # BASE APPLICATION LAYER - Rarely edit in derived apps
-│   ├── policies/      # Builtin resource policies (group, collection)
-│   ├── hydrators/     # Builtin hydrators (user, context)
-│   └── audit/         # Audit event types
+│   ├── policies/      # One policy container per resource type
+│   ├── hydrators/     # Hydrators for types the default Prisma hydrator cannot serve
+│   ├── paths/         # The access rule as SQL, one file per path-based type, and standing
+│   ├── tables/        # The access model's tables, read by the reference model in tests
+│   ├── lists.js       # Helpers a list route calls
+│   ├── importFor.js   # import(type): decision helpers bound to one type at module load
+│   └── restrictions.js
 │
 ├── custom/            # DERIVED APPLICATION LAYER - Only exists in derived apps
-│   ├── policies/      # Your custom resource policies
-│   ├── hydrators/     # Your custom hydrators
-│   └── README.md      # Extension guide
 │
-├── index.js           # Main entry point (explicit imports & registration)
+├── index.js           # Configuration: imports, registration, and wiring
 └── README.md          # This file
 ```
 
@@ -35,8 +36,22 @@ authorization/
 | Layer | Contains | Edited in Base Repo? | Edited in Derived Apps? |
 |-------|----------|----------------------|-------------------------|
 | **core/** | Framework classes, authorization engine | ✅ Yes | ❌ Never |
-| **builtin/** | Base app policies (group, collection) | ✅ Yes | ⚠️ Rarely |
-| **custom/** | Derived app policies (project, experiment) | ❌ N/A | ✅ Always |
+| **builtin/** | Base app policies, hydrators, and paths | ✅ Yes | ⚠️ Rarely |
+| **custom/** | Derived app policies, hydrators, and paths | ❌ N/A | ✅ Always |
+
+### What index.js does
+
+`index.js` reads as configuration. Adding a resource type edits it only to import and register:
+
+- a **policy container**, always;
+- a **hydrator**, only when the default Prisma hydrator for the model is not enough;
+- a **paths file**, only when the type's terms read `context.access_paths`.
+
+A registered paths file also makes a refusal on that type a 404 for a caller with no standing.
+The resource's state rules are registered separately, in `src/state/index.js`. The startup check
+throws when a policy action has no state rule.
+
+See [custom/README.md](custom/README.md) for the full steps.
 
 ### Merge Conflict Strategy
 
@@ -47,69 +62,74 @@ When merging base repo updates into a derived app:
 3. **index.js conflicts**: Simple to resolve:
    - Accept both changes
    - Your custom imports stay in Section 3
-   - Your custom registrations stay in Sections 4 & 5
+   - Your custom registrations stay at the end of each block in Section 4
 
 ## Implementation Invariants
 
-- **Policies as pure functions**: Stateless evaluation based only on provided attributes
-- **Explicit attribute declarations**: Policies declare exactly what they need (`requires: { user: [...], resource: [...] }`)
+- **Policies as pure functions**: A term decides synchronously from the attributes it declares. The startup check rejects an async term.
+- **Explicit attribute declarations**: Policies declare exactly what they need (`requires: { user: [...], resource: [...], context: [...] }`)
 - **Centralized loaders**: Hydrators manage all data fetching
 - **Request-scoped caching**: Avoid redundant database queries within a request
-- **Zero knowledge at call sites**: Routes just call `authorize()`, don't need to know policy internals
+- **One pipeline**: The middleware and `authorizeAction` call the same decision pipeline, so they cannot disagree
+- **Configuration fails at startup**: Policies, attribute rules, hydrators, paths, and bound action names are checked when they load; a decision checks only the request's own values
 - **Separation of concerns**: Policy definition, data loading, and enforcement are separate
 
 ## Quick Start
 
-### Using Authorization in Routes
+### Authorizing a route
+
+A route binds one action with the middleware. A refusal is answered with 404 or 403 before the
+handler runs, and `req.permission.filter` projects the response.
 
 ```javascript
-const { authorize, POLICY_REGISTRY, hydratorRegistry } = require('@/authorization');
+const { createAuthorizationMiddleware: authorize } = require('@/authorization');
 
-router.get('/groups/:id', async (req, res) => {
-  const allowed = await authorize(
-    POLICY_REGISTRY.group.getPolicy('view_metadata'),
-    {
-      user: req.user.id,
-      resource: req.params.id,
-      context: req.id
-    },
-    hydratorRegistry,
-    req.policyContext
-  );
+router.get(
+  '/groups/:id',
+  authorize('group', 'view_metadata', { shouldDeriveCapabilities: true, shouldDeriveStanding: true }),
+  asyncHandler(async (req, res) => {
+    const group = await groupService.getGroupById(req.params.id);
+    res.json(req.permission.filter(group));
+  }),
+);
+```
 
-  if (!allowed) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
+A handler that must decide in its body binds the decision when its module loads, and answers
+with `decision.status` when `decision.granted` is false. Binding checks the type and action at
+startup:
 
-  // ... proceed with request
+```javascript
+const decideViewGroup = require('@/authorization').import('group').action('view_metadata');
+
+const decision = await decideViewGroup({
+  identifiers: { user: req.user.subject_id, resource: group.id },
+  policyExecutionContext: req.policyContext,
+  preFetched: { user: req.user, resource: group },
 });
 ```
 
-### Adding Authorization to a Derived App
+### Authorizing a list
 
-See [custom/README.md](custom/README.md) for detailed instructions on:
-- Creating custom policies
-- Creating custom hydrators
-- Registering them in index.js
-- Testing your authorization
+A list route binds the type's `list` action. Its query scopes the rows, and
+`req.permission.filter` gives every row the list's fields. A route whose own decision is about the
+resource in the URL, such as a group's ancestors, uses `import(type).listFilter()` instead.
+`import(type).standingOfRows()` and `import(type).rows(action)` add per-row badges and controls.
+
+@see docs/design/groups/access-model.md — Projection
 
 ## Architecture Details
 
 ### Policies
 
-Policies are instances of the `Policy` class that define authorization rules:
+A leaf term is a `Policy` with a path kind in `meta`:
 
 ```javascript
 const isGroupAdmin = new Policy({
   name: 'isGroupAdmin',
   resourceType: 'group',
-  requires: {
-    user: ['group_memberships'],
-    resource: ['id'],
-  },
-  evaluate: (user, group) => user
-    .group_memberships
-    .some((m) => m.group_id === group.id && m.role === 'ADMIN'),
+  meta: { pathKind: 'admin' },
+  requires: { context: ['access_paths'] },
+  evaluate: (user, group, context) => context.access_paths.kinds.has('admin'),
 });
 ```
 
@@ -118,26 +138,25 @@ const isGroupAdmin = new Policy({
 Combine policies using `Policy.or()`, `Policy.and()`, `Policy.not()`:
 
 ```javascript
-const canEdit = Policy.or([isPlatformAdmin, isGroupAdmin]);
-const canView = Policy.and([isAuthenticated, isGroupMember]);
-const isNotBanned = Policy.not(isBanned);
+const canView = Policy.or([isGroupAdmin, isGroupMember]);
 ```
+
+No policy names the platform admin. The pipeline allows a platform admin before any action policy
+runs.
 
 ### Policy Containers
 
-`PolicyContainer` organizes policies for a resource type:
+`PolicyContainer` holds a resource type's actions and attribute rules. Every action declares its
+restriction class with `mutating`, `reading`, or `readingData`:
 
 ```javascript
-const groupPolicies = new PolicyContainer({
-  resourceType: 'group',
-  version: '1.0.0',
-});
+const groupPolicies = new PolicyContainer({ resourceType: 'group', version: '1.0.0' });
 
 groupPolicies
   .actions({
-    create: isPlatformAdmin,
-    view_metadata: Policy.or([isGroupAdmin, isGroupMember]),
-    edit_metadata: isGroupAdmin,
+    create_child: mutating(isGroupAdmin),
+    view_metadata: reading(Policy.or([isGroupAdmin, isGroupMember])),
+    list: reading(Policy.always),
   })
   .attributes({
     '*': [
@@ -148,18 +167,17 @@ groupPolicies
   .freeze();
 ```
 
+A caller sees the union of every matching attribute rule.
+
 ### Hydrators
 
 Hydrators fetch entity attributes needed by policies:
 
 ```javascript
-const userHydrator = new PrismaHydrator({ 
-  prismaClient: prisma, 
-  modelName: 'user' 
-});
+const userHydrator = new PrismaHydrator({ prismaClient: prisma, modelName: 'user' });
 
 // Register virtual attributes (computed/derived data)
-userHydrator.registerVirtualAttribute('roles', async ({ id, hydrator }) => {
+userHydrator.registerVirtualAttribute('current_roles', async ({ id, hydrator }) => {
   const roles = await hydrator.prisma.user_role.findMany({
     where: { user_id: id },
     include: { roles: true },
@@ -168,52 +186,32 @@ userHydrator.registerVirtualAttribute('roles', async ({ id, hydrator }) => {
 });
 ```
 
-### Two-Phase Authorization
+### Paths
 
-1. **Phase 1: Action Authorization**
-   - Check if user can perform the action (e.g., "view_metadata")
-   - Returns boolean
+A path is one way a user reaches a resource: `admin`, `oversight`, `member`, or `grant`. Each
+path-based type registers a paths file under `builtin/paths/` that returns one row per path as
+SQL. The context hydrator's `access_paths` attribute runs it for one resource, and list services
+embed it with `accessibleIdsQuery`, so a check and a list read the same rule.
+`builtin/paths/standing.js` turns the rows into `_meta.standing`.
 
-2. **Phase 2: Attribute Filtering** (optional)
-   - Determine which attributes user can see
-   - Returns filter function
-
-```javascript
-const result = await authorizeWithFilters(
-  groupPolicies.getPolicy('view_metadata'),
-  groupPolicies.getAttributeRules('view_metadata'),
-  { user: req.user.id, resource: req.params.id },
-  hydratorRegistry,
-  req.policyContext
-);
-
-if (result.granted) {
-  const group = await prisma.group.findUnique({ where: { id: req.params.id } });
-  res.json(result.filter(group)); // Returns only allowed attributes
-}
-```
+@see [builtin/paths/index.js](builtin/paths/index.js)
 
 ## File Organization
 
 ### Core Framework Files
 
-- **[core/policies/Policy.js](core/policies/Policy.js)**: Base Policy class with combinators
-- **[core/policies/PolicyContainer.js](core/policies/PolicyContainer.js)**: Container for organizing resource policies
-- **[core/hydrators/BaseHydrator.js](core/hydrators/BaseHydrator.js)**: Abstract Hydrator base class
-- **[core/hydrators/PrismaHydrator.js](core/hydrators/PrismaHydrator.js)**: Prisma-based hydrator with virtual attributes
-- **[core/hydrators/HydratorRegistry.js](core/hydrators/HydratorRegistry.js)**: Registry with auto-hydrator factory
-- **[core/authorize.js](core/authorize.js)**: Core `authorize()` and `authorizeWithFilters()` functions
-- **[core/attributeFilters.js](core/attributeFilters.js)**: Attribute filtering logic using Notation library
-- **[core/middlewares.js](core/middlewares.js)**: Request middleware for policy context initialization
+See [core/README.md](core/README.md).
 
 ### Builtin Application Files
 
-- **[builtin/policies/group.js](builtin/policies/group.js)**: Group resource policies
-- **[builtin/policies/collection.js](builtin/policies/collection.js)**: Collection resource policies
-- **[builtin/policies/utils/](builtin/policies/utils/)**: Shared policies (e.g., `isPlatformAdmin`)
-- **[builtin/hydrators/user.js](builtin/hydrators/user.js)**: User hydrator with virtual attributes
-- **[builtin/hydrators/context.js](builtin/hydrators/context.js)**: Context hydrator for request-level data
-- **[builtin/audit/events.js](builtin/audit/events.js)**: Audit event type enum
+- **[builtin/policies/](builtin/policies/)**: One policy container per resource type; `utils/` holds `isPlatformAdmin`
+- **[builtin/policies/base_attributes.js](builtin/policies/base_attributes.js)**: The public attribute lists
+- **[builtin/hydrators/](builtin/hydrators/)**: Hydrators with virtual attributes, including `context.access_paths`
+- **[builtin/paths/](builtin/paths/)**: The path registry, the path queries, one SQL file per type, and standing
+- **[builtin/lists.js](builtin/lists.js)**: `callerIsPlatformAdmin`, `listFilter`, `decideRows`, and `standingOfRows`
+- **[builtin/importFor.js](builtin/importFor.js)**: `import(type)`, the same helpers bound to one type at module load
+- **[builtin/restrictions.js](builtin/restrictions.js)**: The restriction checker injected into the pipeline
+- **[builtin/tables/](builtin/tables/)**: The term, action, and attribute tables the reference model reads
 
 ## Driving Forces
 
@@ -225,4 +223,5 @@ if (result.granted) {
 ## Related Documentation
 
 - [Architecture](../../../docs/reference/architecture.md): System-wide architecture
+- [Access model](../../../docs/design/groups/access-model.md): Paths, standing, projection, and refusal shapes
 - [Custom Extensions](custom/README.md): Guide for derived app developers

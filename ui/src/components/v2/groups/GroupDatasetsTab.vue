@@ -23,6 +23,8 @@
 
             <VaButton
               size="small"
+              :disabled="!stateAdmits('add_dataset')"
+              :title="stateAdmits('add_dataset') ? null : DISABLED_REASON"
               @click="navigateToCreateDataset"
               v-if="props.canCreate"
             >
@@ -48,7 +50,11 @@
               />
             </div>
 
-            <div v-else-if="datasets.length > 0">
+            <div
+              v-else-if="datasets.length > 0"
+              class="v2-table-page"
+              :style="tablePageStyle"
+            >
               <VaDataTable
                 :items="datasets"
                 :columns="columns"
@@ -144,7 +150,7 @@
                   <template v-else>
                     No datasets are currently available to you in this group.
                     This group may have no datasets, or you may not have been
-                    granted access. Contact your group administrator for
+                    given access. Contact your group administrator for
                     assistance.
                   </template>
                 </template>
@@ -152,6 +158,8 @@
                   <!-- Call to action -->
                   <VaButton
                     v-if="props.canCreate"
+                    :disabled="!stateAdmits('add_dataset')"
+                    :title="stateAdmits('add_dataset') ? null : DISABLED_REASON"
                     @click="navigateToCreateDataset"
                   >
                     <div class="flex items-center gap-3 px-2">
@@ -171,7 +179,7 @@
   <!--
     The owning group is fixed here: the user is on that group's page, so there is nothing to
     choose. The modal still shows which group it will be.
-    @see docs/design/groups/dataset-creation-plan.md — A7
+    @see docs/design/groups/dataset-creation.md — Where a user starts
   -->
   <AddDatasetModal
     ref="addDatasetModal"
@@ -191,9 +199,33 @@ const props = defineProps({
   groupId: { type: String, required: true },
   group: { type: Object, required: false, default: null },
   canCreate: { type: Boolean, required: true },
+  /**
+   * `_meta.available_actions`: what the group's own state admits right now, or null when the
+   * response did not say. A control the state withholds stays visible and disabled, because
+   * the caller keeps the authority and will hold it again.
+   *
+   * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+   */
+  availableActions: { type: Array, default: null },
 });
 
-// const emit = defineEmits(["count-changed"]);
+/**
+ * Whether the group's state admits the action.
+ *
+ * A null list means the response did not answer, and every control stays usable: the service
+ * checks the state again under its own lock, so a wrongly enabled control costs a 409 rather
+ * than a wrong write.
+ */
+function stateAdmits(action) {
+  return props.availableActions === null
+    ? true
+    : props.availableActions.includes(action);
+}
+
+/** The words a disabled control shows for why the state withholds it. */
+const DISABLED_REASON = "This group is archived.";
+
+const emit = defineEmits(["count-changed"]);
 
 const addDatasetModal = ref(null);
 const datasets = ref([]);
@@ -204,6 +236,10 @@ const searchTerm = ref("");
 const total = ref(0);
 const currentPage = ref(1);
 const itemsPerPage = ref(20);
+
+// Reserves one page of rows on the table container, so the pagination keeps its
+// place when the last page is short.
+const tablePageStyle = useTablePageStyle(total, itemsPerPage);
 const sortBy = ref("created_at");
 const sortOrder = ref("desc");
 const ITEMS_PER_PAGE_OPTIONS = [20, 50, 100];
@@ -291,6 +327,7 @@ function onDatasetCreated() {
   // An import lands immediately; an upload has only been registered at this point, and its
   // transfer is reported by the tray. Refetching covers both.
   fetchDatasets();
+  emit("count-changed");
 }
 
 function resetFilters() {

@@ -14,7 +14,7 @@
         Myself
       </button>
       <button
-        v-if="uiPersona.isGroupAdmin"
+        v-if="me.adminGroupCount > 0"
         @click="selectedMode = 'group'"
         :class="[
           'px-3 py-2 text-sm font-medium rounded-lg transition-all',
@@ -50,9 +50,15 @@
 
     <!-- Group mode: Show search and selection -->
     <div v-if="selectedMode === 'group'" class="flex flex-col gap-3">
-      <AdminGroupSearchSelect
-        v-model="selectedGroup"
-        @update:modelValue="handleGroupSelect"
+      <!--
+        Requesting access on behalf of a group is representing it, which is an admin act, so
+        the picker offers the groups this caller may govern.
+        @see docs/design/groups/access-model.md — What each search scope shows
+      -->
+      <GroupSelect
+        scope="can_administer"
+        placeholder="Search groups you administer…"
+        @select="onGroupSelected"
       />
 
       <!-- Show selected group -->
@@ -76,7 +82,7 @@
 
 <script setup>
 import { useAuthStore } from "@/stores/auth";
-import { useUIPersonaStore } from "@/stores/v2/uiPersona";
+import { useMeStore } from "@/stores/v2/me";
 
 const props = defineProps({
   modelValue: {
@@ -88,7 +94,7 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 const auth = useAuthStore();
-const uiPersona = useUIPersonaStore();
+const me = useMeStore();
 const selectedMode = ref("myself");
 const selectedGroup = ref(null);
 
@@ -107,24 +113,24 @@ function selectMyself() {
 }
 
 /**
- * Handle group selection
+ * Record the chosen group, and tell the form.
+ *
+ * The picker emits `select`. It was wired to `v-model` and `@update:modelValue`, which it has
+ * never emitted, so choosing a group did nothing at all.
  */
-function handleGroupSelect(group) {
-  if (group?.id) {
-    emit("update:modelValue", {
-      id: group.id,
-      type: "GROUP",
-      group: group,
-    });
-  }
+function onGroupSelected(group) {
+  if (!group?.id) return;
+  selectedGroup.value = group;
+  emit("update:modelValue", {
+    id: group.id,
+    type: "GROUP",
+    group,
+  });
 }
 
 // Initialize with current user on mount
 onMounted(async () => {
-  // Ensure persona is loaded
-  if (!uiPersona.isLoaded) {
-    await uiPersona.fetchPersona();
-  }
+  await me.ensureLoaded();
 
   if (!props.modelValue && auth.user?.subject_id) {
     selectMyself();

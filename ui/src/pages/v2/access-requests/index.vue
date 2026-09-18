@@ -73,7 +73,6 @@
               v-for="req in pendingRequests"
               :key="req.id"
               :request="req"
-              :can-act="true"
               @review="openReviewModal"
               @view="viewRequest"
             />
@@ -83,7 +82,7 @@
             class="mt-5 px-5"
             v-model:page="pendingPage"
             v-model:page_size="itemsPerPage"
-            :total_results="pendingTotal"
+            :total_results="pendingTotal ?? 0"
             :curr_items="pendingRequests.length"
           />
         </div>
@@ -120,7 +119,6 @@
               v-for="req in reviewedRequests"
               :key="req.id"
               :request="req"
-              :can-act="false"
               @view="viewRequest"
             />
           </div>
@@ -129,7 +127,7 @@
             class="mt-5 px-5"
             v-model:page="reviewedPage"
             v-model:page_size="itemsPerPage"
-            :total_results="reviewedTotal"
+            :total_results="reviewedTotal ?? 0"
             :curr_items="reviewedRequests.length"
           />
         </div>
@@ -166,7 +164,6 @@
               v-for="req in myRequests"
               :key="req.id"
               :request="req"
-              :can-act="false"
               @view="viewRequest"
             />
           </div>
@@ -175,7 +172,7 @@
             class="mt-5 px-5"
             v-model:page="minePage"
             v-model:page_size="itemsPerPage"
-            :total_results="mineTotal"
+            :total_results="mineTotal ?? 0"
             :curr_items="myRequests.length"
           />
         </div>

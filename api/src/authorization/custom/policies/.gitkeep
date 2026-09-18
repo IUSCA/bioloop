@@ -7,6 +7,6 @@
 # 1. Create a new file (e.g., project.js)
 # 2. Import core/builtin utilities as needed
 # 3. Define and export a PolicyContainer
-# 4. Register it in ../index.js POLICY_REGISTRY
+# 4. Register it in SECTION 4 of ../../index.js
 #
-# See ../custom/README.md for examples and guidelines
+# See ../README.md for examples and guidelines

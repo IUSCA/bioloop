@@ -72,9 +72,9 @@ function refuse(what, problems) {
 /**
  * Confirm the migrations have run.
  *
- * The system principals, the `Unassigned Datasets` group, and the restriction types are
- * inserted by migrations rather than by this script, because the constraints that reference
- * them are created in the same migration. Seeding a database that has only had
+ * The system principals and the `Unassigned Datasets` group are inserted by migrations rather
+ * than by this script, because the constraints that reference them are created in the same
+ * migration. Seeding a database that has only had
  * `prisma migrate deploy` partially applied produces foreign key errors several hundred
  * lines later, naming a constraint rather than the missing step.
  *
@@ -96,10 +96,6 @@ async function assertMigrationsRan(prisma) {
   const problems = required
     .filter(([id]) => !foundIds.has(id))
     .map(([id, label]) => `${label} (group ${id}) is missing`);
-
-  if (await prisma.restriction_type.count() === 0) {
-    problems.push('the restriction_type table is empty');
-  }
 
   if (problems.length > 0) {
     problems.push('run `npx prisma migrate deploy` before seeding');
@@ -391,7 +387,7 @@ function collectImportSourcesFromJSON() {
  * and `status` are deliberately left alone, because a platform admin sets those after the
  * groups exist.
  *
- * @see docs/design/groups/dataset-creation-plan.md — B1
+ * @see docs/design/groups/dataset-creation.md — How a source gets registered, for now
  */
 async function seedImportSources(prisma, sources, { dryRun }) {
   if (sources.length === 0) return { created: 0, updated: 0 };

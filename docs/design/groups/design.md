@@ -3,7 +3,7 @@ title: Hierarchical Groups
 order: 1
 status: active
 implemented: partial
-last_verified: 2026-09-08
+last_verified: 2026-09-17
 ---
 
 ::: warning Design record — active
@@ -331,8 +331,10 @@ When `group.is_archived = true`, the following actions are disallowed:
 
 **Governance Authority:**
 * Create new grants for resources owned by the group
-* Revoke existing grants (except via platform admin for incident response)
-* Transfer ownership of datasets from the group (except via platform admin override)
+* Revoke existing grants
+* Create new grants whose subject is the group
+* File, update, submit, withdraw, or review access requests on resources owned by the group, or on behalf of the group
+* Transfer ownership of datasets from the group
 * Create new datasets owned by the group
 * Edit group metadata (except for archival notes or administrative timestamps)
 
@@ -340,7 +342,7 @@ When `group.is_archived = true`, the following actions are disallowed:
 * Reparent the group
 * Modify parent-child relationships
 * Dataset creation with an archived group as owner must be rejected. Reason: Archive signals governance boundary closure. Allowing new assets under it defeats the lifecycle signal.
-* Create new collections owned by the group / delete existing collections owned by the group
+* Create new collections owned by the group / archive existing collections owned by the group
 * Modify collection membership (add/remove datasets from collections owned by the group)
 
 
@@ -352,7 +354,22 @@ For clarity, these actions **are** allowed:
 * Oversight visibility (ancestor admins over archived descendants)
 * Evaluate existing grants
 * Run audit reports and explain historical access decisions
-* Platform admin incident response (all actions, with audit trail)
+* Read access requests, which stay exactly as they were so that unarchiving resumes them
+* Revoke a grant the group holds on a resource another, active group owns. That group is not frozen, so its admins keep the power to take access away.
+* Expire a request under review on time. The expiry job acts on the clock rather than on a person's action, the same way a grant still expires by time.
+* Unarchiving, by a platform admin
+
+#### How Archiving Is Enforced
+
+Archiving is the state of the group. It covers the group itself and the datasets and collections
+it owns. A sub-group keeps its own state until someone archives it.
+
+The service that performs an action checks the state after authorization, inside its transaction,
+and refuses with 409. A platform admin is refused the same way, so the prohibitions above bind
+everyone until a platform admin unarchives the group. The UI reads `is_archived` for badges and
+labels.
+
+@see [decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization)
 
 #### Reversibility: Unarchiving
 
@@ -553,6 +570,25 @@ one row is not one capability. It is one authorization fact, and the order says 
 fact reaches. Issuance reduces a request to the access types the order does not already
 supply, so the two never disagree about how many rows an approval is worth.
 
+#### Supersession
+
+Issuing a grant for an access type the subject already holds on that resource compares the
+two expiries. Supersession resolves the overlap rather than refusing the new grant.
+
+- **The new grant lasts longer.** The existing grant is closed with `revocation_type`
+  `SUPERSEDED`, and the new grant is written in the same transaction. A grant with no expiry
+  outlasts any grant with one.
+- **The existing grant lasts as long or longer.** No grant is written. On a request, the item
+  is still approved, and a `GRANT_CREATION_SKIPPED` audit record names the covering grant.
+- **A wider access type already covers it for as long.** No grant is written here either. A
+  wider grant is never closed to write a narrower one, because approving a request must never
+  narrow access.
+
+Supersession compares grants the exact subject holds. A grant that reaches the subject
+through a group or through a collection is never closed.
+[Decision 14](./decisions.md#_14-the-no-overlap-constraint-and-supersession-stay) records why
+the constraint stays, and why supersession is preferred over refusal or chaining.
+
 ### Critical Constraint: Grants Are Only For Consumption Actions
 
 Grants represent **consumption rights**, not **governance authority**.
@@ -606,7 +642,7 @@ grants nobody access to a dataset, and hiding one takes no access away. That is 
 is a column rather than a grant to `Public`: a grant is an authorization fact, and this is
 not one.
 
-@see [Profiles](./profiles.md) — Decision 1
+@see [Profiles — Two asymmetries](./profiles.md#two-asymmetries)
 
 **Invariant**:
 
@@ -638,8 +674,9 @@ downloadable by their lab. **Grant presets** are named bundles of access types t
 that gap.
 
 A preset is a convenience and a provenance label. It is not an enforcement boundary, and it
-does not change what authorization evaluates. The design record is
-[Access presets](./access-presets.md).
+does not change what authorization evaluates.
+[Decision 18](./decisions.md#_18-presets-are-stored-and-expanded-when-a-grant-is-issued) records why presets are stored
+and expanded when a grant is issued.
 
 #### What a preset expands to
 
@@ -655,6 +692,24 @@ Each issued grant records the preset that supplied it, so the Access tab names
 "Standard Research Use" rather than listing access types with no shape. An access type the
 request named directly, or that two presets both supply, records no preset.
 
+Reduction decides what a revoke removes. The preset above writes one grant of `DOWNLOAD`
+rather than three rows. Revoking that one grant removes everything the preset conferred. Grants written before issuance reduced presets are not rewritten. Their extra rows
+are redundant rather than harmful, and revoking a row cannot be undone, so a backfill would be
+the riskier change.
+
+#### A request names presets and access types
+
+Each request item names one unit of intent: a preset or a single access type.
+`access_request_item` holds either `preset_id` or `access_type_id`. The
+`chk_item_exactly_one_type` constraint refuses a row with both or neither. A request names
+each preset and each access type at most once.
+
+A reviewer decides each item as a whole, so a preset item is approved or rejected entirely.
+The request keeps the shape the requester chose through the whole review.
+
+When items are approved, an access type that two of them supply takes the later of their
+approved expiries. Reduction through the order then runs on the combined set.
+
 #### The seeded presets
 
 Two presets ship with the platform, *Discoverable* and *Standard Research Use*, and both are
@@ -666,8 +721,6 @@ No preset is scoped to a dataset. On a dataset every bundle reduces through the 
 access type, so a preset would only give that type a second name. The seed retires any
 preset `GRANT_PRESETS` no longer lists. Approving a request that names a retired preset is
 refused.
-
-@see [Access presets](./access-presets.md) — 2.11 Presets are scoped to collections
 
 #### What presets do not do
 
@@ -682,17 +735,16 @@ refused.
 A preset names access types only. It never resolves a subject. Choosing who receives access —
 a user, a group, or a system principal — is a separate, explicit step in every flow.
 
-@see [Access type order plan](./access-type-order-plan.md) for how issuance reduces a preset,
+@see [What a preset expands to](#what-a-preset-expands-to) for how issuance reduces a preset,
 and [decision 7](./decisions.md#_7-access-types-imply-one-another) for the order itself.
 
 
 ## Restrictions
 
 Grants only ever add. Nothing in a purely additive model can say "no", so a governance
-decision that has to stop access — a lab closing, a hold pending review — has nowhere to live.
+decision that has to stop access has nowhere to live.
 
-A **restriction** is that missing half. It is a durable row, like a grant, and it composes with
-grants by AND:
+A **restriction** is that missing half. It composes with grants by AND:
 
 > allowed = no restriction blocks this action AND some grant permits it
 
@@ -701,37 +753,33 @@ a restriction. This is deliberately not a negative grant: negative grants make e
 depend on the order rules are evaluated in, and the reason somebody cannot reach a dataset
 stops being answerable.
 
-### What a restriction attaches to
+### Every action passes the check
 
-A restriction attaches to exactly one of a group or a resource, and reaches:
+Every action passes the restriction check at every level that decides access: a single decision,
+the capability map, and a list. A container a derived app registers passes it too. Every
+registered action declares a restriction class, and a test asserts the classification is
+exhaustive, so an action added later cannot fall outside the check.
 
-* the group it names, and every descendant group
-* every dataset and collection those groups govern
-* or, when it names a resource directly, that resource alone
+No restriction type is specified yet. How a restriction is written, stored, and satisfied is
+deferred, and until then the check allows every action.
 
-So archiving a lab freezes the lab, its sub-labs, and everything any of them owns, from one row.
+### What a restriction reaches
 
-### What it blocks
-
-Each restriction type names the actions it blocks. Every registered policy action is classified
-as mutating or reading, and the classification is asserted to be exhaustive by a test, so an
-action added later cannot quietly fall outside every restriction type.
-
-`ARCHIVED` is the only type that ships. It blocks every mutating action, and exempts only the
-three `unarchive` actions — otherwise an archived group could never be reopened.
+A restriction reaches only the resource it names. It does not flow through the group tree or
+through a collection.
 
 ### Restrictions apply to platform admins
 
-The platform-admin short-circuit runs **after** the restriction check. An archived group is
-archived for a platform admin too. This is the point of a governance boundary: it is not a
-permission level that seniority passes through.
+The platform-admin short-circuit runs **after** the restriction check, so a restriction binds a
+platform admin too. This is the point of a governance boundary: it is not a permission level that
+seniority passes through.
 
-### Archiving is expressed through it
+### Resource state is not a restriction
 
-`is_archived` remains as a denormalised column, because listings, filters, and badges read it
-on every page and a join through the restriction view would be the wrong shape for that. The
-restriction row is the authority; the column is a cache of it, and a test asserts the two agree
-for every group and collection.
+Archiving a group or a collection, and deleting a dataset, change the resource's state. The
+service that performs an action checks that state after authorization. See
+[How Archiving Is Enforced](#how-archiving-is-enforced) and
+[decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization).
 
 @see [decision 6](./decisions.md#_6-restrictions-compose-by-and-grants-stay-additive)
 
@@ -760,6 +808,42 @@ stateDiagram-v2
     WITHDRAWN --> [*]
     EXPIRED --> [*]
 ```
+
+A request records a decision, and a decided request never changes. Every status change is
+guarded on the status it leaves, which is `DRAFT` or `UNDER_REVIEW`. No request status means
+revoked. Revoking access is always an operation on grants, so a request whose grants were
+all revoked still reads `APPROVED`. The approval happened, and the revocations are recorded
+on the grants.
+
+### Filing a request
+
+A request can be filed only against a resource the requester can already see.
+`POST /access-requests` decides `view_metadata` on the dataset or collection the request
+names. The body carries `resource_id` and no resource type, so the `authorize()` middleware
+cannot choose the policy container. The handler reads the `resource` row and then decides
+`view_metadata` itself. The `create` action on `access_request` stays `Policy.always`, and its
+`preFetchedResourceFn` names the resource to the restriction check. The request's own `create`
+state rule refuses a resource whose state no longer admits access changes, with a 409. Items
+pass `assertGrantItemsApplicableToResourceType`, as they do on grant creation.
+
+Filing a request also submits it. With `submit: true`, `createAndSubmitAccessRequest` creates
+the `DRAFT` and moves it to `UNDER_REVIEW` in one transaction. Both states and both audit events
+are kept. Two client calls would be worse, because no surface lists a `DRAFT`. A failure
+between the calls would strand a request its requester can neither see nor resume.
+
+### Notifications and expiry
+
+Submitting a request notifies its reviewers in app. The reviewers are the admins of the
+resource's owning group. Deciding a request notifies the requester, not the subject, because
+a group has no inbox. Both notifications run after the transaction commits. A failure is
+logged and swallowed, because an undelivered notification must not undo a decision.
+`services/access_requests/notify.js` writes the in-app rows directly. The notification bus
+always queues an email job, and it has no in-app-only path.
+
+`review_timeout` is a scheduled job. `notify.cron.access_request_expiry` in the API config sets
+its schedule and its cutoff, which default to 02:00 daily and 30 days. Neither value is derived,
+and either may be changed. Every job in `notification/cron.js` runs in `notify.cron.timezone`,
+and a test asserts that.
 
 ---
 
@@ -1238,6 +1322,27 @@ Audit record includes:
 * Timestamp
 * Provenance
 
+### Operation Effects
+
+Every operation that changes access has a decided effect on the records around it. Each cell says
+whether the effect cascades, refuses the operation, or leaves the record with a stated reason.
+[Decision 16](./decisions.md) carries the reasons for the choices that were open.
+
+| Operation | Grants | Pending invitations | Open access requests | Other records |
+|---|---|---|---|---|
+| Archive a group | leave; archiving does not mutate access. No grant is issued on what it owns or to the group itself, and a grant on what it owns cannot be revoked. A grant the group holds on another group's resource can still be revoked | leave; acceptance answers `invalid` while archived | leave; nothing is cancelled. Every step, withdrawing included, is refused while archived, for requests on what it owns and for requests on behalf of the group. The expiry job still closes what is under review | the group and what it owns; its sub-groups keep their own state |
+| Unarchive a group | leave | leave; acceptance works again | leave; every step resumes where it stopped | none |
+| Archive a collection | leave | none | leave; refused while archived, as for a group | contained datasets are not archived |
+| Remove a member | leave the member's direct grants; group grants stop reaching them | leave invitations they sent; an invitation is the group's offer | leave requests they filed for the group | refuse when it would leave a group with an admin without one |
+| Demote an admin | leave | leave | leave | refuse when it would leave a group with an admin without one |
+| Delete a dataset | leave; mutating and data-plane actions are refused | none | leave; mutating actions on them are refused | `collection_dataset` rows stay as history; the archived files are removed, and deletion cannot be undone |
+| Soft-delete a user | leave | leave | leave | memberships stay; the account no longer counts as an admin |
+| Change a dataset's owner | refused: no route changes it | none | none | ownership transfer is deferred by decision 15 |
+| Toggle `allow_user_contributions` | leave | none | none | every effective member's `contribute` follows the new value at once |
+| Change `profile_visibility` | leave | none | none | the public profile cache may serve the old page for up to 300 seconds |
+| Revoke the seeded owning-group grant | members lose grant-path read; admins keep the structural path | none | leave | none |
+| Reparent a group | not built | not built | not built | not built |
+
 ### Other Lifecycle Operations
 
 * Deprecation (admin of owning group)
@@ -1357,6 +1462,7 @@ This design establishes a **minimal but complete authorization core** built on f
    * **Grants** only ever add; **restrictions** only ever subtract
    * They compose by AND, and neither can overcome the other
    * A restriction applies to platform admins too, because a governance boundary is not a permission level
+   * Resource state, such as archiving, is checked by the service after authorization
 
 ### Implementation Foundations
 

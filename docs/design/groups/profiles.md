@@ -1,472 +1,144 @@
 ---
 title: Profiles
-order: 8
+order: 10
 status: active
-implemented: yes
-last_verified: 2026-09-09
+implemented: partial
+last_verified: 2026-09-17
 ---
 
-::: tip Design record — active
-**Built.** The profile columns, the `view_profile` action, the anonymous principal, the
-grant subject-set fix, the profile and avatar routes, the public router, and the UI have all
-shipped. This record continues
-[Decision 3](./decisions.md#_3-a-public-principal-exists-and-everyone-is-renamed), which added
-the `Public` principal and deferred the serving half to a separate piece of work.
+::: warning Design record — active
+The readable front page of a group or a collection, who may see it, and why visibility is a
+column. For where each piece lives, see [Code Map](./code-map.md).
 :::
 
 # Group and Collection Profiles
 
-A profile is the readable front page of a group or a collection. It carries a picture, a
-tagline, a markdown body, external links, a citation, and related publications.
-Screens are drawn at [`/mockups/profile-screens.html`](/mockups/profile-screens.html).
+A profile is the front page of a group or a collection. It carries a tagline, a markdown
+body, external links, a citation, and related publications. Screens are drawn at
+[`/mockups/profile-screens.html`](/mockups/profile-screens.html).
 
 **A profile is informational and never authorization-bearing.** Publishing a profile grants
-nobody any access to data. Hiding a profile takes no access away. This separation is the
-constraint the rest of the page is built to satisfy.
+nobody access to data. Hiding one takes no access away.
 
-## Two asymmetries shape everything below
+## Two asymmetries
 
-**A group is a subject. A collection is a resource.** `group.id` is a foreign key into
+**A group is a subject, and a collection is a resource.** `group.id` is a foreign key into
 `subject`, and `collection.id` is a foreign key into `resource`. Grants run from a subject to
-a resource. So a grant can name a collection, and no grant can ever name a group. No design
-that expresses group visibility as a grant can be built.
+a resource. So a grant can name a collection, and no grant can name a group.
 
-**Profile visibility is therefore not a grant, for either resource type.** A collection could
-express visibility as a grant of `COLLECTION:VIEW_METADATA` to the `Public` principal, and a
-group could not. Two mechanisms for one switch is the worse outcome. Visibility is a column on
-both, and the reasoning is in [Decision 1](#_1-visibility-is-a-column-not-a-grant).
+**Profile visibility is therefore a column on both.** A collection could express visibility as
+a grant of `COLLECTION:VIEW_METADATA` to `Public`, and a group could not. Two mechanisms for one
+switch is the worse outcome. A grant is also an authorization record, which a profile must not
+be. So `profile_visibility` is a `PRIVATE`, `AUTHENTICATED`, or `PUBLIC` column on `group` and
+`collection`.
 
-## Schema
+**The column has a cost.** An admin sees two switches with adjacent meanings: a public profile,
+and a grant to `Public`. The UI names them differently and says which one moves data.
 
-Four typed columns on `group`, three on `collection`, and three JSON keys under the
-`metadata` column each already carries.
+## The columns
 
-A field earns a typed column when a page header, a card, or a query reads it on its own. A
-repeating list that nothing filters on stays in `metadata`, where the API validates its shape
-on write.
+`tagline`, `about_md`, and `profile_visibility` are typed columns on both models. Links,
+citation, publications, and a group's `type` are keys under `metadata`. The API validates them
+on write in `api/src/services/profiles/validate.js`.
 
-```prisma
-enum PROFILE_VISIBILITY {
-  PRIVATE        // members, oversight admins, and platform admins only
-  AUTHENTICATED  // any signed-in user
-  PUBLIC         // anyone, including people who are not signed in
-}
+- **A profile carries no picture.** Text is what a profile is for, and an uploaded image costs
+  a byte store, a public byte route, and a size limit that fails at the worst moment. A group
+  or a collection is marked by the icon for its kind, drawn by `ProfileAvatar.vue`.
+- **The mark is an icon, never initials.** `UserAvatar` draws monograms for people, so a
+  lettered square beside a group name reads as a user.
+- **The citation is generated when `metadata.citation` is null.** `resolveCitation` follows
+  DataCite's order: creator, year, title, publisher, identifier. It is a display field, so an
+  approximation is the right answer.
+- **A publication is a DOI with optional decoration.** The title, container, and year are what
+  an admin typed. Nothing resolves the DOI, and the link always goes through `doi.org`.
+- **`profile_visibility` defaults to `PRIVATE`.** Going public is always a deliberate act.
+- **`metadata.type` is a group's own word for what it is**, such as `lab` or `core`. It is
+  stored lower case and rendered under the name on every card, and `GroupIcon` reads it to pick
+  an icon and a colour. A collection has none; nothing renders one, so `buildProfileUpdate`
+  reads the key only for a group.
+- **`type` is not an enum.** `GROUP_TYPES` lists the four the icon map knows — `lab`, `project`,
+  `center`, `core` — and the edit form offers those as a click beside a free text box. A word
+  that is not on the list is stored as typed and wears the default icon. An institute is not a
+  lab, and refusing its own name to keep a closed list would be the wrong trade. What is
+  enforced is shape: letters, digits, spaces, and hyphens, at most 32 characters, because the
+  value is rendered on a public profile and belongs to a label rather than to markup.
 
-model group {
-  // ...
-  tagline            String?            @db.VarChar(120)
-  about_md           String?
-  avatar_key         String?
-  profile_visibility PROFILE_VISIBILITY @default(PRIVATE)
-}
-
-model collection {
-  // ...
-  tagline            String?            @db.VarChar(120)
-  about_md           String?
-  profile_visibility PROFILE_VISIBILITY @default(PRIVATE)
-}
-```
-
-`metadata` gains three keys on both models, and keeps the `type` key the group already uses
-for its `lab`, `center`, `core`, and `project` badge.
-
-```jsonc
-{
-  "links": [
-    { "type": "website" | "ror" | "protocols" | "contact_email" | "other",
-      "url": "https://cgb.indiana.edu",
-      "label": "Facility website" }
-  ],
-  "citation": "Genomics Core Facility (2026). Genomics Core Facility. Bioloop, Indiana University. https://…",
-  "publications": [
-    { "doi": "10.1038/s41477-026-01847-2",
-      "title": "Long-read assembly of twelve regional maize landraces",
-      "container": "Nature Plants",
-      "year": 2026 }
-  ]
-}
-```
-
-Four notes on the columns.
-
-**`avatar_key` is an object-store key, not a URL.** The bytes live where dataset files live.
-A collection has no picture, because a collection is displayed inside its owning group's
-identity and a second logo competes with it. A group or collection with no picture falls
-back to the icon for its kind, never to initials. `UserAvatar` draws a monogram for a person,
-so a lettered square beside a group name reads as a user.
-
-**`citation` is generated when the column is null.** The generated form follows DataCite's
-human-readable order: creator, year, title, publisher, identifier. An admin who sets the
-column overrides the generated line. This is a display field, so a generated approximation is
-the right answer and precision work is wasted.
-
-**`publications` stores the resolved title and container, not only the DOI.** The list still
-renders when the DOI resolver is unreachable. Resolution happens once, on write.
-
-**`profile_visibility` defaults to `PRIVATE`.** Every existing row is private after the
-migration, and becoming public is always a deliberate act by a group admin.
-
-The migration is written by hand, following
-[`.claude/skills/prisma-schema-changes/SKILL.md`](https://github.com/IUSCA/bioloop/tree/main/.claude/skills/prisma-schema-changes).
-It adds the enum, the columns, and a `CHECK` constraint on `tagline` length. Prisma cannot
-express the check, so the migration carries it and a test asserts it holds.
+Profile editing reuses `edit_metadata`. A separate `edit_profile` action would carry the same
+policy and give a reader two things to keep in step.
 
 ## What each audience sees
 
-Three tiers, and one attribute list per tier.
+`view_profile` returns the union of three attribute tiers. They are defined in
+`api/src/authorization/builtin/policies/group.js` and `collection.js`.
 
 | Tier | Who | Gets |
 |---|---|---|
-| Full | Group admin, oversight admin, platform admin | Every column |
-| Member | Member of the group, or holder of a grant on the collection | The profile, plus counts, ancestors, and admin contact details |
-| Profile | Any viewer the visibility setting admits, including anonymous | `PUBLIC_PROFILE_ATTRIBUTES` |
+| Full | Admin or oversight admin of the resource | Every attribute |
+| Member | Group member, or holder of `COLLECTION:VIEW_METADATA` | `PUBLIC_ATTRIBUTES` plus `PROFILE_ATTRIBUTES`; for a group also admin contacts and ancestors |
+| Profile | Any viewer the visibility admits, including an anonymous one | `PUBLIC_PROFILE_ATTRIBUTES`; for a group also admin names |
 
-`PUBLIC_PROFILE_ATTRIBUTES` is a new exported constant beside the existing `PUBLIC_ATTRIBUTES`
-in `api/src/authorization/builtin/policies/group.js` and `collection.js`.
+`view_profile` admits a caller through membership, oversight, a grant, or the column.
+`isProfilePublic` admits anyone to a `PUBLIC` profile. `isProfileVisibleToSignedInUser` admits
+any signed-in caller to an `AUTHENTICATED` one. The action is `reading`, so an archived group
+keeps serving its profile.
 
-```js
-// group.js
-const PUBLIC_PROFILE_ATTRIBUTES = [
-  'id', 'name', 'slug', 'description', 'tagline', 'about_md', 'avatar_key',
-  'metadata.type', 'metadata.links', 'metadata.citation', 'metadata.publications',
-  'is_archived', 'profile_visibility',
-];
-```
+Three things are absent from the profile tier on purpose.
 
-`description` is on that list because it is already in `PUBLIC_ATTRIBUTES`, which every
-signed-in user receives for every group in a listing. No screen renders it. `tagline` is the
-one-line summary a card or a header shows, and `about_md` is the body; the column stays
-returned so an API consumer that reads it keeps working. `tagline` and `avatar_key` join
-`PUBLIC_ATTRIBUTES` for the same reason: a tagline sits at the sensitivity of the
-description beside it, and the avatar route authorizes the bytes on its own.
+**No counts.** A member count describes people who did not choose to be counted in public. A
+dataset count tells an outsider how large a holding is. A public collection profile says its
+datasets are not listed and gives no number.
 
-The collection list adds `owner_group.id`, `owner_group.name`, and `owner_group.slug`,
-because a citation is not usable without naming who published the collection.
-
-A third constant, `PROFILE_ATTRIBUTES`, holds the profile columns a member or grant holder
-gains on top of what they already saw, so the member arm and the public arm cannot drift.
-
-Three things are deliberately absent, and each absence is a rule rather than an oversight.
-
-**No counts.** `_count.members` sits in the existing `PUBLIC_ATTRIBUTES` and must not reach an
-anonymous viewer. A member count is a fact about people, and a dataset count tells an outsider
-how large a holding is.
-
-**No personal email addresses.** The `admins[*].email` arm stops at the member tier. A group
-publishes a shared inbox through a `contact_email` link when it wants to be reachable. An
-opt-in shared inbox is a different thing from a harvestable list of staff addresses.
+**No personal email addresses.** `admins[*].email` stops at the member tier. A group that wants
+to be reachable publishes a shared inbox as a `contact_email` link.
 
 **No ancestry.** `ancestors[*]` describes the group hierarchy, which is internal structure.
-The mockup shows the parent group to a signed-in non-member and withholds it from an anonymous
-viewer.
 
-## API
+## The public router
 
-The authenticated routes stay where they are. Profile fields reach `GET /groups/:id` and
-`GET /collections/:id` through the attribute rules those routes already apply.
+`api/src/routes/public.js` is mounted at `/public` before `authenticate` in
+`api/src/routes/index.js`. It holds the only routes reachable without a token.
+`api/tests/authorization/public_router.test.js` asserts the first two properties below.
 
-| Method and path | Action | Notes |
-|---|---|---|
-| `PATCH /groups/:id/profile` | `group.edit_metadata` | Body carries `tagline`, `about_md`, `profile_visibility`, `links`, `citation`, `publications`. Optimistic lock on `version`. |
-| `PUT /groups/:id/avatar` | `group.edit_metadata` | Multipart. Replaces `avatar_key`. |
-| `DELETE /groups/:id/avatar` | `group.edit_metadata` | Clears `avatar_key`. |
-| `PATCH /collections/:id/profile` | `collection.edit_metadata` | Same body, without `avatar_key`. |
+- **Every route is a GET.**
+- **Every route authorizes `view_profile`.**
+- **A refusal is a 404, not a 403.** A 403 on a private group confirms the group exists.
+  `hideRefusals` answers a private profile and an unknown id the same way.
+- **The URL carries the id, not the slug.** `group.slug` changes on rename, which would break a
+  published citation.
 
-Profile editing reuses `edit_metadata` rather than adding an `edit_profile` action. The policy
-would be identical, `isGroupAdmin`, and a second action with the same policy gives a reader two
-things to keep in step and tells them nothing.
-
-The public routes are a new router at `api/src/routes/public.js`, mounted in
-`api/src/routes/index.js` **above** the `router.use(authenticate)` line.
-
-| Method and path | Action | Notes |
-|---|---|---|
-| `GET /public/groups/:id` | `group.view_profile` | 404 when the group is not `PUBLIC`. |
-| `GET /public/collections/:id` | `collection.view_profile` | 404 when the collection is not `PUBLIC`. |
-| `GET /public/groups/:id/avatar` | `group.view_profile` | Image bytes, `Cache-Control: public, max-age=300`. |
-
-Three properties of that router matter more than its contents.
-
-**Every route on it is a GET.** A test walks the router stack and fails on any other method.
-
-**Every route on it authorizes `view_profile`.** The same test reads `middleware.authorizes`,
-which the authorization middleware already stamps on itself for exactly this purpose.
-
-**A refusal is a 404, not a 403.** A 403 on a private group confirms the group exists. The
-route answers the same way for a private group and for an id that was never issued.
-
-**The canonical public URL carries the id, not the slug.** `group.slug` is regenerated whenever
-the group is renamed, so a slug in a published citation breaks on the next rename. The routes
-take an id and nothing else. A slug form that redirects to the id was considered and not
-built: it is a second way to address the same page, and the only URL the system ever hands
-out is the one in the generated citation, which carries the id.
-
-## Authorization
-
-One new action, two new policy terms, and one new principal. The engine's core is not touched.
-
-### The `view_profile` action
-
-```js
-// group.js
-const isProfilePublic = new GroupPolicy({
-  name: 'isProfilePublic',
-  requires: { resource: ['profile_visibility'] },
-  evaluate: (user, group) => group.profile_visibility === 'PUBLIC',
-});
-
-const isProfileVisibleToSignedInUser = new GroupPolicy({
-  name: 'isProfileVisibleToSignedInUser',
-  requires: { user: ['is_anonymous'], resource: ['profile_visibility'] },
-  evaluate: (user, group) => user.is_anonymous !== true
-    && ['PUBLIC', 'AUTHENTICATED'].includes(group.profile_visibility),
-});
-
-view_profile: Policy.or([
-  isGroupAdmin,
-  isGroupMember,
-  hasGroupOversight,
-  canAccessResourcesOwnedByGroup,
-  isProfilePublic,
-  isProfileVisibleToSignedInUser,
-]),
-```
-
-**Attribute rules short-circuit on the first matching policy; they do not combine.** An
-action-specific rule list also replaces the `'*'` wildcard block entirely rather than adding
-to it. So the `view_profile` rules are written out in full, most privileged first, and the
-last arm is `Policy.always` — everything reaching attribute evaluation has already been
-granted the action, so the catch-all needs no condition of its own.
-
-`is_anonymous` is registered as a virtual attribute on `userHydrator` that returns `false`. A
-real user never carries the field, so the loader answers for them; the anonymous principal
-supplies `true` through `preFetched` and the loader never runs.
-
-The collection policies take the same two terms against `collection.profile_visibility`, added
-to the existing `view_metadata` arms.
-
-`view_profile` must be added to `READING_ACTIONS` in
-`api/src/authorization/builtin/restrictions.js`. A test asserts that every registered action
-appears in `READING_ACTIONS` or `MUTATING_ACTIONS`, and it fails until the entry exists. An
-archived group keeps serving its public profile, because `ARCHIVED` blocks mutation only.
-
-### The anonymous principal
-
-An unauthenticated request reaches the engine as a subject with no memberships, no grants, and
-no roles.
-
-```js
-// api/src/constants.js
-const ANONYMOUS_PRINCIPAL = Object.freeze({
-  subject_id: PUBLIC_GROUP_ID,
-  is_anonymous: true,
-  roles: [],
-  group_memberships: [],
-  effective_group_ids: [],
-  oversight_group_ids: [],
-  accessible_owner_group_ids: [],
-});
-```
-
-A new `optionalAuthenticate` middleware sets `req.user` to this object when no token is
-present, and behaves exactly like `authenticate` when one is. The public router uses it.
-
-This shape is chosen because it needs no change to `api/src/authorization/core/`. Three places
-in the core refuse a missing user, and the principal satisfies all three:
-`authorizeWithFilters` throws when `identifiers.user` is nullish, `evaluateCapabilitySet`
-throws on the same condition, and the context hydrator returns an empty grant set. Every
-membership policy evaluates `false` against the empty arrays, and `isPlatformAdmin` evaluates
-`false` against the empty role list.
-
-The principal costs no database reads. `PrismaHydrator.hydrate` merges `preFetched` into the
-shared request cache before deciding what to fetch, so every user attribute the group and
-collection policies declare is already present. Capability derivation reads the same cache.
-
-### Which system principals a caller holds
-
-**Containment runs one way.** A signed-in caller holds both `Public` and
-`Authenticated Users`, because `Public` is the wider audience and contains the authenticated
-one. An anonymous caller holds only `Public`. Reading the containment in the other direction
-would hand an anonymous caller every grant made to `Authenticated Users`.
-
-`subjectSetSql()` in `api/src/services/grants/helpers.js` is the single place that decides.
-It is one builder rather than the three duplicated subject CTEs that preceded it, so the rule
-cannot hold in one grant query and not in another. A test grants `Authenticated Users` a
-collection access type and asserts the anonymous principal does not resolve it.
-
-This had to be settled before any route could be reached without a token. Until then every
-grant query combined both principals unconditionally, which was harmless only because every
-route required one.
-
-### Rate limiting and caching
-
-The public router carries `express-rate-limit`, pinned at 7.5.1 because that line has no
-runtime dependencies of its own and peers Express 4. The limit is 60 requests per minute per
-address. A person reading one profile issues a handful of requests, so
-the limit sits two orders of magnitude above ordinary use, and far below the rate a scraper
-enumerating ids would need.
-
-Public responses carry `Cache-Control: public, max-age=300`. Five minutes is short enough that
-an admin who switches a profile back to private sees it disappear while they are still at the
-keyboard.
-
-**Public profile reads are not audited.** An `authorization_audit` row records which subject
-did what, and an anonymous row names no actor. The volume is also unbounded by anything the
-system controls.
+`optionalAuthenticate` gives an unauthenticated request `ANONYMOUS_PRINCIPAL`. The reasoning
+for that is in [Decisions](./decisions.md). The router carries a rate limit and a five-minute
+`Cache-Control`, and each constant's comment states its reason. Public profile reads are not
+audited: an anonymous row names no actor, and the volume is unbounded.
 
 ## The UI
 
-The authenticated pages keep their shape. The Overview tab of
-`ui/src/pages/v2/groups/[id]/index.vue` becomes the profile, and the definition list it shows
-today moves into a *Details* card in the right rail.
+The authenticated Overview tab and the public pages share the components in
+`ui/src/components/v2/profiles/`, so the two cannot drift. The Overview tab keeps its summary
+band and wide and thin panels, described in
+[UI Information Architecture](./ui-information-architecture.md#the-overview-tab). The
+profile renders inside those panels.
 
-The presentation components live in `ui/src/components/v2/profiles/` and are shared by the
-authenticated tab and the public page, so the two cannot drift. `ProfileAboutBody.vue` renders
-the markdown and is used by both the page and the edit form's preview, so a preview cannot
-disagree with the result.
+The public pages live in `ui/src/pages/public/` and use `ui/src/layouts/public.vue`. They call
+the API through `ui/src/services/v2/publicProfiles.js`, a bare axios instance. The shared client
+redirects to logout on a 401, which would eject the readers these pages are for.
 
-`EditProfileModal.vue` splits its fields across three panels: *Profile* carries the picture,
-the tagline, and the About body, *Links* carries the external links, and *Citation* carries
-the preferred citation and the related publications. The whole form is taller than a laptop
-screen in one column. Visibility stays above the panels rather than inside one, because it
-decides who everything below it is written for. Every panel writes into one form object and
-one button saves all three, so a panel the admin never opened is still part of the payload.
-
-The public pages are new, at `ui/src/pages/public/groups/[id].vue` and
-`ui/src/pages/public/collections/[id].vue`, carrying `meta: { requiresAuth: false }`. The
-router already honours that flag. They render the same profile components inside
-`ui/src/layouts/public.vue`, which has a brand bar and a footer and no sidebar.
-
-**`ui/src/pages/public/index.vue` is what makes that layout apply.** `setupLayouts` wraps every
-top-level route with `meta.layout` or the default, and only then recurses. A page two
-directories deep has the intermediate `/public` record as its top-level route, and that record
-carries no meta, so it takes the default layout with the public one nested inside it — the
-profile renders correctly and the application sidebar renders around it. The plugin skips the
-outer wrap when a top-level route has a `path: ''` child the inner pass already wrapped, which
-is what an `index.vue` carrying the same layout produces. `pages/auth/` depends on the same
-mechanism without saying so.
-
-The public page cannot use `ui/src/services/api.js`. That client redirects to `/auth/logout` on
-any 401, which would throw a signed-out reader out of a page built for signed-out readers.
-`ui/src/services/v2/publicProfiles.js` is a bare axios instance with no interceptors, and the
-page renders its own error state rather than raising a toast.
-
-**Markdown is rendered in the browser, with `html: false`.** `markdown-it` is configured to
-drop raw HTML rather than pass it through, and DOMPurify runs on the result anyway. The stored
-value stays the markdown an admin typed, and this text reaches the widest audience the system
-has, so the formatting raw HTML would buy is not worth the surface. This differs from
-`ui/src/pages/about/index.vue`, which allows HTML for a page only a platform admin can write.
-
-**An `<img>` cannot carry a bearer token**, so the avatar is served by the public router and
-the same URL works for everyone: an anonymous reader is authorized by the group's visibility,
-and a signed-in admin looking at a still-private profile is authorized from the `jwt` cookie
-the session already carries.
-
-## Decisions
-
-### 1. Visibility is a column, not a grant
-
-**Decision.** `profile_visibility` is an enum column on `group` and `collection`. A grant never
-expresses profile visibility.
-
-The alternative was a grant of `COLLECTION:VIEW_METADATA` to the `Public` principal. It fits
-the existing model, it needs no new column, and the effective-access SQL already honours the
-principal.
-
-It was rejected for two reasons. A group is a subject and cannot receive a grant, so the
-alternative covers half the feature and leaves the other half needing a column anyway. And a
-grant is an authorization record. Expressing visibility as a grant would make the profile
-authorization-bearing, which is the one thing this feature is not allowed to be.
-
-The cost is real. An admin now has two switches with adjacent meanings: a public profile, and a
-grant to `Public`. The UI names them differently and says which one moves data.
-
-### 2. The anonymous caller is a principal, not a second code path
-
-**Decision.** An unauthenticated request runs through the same authorization engine as every
-other request, carrying a frozen principal with empty memberships.
-
-The alternative was a public read path that never enters the engine: a service function that
-checks the visibility column and returns a hand-written projection.
-
-It was rejected because it creates two places that decide what a viewer may see. The two drift,
-and the one that drifts is the one nobody exercises. Keeping one engine means the attribute
-rules stay the single authority on which fields leave the building.
-
-The cost is that a principal object now exists which is not a person. The mitigations are that
-it is frozen, that it reaches only GET routes on one router, and that a test enumerates that
-router.
-
-### 3. A public profile omits counts and personal addresses
-
-**Decision.** `PUBLIC_PROFILE_ATTRIBUTES` excludes every `_count` field, every `email` field,
-and the ancestor list.
-
-Zenodo and dbGaP both publish that a restricted thing exists and gate the data itself, which is
-the pattern the collection profile follows for a signed-in viewer. It does not follow that
-every number is safe for an anonymous one. A member count describes people who did not choose
-to be counted in public, and an admin email list is worth harvesting.
-
-### 4. A signed-in viewer is told what they cannot see; an anonymous one is not
-
-**Decision.** The collection profile shows a signed-in viewer `8 of 20 visible to you` and a
-strip naming the 12 they cannot open. A public profile shows no dataset count at all.
-
-The count is a disclosure either way. For a signed-in viewer it is the disclosure that makes a
-request worth making, and the requester is identified. For an anonymous viewer it discloses the
-size of a holding to somebody the system cannot name.
-
-This one is worth revisiting with a real group. It is the decision most likely to be wrong.
-
-**The anonymous half is built and the signed-in half is not.** A public collection profile
-says that its datasets are not listed and gives no count, which is what this decision asks
-for. The `8 of 20 visible to you` strip on the authenticated Overview tab was not built.
-A caller holding `COLLECTION:LIST_CONTENTS` already sees both numbers on the Datasets tab.
-It lists every dataset in the collection and marks the ones that caller cannot open. A caller
-with only `COLLECTION:VIEW_METADATA` has no Datasets tab and no total. For that caller the
-strip needs an endpoint that reports a count they are not otherwise allowed to see. That is the
-disclosure this decision is about, and it deserves its own change rather than being smuggled
-in with the profile.
-
-### 5. The Overview tab becomes the profile
-
-**Decision.** The profile replaces the Overview tab rather than adding a seventh tab.
-
-Every comparable platform puts the readable page first: a GitHub organisation README, an OSF
-wiki, a Zenodo community about page. A seventh tab is cheaper to build and puts the
-outward-facing page one click behind the internal one.
-
-The demoted definition list keeps every row for an admin. A non-member loses the rows that
-describe governance, such as `allow_user_contributions`.
+**Markdown renders with `html: false`, then DOMPurify.** `ProfileAboutBody.vue` drops raw HTML,
+because this text reaches the widest audience the system has. The same component renders the
+edit preview, so the preview cannot disagree with the page.
 
 ## What this does not do
 
-**No public listing or search.** There is no `GET /public/groups`. A public profile is
-reachable by its URL and by whatever indexes it from outside. A public directory is a separate
-decision about discoverability.
+- **No public listing or search.** A public profile is reachable by its URL only.
+- **No public dataset pages.** Datasets carry file paths and consent codes, and need their own
+  analysis.
+- **No user profiles.** Only groups and collections have them.
+- **No custom theming.** A profile gets text, not pictures, colours, or a footer.
 
-**No public dataset pages.** `dataset.view_profile` does not exist. Datasets carry file paths
-and consent codes, and a public dataset page needs its own analysis of what is safe.
+## Not built
 
-**No profile for a user.** Only groups and collections have profiles.
-
-**No custom theming.** Dataverse gives a collection a logo, colours, and a footer. Bioloop gives
-it a picture and text. Colour customisation makes every profile a small design project and
-every screenshot ambiguous.
-
-## Open questions
-
-**Does a public group profile list its public collections?** The mockups do not show it. It is
-the one link that makes a public profile useful for discovery, and it needs the same count
-decision as [Decision 4](#_4-a-signed-in-viewer-is-told-what-they-cannot-see-an-anonymous-one-is-not).
-
-**Who may set `PUBLIC`?** The design lets a group admin do it alone. Publishing a page under
-the institution's domain may warrant a platform-admin review step.
-
-## Related records
-
-- [Decisions](./decisions.md) — Decision 3 added the `Public` principal and deferred this work
-- [Design](./design.md) — how groups, collections, and grants fit together
-- [UI information architecture](./ui-information-architecture.md) — where these pages sit
-- [Code map](./code-map.md) — where the authorization engine lives
+**The "visible to you" strip.** A signed-in viewer of a collection profile should see a count
+such as `8 of 20 visible to you`, and an anonymous viewer sees none. The anonymous half is
+built. For a caller with only `COLLECTION:VIEW_METADATA`, the strip needs a total they cannot
+otherwise see, which is a disclosure worth its own change. It is tracked in
+`.todo/issues/02-profiles.md` under T4.

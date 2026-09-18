@@ -1,15 +1,18 @@
 const { GRANT_ACCESS_TYPES } = require('@/constants');
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
+const { mutating, reading, readingData } = require('../../core/policies/PolicyContainer');
 const { platformAdminOnly } = require('./utils/index');
 const { dataset: PUBLIC_ATTRIBUTES } = require('./base_attributes');
 
 const VALID_GRANT_NAMES = new Set(GRANT_ACCESS_TYPES.map((g) => g.name));
 
 class DatasetPolicy extends Policy {
-  constructor({ name, requires, evaluate }) {
+  constructor({
+    name, requires, evaluate, meta,
+  }) {
     super({
-      name, resourceType: 'dataset', requires, evaluate,
+      name, resourceType: 'dataset', requires, evaluate, meta,
     });
   }
 }
@@ -25,16 +28,11 @@ class DatasetPolicy extends Policy {
  */
 const isDatasetOwningGroupAdmin = new DatasetPolicy({
   name: 'isDatasetOwningGroupAdmin',
+  meta: { pathKind: 'admin' },
   requires: {
-    user: ['group_memberships'],
-    resource: ['owner_group_id'],
+    context: ['access_paths'],
   },
-  evaluate: (user, dataset) => user
-    .group_memberships
-    .some(
-      (membership) => membership.group_id === dataset.owner_group_id
-        && membership.role === 'ADMIN',
-    ),
+  evaluate: (user, dataset, context) => context.access_paths.kinds.has('admin'),
 });
 
 /**
@@ -44,11 +42,11 @@ const isDatasetOwningGroupAdmin = new DatasetPolicy({
  */
 const hasDatasetOwningGroupOversight = new DatasetPolicy({
   name: 'hasDatasetOwningGroupOversight',
+  meta: { pathKind: 'oversight' },
   requires: {
-    user: ['oversight_group_ids'],
-    resource: ['owner_group_id'],
+    context: ['access_paths'],
   },
-  evaluate: (user, dataset) => user.oversight_group_ids.includes(dataset.owner_group_id),
+  evaluate: (user, dataset, context) => context.access_paths.kinds.has('oversight'),
 });
 
 /**
@@ -58,16 +56,17 @@ const hasDatasetOwningGroupOversight = new DatasetPolicy({
  * same way `isGroupMember` treats it. This is the only policy that lets somebody who is not
  * an admin put a dataset into a group.
  *
- * @see docs/design/groups/dataset-creation-plan.md — A1
+ * @see docs/design/groups/dataset-creation.md — Contribution is a policy, not a comment
  */
 const isDatasetOwningGroupContributor = new DatasetPolicy({
   name: 'isDatasetOwningGroupContributor',
+  meta: { pathKind: 'member', rule: 'contributions_allowed' },
   requires: {
-    user: ['effective_group_ids'],
-    resource: ['owner_group_id', 'owner_group_allows_contributions'],
+    resource: ['owner_group_allows_contributions'],
+    context: ['access_paths'],
   },
-  evaluate: (user, dataset) => dataset.owner_group_allows_contributions === true
-    && user.effective_group_ids.includes(dataset.owner_group_id),
+  evaluate: (user, dataset, context) => dataset.owner_group_allows_contributions === true
+    && context.access_paths.kinds.has('member'),
 });
 
 // ============================================================================
@@ -80,9 +79,8 @@ const isDatasetOwningGroupContributor = new DatasetPolicy({
  * Factory: returns a policy that checks whether the user has an active grant
  * of the specified access_type on this dataset.
  *
- * The check is a pure Set membership test against `context.active_grant_access_types`,
- * a Set<string> pre-fetched once per request by the ContextHydrator virtual attribute
- * `active_grant_access_types`.  No DB call fires inside evaluate().
+ * The check is a Set membership test against `context.access_paths.access_types`, the
+ * widened types of the caller's grant paths to this dataset. No DB call fires inside evaluate().
  */
 const userHasGrant = (access_type) => {
   if (!VALID_GRANT_NAMES.has(access_type)) {
@@ -90,21 +88,13 @@ const userHasGrant = (access_type) => {
   }
   return new DatasetPolicy({
     name: `userHasGrant(${access_type})`,
+    meta: { pathKind: 'grant', accessType: access_type },
     requires: {
-      user: [],
-      resource: [],
-      context: ['active_grant_access_types'],
+      context: ['access_paths'],
     },
-    evaluate: (user, dataset, context) => context.active_grant_access_types.has(access_type),
+    evaluate: (user, dataset, context) => context.access_paths.access_types.has(access_type),
   });
 };
-
-const callerRoles = Object.freeze({
-  PLATFORM_ADMIN: 'PLATFORM_ADMIN',
-  ADMIN: 'ADMIN',
-  OVERSIGHT: 'OVERSIGHT',
-  GRANT_HOLDER: 'GRANT_HOLDER',
-});
 
 // ============================================================================
 // POLICY CONTAINER
@@ -128,17 +118,15 @@ datasetPolicies
     //
     // `contribute` is the ingestion action, and it is what the import and
     // upload routes check. It additionally admits an ordinary member of a
-    // group that has allow_user_contributions set. The rule used to be
-    // described as service-layer, and nothing enforced it anywhere; it lives
-    // in the engine now, with every other access decision.
-    // @see docs/design/groups/dataset-creation-plan.md — A1
+    // group that has allow_user_contributions set.
+    // @see docs/design/groups/dataset-creation.md — Contribution is a policy, not a comment
     // ------------------------------------------------------------------
-    create: isDatasetOwningGroupAdmin,
+    create: mutating(isDatasetOwningGroupAdmin),
 
-    contribute: Policy.or([
+    contribute: mutating(Policy.or([
       isDatasetOwningGroupAdmin,
       isDatasetOwningGroupContributor,
-    ]),
+    ])),
 
     // ------------------------------------------------------------------
     // EXISTENCE / METADATA VISIBILITY
@@ -150,11 +138,11 @@ datasetPolicies
     //   2. Oversight authority over owning group (structural, read-only)
     //   3. Active grant of type view_metadata
     // ------------------------------------------------------------------
-    view_metadata: Policy.or([
+    view_metadata: reading(Policy.or([
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
       userHasGrant('DATASET:VIEW_METADATA'),
-    ]),
+    ])),
 
     // ------------------------------------------------------------------
     // SENSITIVE METADATA
@@ -162,13 +150,16 @@ datasetPolicies
     // infrastructure-level details. Requires an explicit elevated grant
     // beyond basic view_metadata.
     // ------------------------------------------------------------------
-    view_sensitive_metadata: Policy.or([
+    view_sensitive_metadata: reading(Policy.or([
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
       userHasGrant('DATASET:VIEW_SENSITIVE_METADATA'),
-    ]),
+    ])),
 
-    list: Policy.always, // anyone can list, but service layer filters to only what they have access to
+    // A list query scopes its rows to the caller, so the action itself admits anyone. Its
+    // attribute rule decides the fields of every row, because no single row is decided.
+    // @see docs/design/groups/access-model.md — Projection
+    list: reading(Policy.always),
 
     // ------------------------------------------------------------------
     // FILE LISTINGS
@@ -176,11 +167,11 @@ datasetPolicies
     // Grant holders need an explicit list_files grant — view_metadata
     // alone does NOT imply the ability to enumerate files.
     // ------------------------------------------------------------------
-    list_files: Policy.or([
+    list_files: readingData(Policy.or([
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
       userHasGrant('DATASET:LIST_FILES'),
-    ]),
+    ])),
 
     // ------------------------------------------------------------------
     // DATA ACCESS (read / download / compute)
@@ -193,74 +184,76 @@ datasetPolicies
     // type order carries the rest: DOWNLOAD, COMPUTE, and REMOTE_ACCESS all imply
     // LIST_FILES, so any of them satisfies this check.
     // @see docs/design/groups/decisions.md — 7. Access types imply one another
-    read_data: Policy.or([
+    read_data: readingData(Policy.or([
       isDatasetOwningGroupAdmin,
       userHasGrant('DATASET:LIST_FILES'),
-    ]),
+    ])),
 
-    download: Policy.or([
+    download: readingData(Policy.or([
       isDatasetOwningGroupAdmin,
       userHasGrant('DATASET:DOWNLOAD'),
-    ]),
+    ])),
 
-    compute: Policy.or([
+    compute: readingData(Policy.or([
       isDatasetOwningGroupAdmin,
       userHasGrant('DATASET:COMPUTE'),
-    ]),
+    ])),
 
     // Reading the dataset in place, from the path the storage layer exposes. The access type
     // was grantable with nothing checking it, so granting it conferred file listing through
     // the order and nothing named remote access.
-    remote_access: Policy.or([
+    remote_access: readingData(Policy.or([
       isDatasetOwningGroupAdmin,
       userHasGrant('DATASET:REMOTE_ACCESS'),
-    ]),
+    ])),
 
     // ------------------------------------------------------------------
     // STAGING
     // Requesting that a dataset be staged is a data-plane action.
     // Requires an explicit grant — oversight does not include staging.
     // ------------------------------------------------------------------
-    request_stage: Policy.or([
+    request_stage: mutating(Policy.or([
       isDatasetOwningGroupAdmin,
       userHasGrant('DATASET:DOWNLOAD'),
       userHasGrant('DATASET:COMPUTE'),
-    ]),
+    ])),
 
     // ------------------------------------------------------------------
     // GOVERNANCE ACTIONS
     // Only the owner group's admins.
     // Oversight is read-only and never includes mutation authority.
     // ------------------------------------------------------------------
-    edit_metadata: isDatasetOwningGroupAdmin,
-    archive: isDatasetOwningGroupAdmin,
-    unarchive: isDatasetOwningGroupAdmin,
-    transfer_ownership: isDatasetOwningGroupAdmin,
-    edit: platformAdminOnly,
+    edit_metadata: mutating(isDatasetOwningGroupAdmin),
+    // A dataset has no archive: its lifecycle ends at delete, which removes the archived
+    // files and cannot be undone. Groups and collections archive; datasets do not.
+    // @see docs/design/groups/design.md — Operation Effects
+    delete: mutating(isDatasetOwningGroupAdmin),
+    transfer_ownership: mutating(isDatasetOwningGroupAdmin),
+    edit: mutating(platformAdminOnly),
 
     // ------------------------------------------------------------------
     // GRANT MANAGEMENT
     // Only the owner group's admins may create, modify, or revoke grants
     // on a dataset.
     // ------------------------------------------------------------------
-    manage_grants: isDatasetOwningGroupAdmin,
+    manage_grants: mutating(isDatasetOwningGroupAdmin),
 
     // ------------------------------------------------------------------
     // ACCESS REQUEST REVIEW
     // Incoming access requests on this dataset are reviewed by the
     // owner group's admins.
     // ------------------------------------------------------------------
-    review_access_requests: isDatasetOwningGroupAdmin,
+    review_access_requests: mutating(isDatasetOwningGroupAdmin),
 
     // ------------------------------------------------------------------
     // AUDIT LOG VISIBILITY
     // Owner group admins and oversight authorities can see audit logs.
     // Grant holders cannot — audit logs are governance metadata.
     // ------------------------------------------------------------------
-    view_audit_logs: Policy.or([
+    view_audit_logs: reading(Policy.or([
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
-    ]),
+    ])),
 
     // ------------------------------------------------------------------
     // WORKFLOW / PIPELINE STATUS
@@ -268,10 +261,10 @@ datasetPolicies
     // Oversight includes this (see oversight spec §3).
     // Grant holders cannot see workflow internals.
     // ------------------------------------------------------------------
-    view_workflows: Policy.or([
+    view_workflows: reading(Policy.or([
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
-    ]),
+    ])),
 
     // ------------------------------------------------------------------
     // COLLECTION MEMBERSHIP
@@ -279,10 +272,10 @@ datasetPolicies
     // Only visible to structural actors — grant holders on the dataset
     // do not gain visibility into collection membership.
     // ------------------------------------------------------------------
-    view_collections: Policy.or([
+    view_collections: reading(Policy.or([
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
-    ]),
+    ])),
 
     // ------------------------------------------------------------------
     // SOURCE DATASETS
@@ -290,11 +283,11 @@ datasetPolicies
     // Structural actors can see source relationships (governance).
     // Grant holders need explicit grant to see source datasets.
     // ------------------------------------------------------------------
-    view_source_datasets: Policy.or([
+    view_source_datasets: reading(Policy.or([
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
       userHasGrant('DATASET:LIST_SOURCE_DATASETS'),
-    ]),
+    ])),
 
     // ------------------------------------------------------------------
     // DERIVED DATASETS
@@ -302,11 +295,11 @@ datasetPolicies
     // Structural actors can see derived relationships (governance).
     // Grant holders need explicit grant to see derived datasets.
     // ------------------------------------------------------------------
-    view_derived_datasets: Policy.or([
+    view_derived_datasets: reading(Policy.or([
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
       userHasGrant('DATASET:LIST_DERIVED_DATASETS'),
-    ]),
+    ])),
   })
 
   .attributes({
@@ -339,9 +332,9 @@ datasetPolicies
         ),
       },
 
-      // The grant rules run widest first. The first matching rule wins, and every dataset
-      // access type implies DATASET:VIEW_METADATA, so a rule placed below that one never runs.
-      // tests/services/grants/grantHolderAttributes.test.js runs each access type through it.
+      // A caller sees the union of every matching rule, so an overseer who also holds a
+      // sensitive-metadata grant sees the paths. tests/services/grants/grantHolderAttributes.test.js
+      // runs each access type through these rules.
 
       // Grant holders (view_sensitive_metadata): adds infrastructure paths
       {
@@ -370,7 +363,7 @@ datasetPolicies
     list: [
       {
         policy: Policy.always,
-        attribute_filters: PUBLIC_ATTRIBUTES, // listing only returns public attributes, even for structural roles
+        attribute_filters: PUBLIC_ATTRIBUTES,
       },
     ],
     view_source_datasets: [
@@ -402,18 +395,6 @@ datasetPolicies
       },
     ],
   })
-  .roles([
-    { policy: isDatasetOwningGroupAdmin, role: callerRoles.ADMIN },
-    { policy: hasDatasetOwningGroupOversight, role: callerRoles.OVERSIGHT },
-    {
-      // Every dataset access type implies DATASET:VIEW_METADATA, so one check answers
-      // "does this caller hold any grant on this dataset". Listing the others changed
-      // nothing, because the hydrated set is already closed over the order.
-      // @see docs/design/groups/decisions.md — 7. Access types imply one another
-      policy: userHasGrant('DATASET:VIEW_METADATA'),
-      role: callerRoles.GRANT_HOLDER,
-    },
-  ])
   .freeze();
 
 module.exports = { datasetPolicies };

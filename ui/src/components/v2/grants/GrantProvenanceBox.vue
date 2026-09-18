@@ -9,7 +9,7 @@
     >
       <span
         class="w-[88px] flex-shrink-0 font-medium text-gray-500 dark:text-gray-400"
-        >Grant on</span
+        >Applies to</span
       >
       <span class="text-gray-700 dark:text-gray-300">
         Collection: {{ props.grant.resource?.collection?.name }} — covers all
@@ -51,7 +51,7 @@
           </span>
         </template>
         <template v-else-if="props.grant.creation_type === 'MANUAL'">
-          Granted manually by
+          Given manually by
           {{ props.grant.issuing_authority?.name ?? "(unknown)" }}
         </template>
         <template v-else-if="props.grant.creation_type === 'SYSTEM_BOOTSTRAP'">
@@ -86,7 +86,7 @@
         Authority
       </span>
       <span class="text-gray-700 dark:text-gray-300">
-        Granted under authority of {{ props.grant.issuing_authority.name }}
+        Given under authority of {{ props.grant.issuing_authority.name }}
       </span>
     </div>
 

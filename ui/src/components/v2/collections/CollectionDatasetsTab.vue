@@ -38,6 +38,8 @@
 
             <VaButton
               size="small"
+              :disabled="!stateAdmits('add_dataset')"
+              :title="stateAdmits('add_dataset') ? null : DISABLED_REASON"
               @click="openAddDatasetModal"
               v-if="props.canCreate"
             >
@@ -63,7 +65,11 @@
               />
             </div>
 
-            <div v-else-if="datasets.length > 0">
+            <div
+              v-else-if="datasets.length > 0"
+              class="v2-table-page"
+              :style="tablePageStyle"
+            >
               <!-- A grant to browse a collection does not open every dataset in it. Offer the
                    next step rather than links that end in a refusal. -->
               <ModernAlert
@@ -99,7 +105,9 @@
               >
                 <template #cell(name)="{ row }">
                   <RouterLink
-                    v-if="row.rowData._meta?.can_view_metadata"
+                    v-if="
+                      row.rowData._meta?.capabilities?.includes('view_metadata')
+                    "
                     :to="`/v2/datasets/${row.rowData.resource_id}`"
                     class="text-sm font-medium hover:underline"
                     style="color: var(--va-primary)"
@@ -158,6 +166,10 @@
                     <div class="flex flex-col items-start gap-2">
                       <VaButton
                         v-if="props.canRemove"
+                        :disabled="!stateAdmits('remove_dataset')"
+                        :title="
+                          stateAdmits('remove_dataset') ? null : DISABLED_REASON
+                        "
                         @click="openRemoveDatasetModal(rowData)"
                         size="small"
                         preset="secondary"
@@ -208,13 +220,18 @@
                   <template v-else>
                     No datasets are currently available to you in this
                     collection. This collection may have no datasets, or you may
-                    not have been granted access. Contact the administrator for
+                    not have been given access. Contact the administrator for
                     assistance.
                   </template>
                 </template>
                 <template #actions>
                   <!-- Call to action -->
-                  <VaButton v-if="props.canCreate" @click="openAddDatasetModal">
+                  <VaButton
+                    v-if="props.canCreate"
+                    :disabled="!stateAdmits('add_dataset')"
+                    :title="stateAdmits('add_dataset') ? null : DISABLED_REASON"
+                    @click="openAddDatasetModal"
+                  >
                     <div class="flex items-center gap-3 px-2">
                       <i-mdi-plus class="text-lg" />
                       <span class="font-medium">Add Dataset</span>
@@ -242,6 +259,7 @@
 </template>
 
 <script setup>
+import { holds } from "@/composables/useCapabilities";
 import * as datetime from "@/services/datetime";
 import { formatBytes } from "@/services/utils";
 import CollectionService from "@/services/v2/collections";
@@ -252,7 +270,31 @@ const props = defineProps({
   collection: { type: Object, required: true },
   canCreate: { type: Boolean, required: true },
   canRemove: { type: Boolean, required: true },
+  /**
+   * `_meta.available_actions`: what the collection's own state admits right now, or null when the
+   * response did not say. A control the state withholds stays visible and disabled, because
+   * the caller keeps the authority and will hold it again.
+   *
+   * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+   */
+  availableActions: { type: Array, default: null },
 });
+
+/**
+ * Whether the collection's state admits the action.
+ *
+ * A null list means the response did not answer, and every control stays usable: the service
+ * checks the state again under its own lock, so a wrongly enabled control costs a 409 rather
+ * than a wrong write.
+ */
+function stateAdmits(action) {
+  return props.availableActions === null
+    ? true
+    : props.availableActions.includes(action);
+}
+
+/** The words a disabled control shows for why the state withholds it. */
+const DISABLED_REASON = "This collection is archived.";
 
 const emit = defineEmits(["count-changed", "request-access"]);
 
@@ -266,6 +308,10 @@ const searchTerm = ref("");
 const total = ref(0);
 const currentPage = ref(1);
 const itemsPerPage = ref(20);
+
+// Reserves one page of rows on the table container, so the pagination keeps its
+// place when the last page is short.
+const tablePageStyle = useTablePageStyle(total, itemsPerPage);
 const sortBy = ref("created_at");
 const sortOrder = ref("desc");
 const ITEMS_PER_PAGE_OPTIONS = [20, 50, 100];
@@ -273,11 +319,11 @@ const ITEMS_PER_PAGE_OPTIONS = [20, 50, 100];
 // Staging is authorized per dataset, so offer it only when some row on this page accepts it.
 // The stage route still checks every dataset it is asked to stage.
 const canStage = computed(() =>
-  datasets.value.some((d) => d._meta?.can_request_stage),
+  datasets.value.some((d) => holds(d, "request_stage")),
 );
 
 const hasRowsThatWillNotOpen = computed(() =>
-  datasets.value.some((d) => !d._meta?.can_view_metadata),
+  datasets.value.some((d) => !holds(d, "view_metadata")),
 );
 
 const areFiltersActive = computed(() => {
@@ -382,7 +428,7 @@ async function stageSelected() {
     const { data } = await CollectionService.stageDatasets(
       props.collection.id,
       {
-        dataset_ids: selected.value.length
+        dataset_resource_ids: selected.value.length
           ? selected.value.map((d) => d.resource_id)
           : undefined,
       },

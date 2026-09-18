@@ -1,14 +1,15 @@
 const {
   Prisma,
-  GROUP_MEMBER_ROLE,
   RESOURCE_TYPE,
 } = require('@prisma/client');
 
 const prisma = require('@/db');
 
 const { GRANT_ACCESS_TYPE_CATEGORY_LABELS } = require('@/constants');
-const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
+const { buildWhereClause, createLikePattern } = require('@/utils/sql');
 const Expiry = require('@/utils/expiry');
+const { isGrantActive } = require('@/utils/grantValidity');
+const { accessibleIdsQuery } = require('@/authorization');
 const accessTypeClosure = require('./accessTypeClosure');
 
 /**
@@ -16,9 +17,9 @@ const accessTypeClosure = require('./accessTypeClosure');
  *
  * A grant issued from an approved preset item inside a request has both, so the Access tab
  * can say "issued as part of Standard Research Use" rather than listing five access types
- * with no shape. Both are null on grants that predate the provenance work.
+ * with no shape. Both are null on a grant written without that provenance, such as a seeded row.
  *
- * @see docs/design/groups/access-requests-plan.md — C5
+ * @see docs/design/groups/design.md — What a preset expands to
  */
 const PRESET_JSON = Prisma.sql`
   CASE WHEN gp.id IS NULL THEN NULL
@@ -59,8 +60,8 @@ const GRANT_INCLUDES = {
 };
 
 /**
- * Post-processes an array of grants from a raw SQL result to add the Expiry
- * computed field (mirrors the db.js Prisma client extension for ORM queries).
+ * Post-processes an array of grants from a raw SQL result to add the `expiry` and `is_active`
+ * computed fields (mirrors the db.js Prisma client extension for ORM queries).
  * @param {Array} grants
  * @returns {Array}
  */
@@ -68,6 +69,7 @@ function addExpiryToGrants(grants) {
   return grants.map((g) => ({
     ...g,
     expiry: Expiry.fromValue(g.valid_until).toJSON(),
+    is_active: isGrantActive(g),
   }));
 }
 
@@ -481,7 +483,9 @@ async function listExpiringGrants({
 }
 
 /**
- * List all grants that are expiring within a certain number of days on resources that are owned by groups that user is an admin of
+ * List all grants that are expiring within a certain number of days on resources the user may
+ * list grants for: those whose owning group they administer or oversee, as
+ * `grant.list_for_resource` decides.
  * @param {Object} params
  * @param {string} params.user_id - UUID of the user
  * @param {number} params.within_days - Number of days until expiration to filter by (e.g. 30 to find grants expiring within the next 30 days)
@@ -491,23 +495,12 @@ async function listExpiringGrantsForAdmin({
   user_id,
   within_days,
 }) {
+  const governing = ['admin', 'oversight'];
   const sql = Prisma.sql`
-      WITH admin_groups AS (
-        SELECT gu.group_id
-        FROM active_group_user gu
-        WHERE gu.user_id = ${user_id}
-          AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
-      ),
-      owned_resources AS (
-        SELECT d.resource_id AS resource_id
-        FROM dataset d
-        JOIN admin_groups ag ON d.owner_group_id = ag.group_id
-
+      WITH owned_resources AS (
+        ${accessibleIdsQuery({ userId: user_id, resourceType: 'dataset', pathKinds: governing })}
         UNION
-
-        SELECT c.id AS resource_id
-        FROM collection c
-        JOIN admin_groups ag ON c.owner_group_id = ag.group_id
+        ${accessibleIdsQuery({ userId: user_id, resourceType: 'collection', pathKinds: governing })}
       )
       SELECT 
         g.subject_id,

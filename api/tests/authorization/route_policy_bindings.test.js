@@ -21,6 +21,9 @@ const collectionRoutes = require('@/routes/collections');
 const datasetRoutes = require('@/routes/datasets_v2');
 const auditRoutes = require('@/routes/audit');
 const { auditPolicies } = require('@/authorization/builtin/policies/audit');
+const { collectionPolicies } = require('@/authorization/builtin/policies/collection');
+const { datasetPolicies } = require('@/authorization/builtin/policies/dataset');
+const { policyRegistry } = require('@/authorization');
 
 /**
  * The policies bound to one route of a router, as `resourceType.action` strings.
@@ -52,13 +55,15 @@ describe('archiving and unarchiving are separate authorities', () => {
     expect(unarchive).toEqual([`${resourceType}.unarchive`]);
   });
 
-  test('a dataset is the exception, and says so in its policies', () => {
-    // Both are isDatasetOwningGroupAdmin, so the dataset archive route may bind either.
-    // The point is that the policy container decides, not the route.
-    const { datasetPolicies } = require('@/authorization/builtin/policies/dataset');
-    expect(datasetPolicies.hasAction('archive')).toBe(true);
-    expect(datasetPolicies.hasAction('unarchive')).toBe(true);
-    expect(policiesFor(datasetRoutes, 'post', '/:id/archive')).toEqual(['dataset.archive']);
+  test('a dataset has neither action, because it deletes instead', () => {
+    // A dataset's lifecycle ends at delete: the record stays, the archived files go, and there
+    // is no undo. So the pairing above does not apply to it, and the two action names it
+    // would need are absent rather than merely unbound.
+    // @see docs/design/groups/design.md — Operation Effects
+    expect(datasetPolicies.hasAction('archive')).toBe(false);
+    expect(datasetPolicies.hasAction('unarchive')).toBe(false);
+    expect(datasetPolicies.hasAction('delete')).toBe(true);
+    expect(policiesFor(datasetRoutes, 'delete', '/:dataset_resource_id')).toEqual(['dataset.delete']);
   });
 });
 
@@ -68,8 +73,6 @@ describe('every authorize() on these routers names a real action', () => {
     ['collections', collectionRoutes],
     ['datasets_v2', datasetRoutes],
   ])('%s', (_name, router) => {
-    const { policyRegistry } = require('@/authorization');
-
     const bound = router.stack
       .filter((l) => l.route)
       .flatMap((l) => l.route.stack.map((s) => s.handle?.authorizes).filter(Boolean));
@@ -90,11 +93,11 @@ describe('a resource audit tab reads its own resource, not the platform log', ()
   //
   // @see docs/design/groups/use-cases.md — 57. The audit log is readable only by people with a reason
   test.each([
-    ['group', groupRoutes],
-    ['collection', collectionRoutes],
-    ['dataset', datasetRoutes],
-  ])('%s audit records are bound to view_audit_logs', (resourceType, router) => {
-    expect(policiesFor(router, 'get', '/:id/audit')).toEqual([`${resourceType}.view_audit_logs`]);
+    ['group', groupRoutes, '/:id/audit'],
+    ['collection', collectionRoutes, '/:id/audit'],
+    ['dataset', datasetRoutes, '/:dataset_resource_id/audit'],
+  ])('%s audit records are bound to view_audit_logs', (resourceType, router, auditPath) => {
+    expect(policiesFor(router, 'get', auditPath)).toEqual([`${resourceType}.view_audit_logs`]);
   });
 
   test('the platform-wide log stays platform admin only', () => {
@@ -140,8 +143,6 @@ describe('ownership transfer is modelled and not exposed', () => {
   });
 
   test('the action still exists, so the deferral is visible rather than lost', () => {
-    const { collectionPolicies } = require('@/authorization/builtin/policies/collection');
-    const { datasetPolicies } = require('@/authorization/builtin/policies/dataset');
     expect(collectionPolicies.hasAction('transfer_ownership')).toBe(true);
     expect(datasetPolicies.hasAction('transfer_ownership')).toBe(true);
   });

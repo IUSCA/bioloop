@@ -1,7 +1,7 @@
 <template>
   <VaCard>
     <VaCardContent class="!p-4">
-      <h2 class="v2-card-title">Also reaching this subject</h2>
+      <h2 class="v2-card-title">Also reaching {{ who }}</h2>
       <p class="mt-1.5 text-sm va-text-secondary">
         {{ blurb }}
       </p>
@@ -35,7 +35,7 @@
  * change anything? After one it prevents the opposite mistake: a revoked grant does not mean
  * the subject lost the access, because another path may still supply it.
  *
- * @see docs/design/groups/access-requests-plan.md — C4
+ * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
  */
 import { computed } from "vue";
 
@@ -44,6 +44,11 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  /** The name of the user or group the request is for. */
+  subjectName: {
+    type: String,
+    default: null,
+  },
   /** Whether the request has been decided, which changes what this card is telling you. */
   decided: {
     type: Boolean,
@@ -51,10 +56,12 @@ const props = defineProps({
   },
 });
 
+const who = computed(() => props.subjectName || "this user or group");
+
 const blurb = computed(() =>
   props.decided
-    ? "Access the subject holds by another path. Revoking this request's grants does not remove it."
-    : "Access the subject already holds by another path. Approving this does not create it.",
+    ? `Access ${who.value} holds by another path. Revoking the access this request gave does not affect it.`
+    : `Access ${who.value} already holds by another path. Approving this does not create it.`,
 );
 
 // The same three paths `getEffectiveCoverage` labels, in the reader's words.

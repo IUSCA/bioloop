@@ -11,10 +11,10 @@
         <VaButton
           :loading="loading"
           :disabled="!confirmationValid"
-          :color="props.isArchived ? 'success' : 'danger'"
+          :color="unarchiving ? 'success' : 'danger'"
           @click="confirm"
         >
-          {{ props.isArchived ? "Unarchive Collection" : "Archive Collection" }}
+          {{ unarchiving ? "Unarchive Collection" : "Archive Collection" }}
         </VaButton>
       </div>
     </template>
@@ -22,7 +22,7 @@
     <VaInnerLoading :loading="loading">
       <div class="space-y-6">
         <!-- Unarchive variant -->
-        <template v-if="props.isArchived">
+        <template v-if="unarchiving">
           <div
             class="rounded-lg border border-solid border-green-200 bg-green-50/70 p-4 shadow-sm dark:border-green-800 dark:bg-green-950/40"
           >
@@ -88,7 +88,7 @@
                       <span
                         class="mt-1 inline-block h-2 w-2 rounded-full bg-emerald-800 dark:bg-emerald-200"
                       />
-                      All existing grants
+                      All existing permissions
                     </li>
                     <li class="flex items-start gap-2">
                       <span
@@ -120,23 +120,15 @@
                   <ul
                     class="space-y-1 text-sm text-rose-800 dark:text-rose-200"
                   >
-                    <li class="flex items-start gap-2">
+                    <li
+                      v-for="label in prohibited"
+                      :key="label"
+                      class="flex items-start gap-2"
+                    >
                       <span
                         class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
                       />
-                      Add / remove datasets
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span
-                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
-                      />
-                      Modify collection contents
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span
-                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
-                      />
-                      Update grants
+                      {{ label }}
                     </li>
                   </ul>
                 </div>
@@ -199,6 +191,8 @@
 import toast from "@/services/toast";
 import { maybePluralize } from "@/services/utils";
 import CollectionService from "@/services/v2/collections";
+import StateService from "@/services/v2/states";
+import { prohibitedLabels } from "@/services/v2/stateLabels";
 
 const props = defineProps({
   /** ID of the collection being archived/unarchived. */
@@ -207,22 +201,63 @@ const props = defineProps({
   collectionName: { type: String, default: "" },
   /** Slug of the collection, used for confirmation input. */
   collectionSlug: { type: String, default: "" },
-  /** If true, shows unarchive wording. */
-  isArchived: { type: Boolean, default: false },
+  /**
+   * Which action this dialog confirms: `archive` or `unarchive`.
+   *
+   * The action the toggle offered, rather than the collection's archived column. The two agree
+   * today, and taking the action keeps the dialog from confirming one thing while the page
+   * offered another: what the page offers comes from `_meta.available_actions`.
+   *
+   * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+   */
+  action: {
+    type: String,
+    default: "archive",
+    validator: (value) => ["archive", "unarchive"].includes(value),
+  },
   /** Number of affected datasets (optional, shown in summary). */
   affectedDatasets: { type: Number, default: null },
 });
 
 const emit = defineEmits(["update"]);
 
+/** Whether this dialog is confirming the way back out. */
+const unarchiving = computed(() => props.action === "unarchive");
+
 const visible = ref(false);
 const confirmationText = ref("");
 const confirmationInput = ref(null);
 const loading = ref(false);
 
+// What archiving stops, from each resource type's own state rules. A group's archive dialog
+// lists the collection, and the grants and requests that name it.
+const ARCHIVE_SCOPE = ["collection", "grant", "access_request"];
+const forbiddenActions = ref([]);
+const prohibited = computed(() =>
+  prohibitedLabels(forbiddenActions.value, ARCHIVE_SCOPE),
+);
+
+async function loadForbiddenActions() {
+  try {
+    // One call per resource type, because what archiving forbids is the resource's answer.
+    const answers = await Promise.all(
+      ARCHIVE_SCOPE.map((type) =>
+        StateService.forbiddenActions(type, "archived"),
+      ),
+    );
+    forbiddenActions.value = answers.flatMap((res, i) =>
+      res.data.forbidden_actions.map((f) => `${ARCHIVE_SCOPE[i]}.${f.action}`),
+    );
+  } catch {
+    // Nothing is listed rather than a list that may be wrong.
+    forbiddenActions.value = [];
+  }
+}
+
 function show() {
   confirmationText.value = "";
   visible.value = true;
+  if (!unarchiving.value) loadForbiddenActions();
 
   nextTick(() => {
     confirmationInput.value?.focus?.();
@@ -238,7 +273,7 @@ async function confirm() {
   loading.value = true;
 
   try {
-    if (props.isArchived) {
+    if (unarchiving.value) {
       await CollectionService.unarchive(props.collectionId);
     } else {
       await CollectionService.archive(props.collectionId);
@@ -246,7 +281,7 @@ async function confirm() {
 
     hide();
     toast.success(
-      props.isArchived ? "Collection unarchived." : "Collection archived.",
+      unarchiving.value ? "Collection unarchived." : "Collection archived.",
     );
     emit("update");
   } catch (err) {
@@ -264,13 +299,13 @@ defineExpose({ show, hide });
 const intl = new Intl.NumberFormat();
 
 const modalTitle = computed(() =>
-  props.isArchived
+  unarchiving.value
     ? `UNARCHIVE COLLECTION: ${props.collectionName}`
     : `ARCHIVE COLLECTION: ${props.collectionName}`,
 );
 
 const confirmationValid = computed(() => {
-  if (props.isArchived) return true;
+  if (unarchiving.value) return true;
   if (!props.collectionSlug) return true;
   return confirmationText.value === props.collectionSlug;
 });

@@ -1,5 +1,5 @@
 // This module is a sub router for handling file-related routes for datasets.
-// req.params.dataset_id is expected to be present in all routes, and is validated in the parent router (index.js).
+// req.params.dataset_resource_id is expected to be present in all routes, and is validated in the parent router (index.js).
 
 const express = require('express');
 const { param, query, body } = require('express-validator');
@@ -9,13 +9,12 @@ const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const { createAuthorizationMiddleware: authorize } = require('@/authorization');
 const datasetFileService = require('@/services/datasets_v2/files');
-const prisma = require('@/db');
 
 const router = express.Router({ mergeParams: true });
 
 // All routes in this sub-router authorize against the parent dataset.
-// Because req.params.id is not set in sub-routers, we supply dataset_id explicitly.
-const byDatasetId = { resourceIdFn: (req) => req.params.dataset_id };
+// Because req.params.id is not set in sub-routers, we supply dataset_resource_id explicitly.
+const byDatasetResourceId = { resourceIdFn: (req) => req.params.dataset_resource_id };
 
 const FILE_TYPES = ['file', 'directory', 'symbolic link'];
 
@@ -29,7 +28,7 @@ router.post(
     body('*.md5').isString().isLength({ min: 1 }),
     body('*.type').isIn(FILE_TYPES),
   ]),
-  authorize('dataset', 'edit', byDatasetId),
+  authorize('dataset', 'edit', byDatasetResourceId),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate files to a dataset
@@ -41,7 +40,7 @@ router.post(
     }));
 
     await datasetFileService.addFilesToDataset({
-      dataset_id: req.params.dataset_id,
+      dataset_resource_id: req.params.dataset_resource_id,
       data,
     });
 
@@ -55,13 +54,13 @@ router.get(
   validate([
     query('basepath').default(''),
   ]),
-  authorize('dataset', 'list_files', { resourceIdFn: (req) => req.params.dataset_id }),
+  authorize('dataset', 'list_files', { resourceIdFn: (req) => req.params.dataset_resource_id }),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get a list of files and directories under basepath
 
     const files = await datasetFileService.listFiles({
-      dataset_id: req.params.dataset_id,
+      dataset_resource_id: req.params.dataset_resource_id,
       base: req.query.basepath,
     });
 
@@ -72,12 +71,12 @@ router.get(
 // get file tree for a dataset
 router.get(
   '/tree',
-  authorize('dataset', 'list_files', byDatasetId),
+  authorize('dataset', 'list_files', byDatasetResourceId),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get the file tree for a dataset
     const tree = await datasetFileService.getFileTree({
-      dataset_id: req.params.dataset_id,
+      dataset_resource_id: req.params.dataset_resource_id,
     });
 
     res.json(tree);
@@ -99,18 +98,13 @@ router.get(
     query('skip').default(0).isInt().toInt(),
     query('take').default(1000).isInt().toInt(),
   ]),
-  authorize('dataset', 'list_files', byDatasetId),
+  authorize('dataset', 'list_files', byDatasetResourceId),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Search files in a dataset
 
-    const dataset = await prisma.dataset.findUnique({
-      where: { resource_id: req.params.dataset_id },
-      select: { id: true, resource_id: true },
-    });
-
     const files = await datasetFileService.searchFiles({
-      dataset_id: dataset.id,
+      dataset_resource_id: req.params.dataset_resource_id,
       base: req.query.basepath,
       ..._.omitBy(_.isUndefined)(req.query),
     });
@@ -121,12 +115,12 @@ router.get(
 // get download info for dataset as a bundle (e.g. zip / tar)
 router.get(
   '/bundle/download_info',
-  authorize('dataset', 'download', byDatasetId),
+  authorize('dataset', 'download', byDatasetResourceId),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get download info for the entire dataset as a bundle (e.g. zip / tar)
     const download_info = await datasetFileService.getBundleDownloadInfo({
-      dataset_id: req.params.dataset_id,
+      dataset_resource_id: req.params.dataset_resource_id,
       actor_id: req.user.id,
     });
     res.json(download_info);
@@ -139,12 +133,12 @@ router.get(
   validate([
     param('file_id').isInt().toInt(),
   ]),
-  authorize('dataset', 'download', byDatasetId),
+  authorize('dataset', 'download', byDatasetResourceId),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get download info for a specific file from the dataset
     const download_info = await datasetFileService.getFileDownloadInfo({
-      dataset_id: req.params.dataset_id,
+      dataset_resource_id: req.params.dataset_resource_id,
       file_id: req.params.file_id,
       actor_id: req.user.id,
     });

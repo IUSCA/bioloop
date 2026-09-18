@@ -1,18 +1,17 @@
 const assert = require('assert');
 // const path = require('node:path');
-const { GROUP_MEMBER_ROLE } = require('@prisma/client');
 
 const config = require('config');
+const createError = require('http-errors');
 const _ = require('lodash/fp');
 const prisma = require('@/db');
+const { assertPossible, withStateFields } = require('@/state').import('dataset');
 const wfService = require('@/services/workflow');
 
 const {
   DONE_STATUSES, INCLUDE_WORKFLOWS,
 } = require('@/constants');
 
-const grantService = require('@/services/grants');
-const { userHydrator } = require('@/authorization/builtin/hydrators/user');
 const fetchModule = require('./fetch');
 const createModule = require('./create');
 const useConditionsModule = require('./useConditions');
@@ -98,34 +97,56 @@ async function getStats(type) {
 }
 
 /**
+ * Locks a dataset row, then reads it with the fields its state rules read.
+ *
+ * The lock comes first, so the state a write sees is the state the check read. A raw lock cannot
+ * take the state layer's select fragment, so the row is read after it rather than by it.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ *
+ * @param {import('@prisma/client').Prisma.TransactionClient} tx
+ * @param {number} dataset_row_id - the dataset's numeric id
+ * @param {object} [include] - relations to read along with the row
+ * @returns {Promise<object>} every column of the dataset, and the state fields
+ * @throws {HttpError} 404 when no dataset has that id
+ */
+async function lockDataset(tx, dataset_row_id, include = {}) {
+  const rows = await tx.$queryRaw`SELECT id FROM dataset WHERE id = ${dataset_row_id} FOR UPDATE`;
+  if (rows.length === 0) throw createError.NotFound('Dataset not found');
+  return tx.dataset.findUniqueOrThrow(withStateFields({ where: { id: dataset_row_id }, include }));
+}
+
+/**
  * Partially updates a dataset. Merges metadata and handles bundle upsert.
  */
-async function patchDataset(id, data) {
-  const current = await prisma.dataset.findFirstOrThrow({ where: { id } });
-  const { metadata, bundle, ...rest } = data;
+async function patchDataset(dataset_row_id, data) {
+  return prisma.$transaction(async (tx) => {
+    const current = await lockDataset(tx, dataset_row_id);
+    assertPossible('edit_metadata', current);
+    const { metadata, bundle, ...rest } = data;
 
-  const updateData = _.omitBy(_.isUndefined)(rest);
-  updateData.metadata = _.merge(current.metadata)(metadata);
+    const updateData = _.omitBy(_.isUndefined)(rest);
+    updateData.metadata = _.merge(current.metadata)(metadata);
 
-  if (bundle) {
-    updateData.bundle = { upsert: { create: bundle, update: bundle } };
-  }
+    if (bundle) {
+      updateData.bundle = { upsert: { create: bundle, update: bundle } };
+    }
 
-  return prisma.dataset.update({
-    where: { id },
-    data: updateData,
-    include: {
-      ...INCLUDE_WORKFLOWS,
-      source_datasets: true,
-      derived_datasets: true,
-    },
+    return tx.dataset.update({
+      where: { id: dataset_row_id },
+      data: updateData,
+      include: {
+        ...INCLUDE_WORKFLOWS,
+        source_datasets: true,
+        derived_datasets: true,
+      },
+    });
   });
 }
 
 /** Appends a state entry to a dataset. */
-async function addState(dataset_id, state, metadata) {
+async function addState(dataset_row_id, state, metadata) {
   return prisma.dataset_state.create({
-    data: _.omitBy(_.isNil)({ state, dataset_id, metadata }),
+    data: _.omitBy(_.isNil)({ state, dataset_id: dataset_row_id, metadata }),
   });
 }
 
@@ -135,17 +156,20 @@ async function addState(dataset_id, state, metadata) {
  * otherwise marks is_deleted = true directly.
  * Always writes an audit log entry.
  */
-async function softDelete(dataset_id, user_id) {
-  const dataset = await prisma.dataset.findFirstOrThrow({
-    where: { id: dataset_id },
-    include: INCLUDE_WORKFLOWS,
+async function softDelete(dataset_row_id, user_id) {
+  // Deleting removes the archived files and cannot be undone, so a dataset already deleted is a
+  // conflict rather than a second delete.
+  const dataset = await prisma.$transaction(async (tx) => {
+    const locked = await lockDataset(tx, dataset_row_id, INCLUDE_WORKFLOWS);
+    assertPossible('delete', locked);
+    return locked;
   });
 
   if (dataset.archive_path) {
     await createWorkflowForDataset({ dataset, wf_name: 'delete', initiator_id: user_id });
   } else {
     await prisma.dataset.update({
-      where: { id: dataset_id },
+      where: { id: dataset_row_id },
       data: {
         is_deleted: true,
         states: { create: { state: 'DELETED' } },
@@ -154,87 +178,18 @@ async function softDelete(dataset_id, user_id) {
   }
 
   await prisma.dataset_audit.create({
-    data: { action: 'delete', user_id, dataset_id },
+    data: { action: 'delete', user_id, dataset_id: dataset_row_id },
   });
-}
-
-async function userHasGrant({ user_id, dataset_id, access_type }) {
-  return grantService.userHasGrant({
-    user_id,
-    resource_type: 'DATASET',
-    resource_id: dataset_id,
-    access_types: [access_type],
-  });
-}
-
-/**
- * Explain why user can/cannot access a dataset
- * Returns all applicable grants and ownership paths
- * @param {number} user_id
- * @param {number} dataset_id
- * @param {string} action
- * @returns {Promise<Object>} Detailed explanation
- */
-async function explainDatasetAccess({ user_id, dataset_id, access_types }) {
-  // platformAdmin
-  // admin of owning group
-  // has oversight of owning group
-  // grants
-
-  const user = await userHydrator.hydrate({
-    id: user_id,
-    attributes: ['id', 'roles', 'group_memberships', 'oversight_group_ids', 'effective_group_ids'],
-  });
-
-  if (user.roles.includes('admin')) {
-    return {
-      granted: true,
-      reason: 'User is a platform admin',
-    };
-  }
-
-  const dataset = await prisma.dataset.findUniqueOrThrow({ where: { id: dataset_id } });
-
-  const adminGroupIds = user.group_memberships
-    .filter((gm) => gm.role === GROUP_MEMBER_ROLE.ADMIN)
-    .map((gm) => gm.group_id);
-  if (adminGroupIds.includes(dataset.owner_group_id)) {
-    return {
-      granted: true,
-      reason: 'User is an admin of the owning group',
-    };
-  }
-
-  if (user.oversight_group_ids.includes(dataset.owner_group_id)) {
-    return {
-      granted: true,
-      reason: 'User has oversight of the owning group',
-    };
-  }
-
-  const grants = await grantService.getUserDatasetGrants({ user_id, dataset_id, access_types });
-  if (grants.length > 0) {
-    return {
-      granted: true,
-      reason: 'User has grants on the dataset',
-      grants,
-    };
-  }
-
-  return {
-    granted: false,
-    reason: 'User does not have any applicable grants',
-  };
 }
 
 /**
  * Fetches source datasets (datasets this dataset was derived from).
  * Returns paginated results with optional filtering.
- * @param {string} dataset_id - UUID of the dataset
+ * @param {number} dataset_row_id - the dataset's integer primary key
  * @param {Object} options - Pagination and filtering options
  * @returns {Promise<Object>} { data: Dataset[], metadata: { total, offset, limit } }
  */
-async function getSourceDatasets(dataset_id, options = {}) {
+async function getSourceDatasets(dataset_row_id, options = {}) {
   const {
     limit = 50,
     offset = 0,
@@ -245,7 +200,7 @@ async function getSourceDatasets(dataset_id, options = {}) {
       where: {
         derived_datasets: {
           some: {
-            derived_id: dataset_id,
+            derived_id: dataset_row_id,
           },
         },
       },
@@ -257,7 +212,7 @@ async function getSourceDatasets(dataset_id, options = {}) {
       where: {
         derived_datasets: {
           some: {
-            derived_id: dataset_id,
+            derived_id: dataset_row_id,
           },
         },
       },
@@ -273,11 +228,11 @@ async function getSourceDatasets(dataset_id, options = {}) {
 /**
  * Fetches derived datasets (datasets derived from this dataset).
  * Returns paginated results with optional filtering.
- * @param {string} dataset_id - UUID of the dataset
+ * @param {number} dataset_row_id - the dataset's integer primary key
  * @param {Object} options - Pagination and filtering options
  * @returns {Promise<Object>} { data: Dataset[], metadata: { total, offset, limit } }
  */
-async function getDerivedDatasets(dataset_id, options = {}) {
+async function getDerivedDatasets(dataset_row_id, options = {}) {
   const {
     limit = 50,
     offset = 0,
@@ -288,7 +243,7 @@ async function getDerivedDatasets(dataset_id, options = {}) {
       where: {
         source_datasets: {
           some: {
-            source_id: dataset_id,
+            source_id: dataset_row_id,
           },
         },
       },
@@ -300,7 +255,7 @@ async function getDerivedDatasets(dataset_id, options = {}) {
       where: {
         source_datasets: {
           some: {
-            source_id: dataset_id,
+            source_id: dataset_row_id,
           },
         },
       },
@@ -320,8 +275,6 @@ module.exports = {
   patchDataset,
   addState,
   softDelete,
-  userHasGrant,
-  explainDatasetAccess,
   getSourceDatasets,
   getDerivedDatasets,
   ...fetchModule,

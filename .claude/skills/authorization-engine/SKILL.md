@@ -5,208 +5,125 @@ description: How the ABAC engine in api/src/authorization evaluates a request, a
 
 # The authorization engine
 
-`api/src/authorization/` is split three ways. `core/` is framework code that knows nothing
-about this application. `builtin/` holds the policies, hydrators, and restriction layer that
-are specific to Bioloop. `custom/` is for derived apps.
+Read these before changing anything under `api/src/authorization/` or `api/src/state/`:
 
-Anything application-specific that `core/` needs is **injected**, never imported. The
-restriction checker and the platform-admin policy both arrive as arguments to
-`createAuthorizationMiddlewareFunction`. Follow that pattern rather than adding a `require`
-to a file under `core/`.
+- [api/src/authorization/README.md](../../../api/src/authorization/README.md): layers, `index.js`,
+  policies, containers, hydrators, paths.
+- [docs/design/groups/access-model.md](../../../docs/design/groups/access-model.md): the decision
+  rule, the state check, standing and badges, projection, refusal shapes.
+- [docs/contributing/techniques/authorization-engine.md](../../../docs/contributing/techniques/authorization-engine.md):
+  the background for every item below, plus the state layer, lists, standing, and the arms.
 
-## The order a request is decided in
+This skill keeps only the rules and traps a session needs before its first edit.
 
-1. **Restriction check.** `allowed = no restriction blocks this AND some grant permits it`.
-   Runs first because it is cheaper and because the refusal can name what blocked it.
-2. **Platform-admin short-circuit.** If the caller is a platform admin, every action is
-   allowed and the action's own policy is never consulted.
-3. **The action policy**, through `authorizeWithFilters`.
+## Rules that prevent a wrong change
 
-Step 2 sits after step 1 on purpose. An archived group is archived for a platform admin too.
-Moving the short-circuit earlier would silently undo the restriction layer.
+- **`core/` never imports application code.** The restriction checker and the platform-admin
+  policy are injected into `createDecisionPipeline`. Do not add a `require` under `core/`.
+- **No policy names the platform admin.** The pipeline allows one before any action policy runs.
+  For an action nobody qualifies for alone, use `platformAdminOnly` from
+  `builtin/policies/utils/index.js`. `platformAdminShortCircuit.test.js` enforces this.
+- **The restriction check runs before the platform-admin check.** Moving the short-circuit earlier
+  silently lets a restriction stop binding a platform admin.
+- **Platform admin reads `current_roles`, never `roles`.** The JWT profile's `roles` are from login.
+  Do not put `current_roles` into a pre-fetched user. A v2 route calls `callerIsPlatformAdmin(req)`
+  from `@/authorization`, never `auth.isPlatformAdmin(req)`.
+- **Dataset, collection, and group terms read `access_paths`.** Add a path kind to the paths SQL,
+  not a user fact such as a group-id list. An `async` `evaluate` fails boot; put the read in a
+  hydrator virtual attribute.
+- **Services import `accessPathsQuery` and `accessibleIdsQuery` from `@/authorization`.** Importing
+  `builtin/paths` directly fails under jest with `no paths are registered for resource type dataset`,
+  because registration runs when `index.js` loads.
+- **`authorization/` does not import `src/state`.** State is checked after authorization, in the
+  service, under the row lock, and refuses with 409. Business rules and record writers live in
+  `services/`. `_meta` for a detail route comes from `buildMeta` in `src/services/meta.js`.
+  @see docs/design/groups/access-model.md — The state check
+- **The state check runs before a service's own validation.** Delete a validation predicate the
+  state rule already covers.
+- **A list passes its rows to `check`.** Never query inside the per-row loop; widen the caller's
+  query instead.
+- **Never project another resource's row with `req.permission.filter`.** That filter was decided for
+  the resource in the URL. Lineage, ancestor, and descendant routes use
+  `require('@/authorization').import(type).listFilter()`.
+- **A list query widens the page's access type with `grantService.satisfiedBy([...])`.** A literal
+  `gat.name IN (...)` hides rows the page opens; no filter lists rows the page refuses.
+- **Bind decisions at module load** with `require('@/authorization').import(type)`: `.action(name)`,
+  `.rows(name)`, `.listFilter()`, `.standingOfRows()`. The string forms are for tests.
+- **A dataset deletes; it never archives.** Do not add `dataset.archive` or `dataset.unarchive`.
+- **Attribute rules combine by union.** Do not reintroduce a first-match short-circuit.
+- **Do not delete the no-op restriction checker.** `restrictionSeam.test.js` proves the seam works.
 
-## No policy may name the platform-admin role
+## Traps that cost real time
 
-Action policies do not carry an `isPlatformAdmin` term. There were 77 of them and they all
-meant the same thing, so a route whose author forgot one had a hole rather than a stricter
-rule. `GET /audit/records` was that hole.
+**A platform admin hides policy 500s.** The admin never reaches a hydrator, so an unhydratable
+requirement only fails for everyone else. Drive a browser check as a group admin such as `user-054`,
+not `test_user`.
 
-For an action nobody qualifies for on their own, use `platformAdminOnly` from
-`builtin/policies/utils/index.js`. It evaluates to false always, and it says in one word what
-an empty `Policy.or([])` would leave a reader guessing about.
-`tests/authorization/platformAdminShortCircuit.test.js` fails if a policy names the role again.
+**Pre-fetching hides a broken virtual attribute.** A virtual attribute runs only when the entity is
+not pre-fetched. Test a hydrator change through `authorizeAction` with only `identifiers`.
 
-## An empty attribute rule set denies every attribute
+**A boot throw looks like nodemon crash-looping** in the API log. Configuration errors fail at
+startup, not per request: an unhydratable requirement, a malformed attribute path, an action with no
+restriction class or no attribute rule, a policy action with no state rule. Read the first stack.
 
-`createFilterFunction([])` returns `() => ({})`. So calling `authorizeWithFilters` with
-`attributeRules: []` grants the action and then hands back an object with no fields, which
-looks like a hydration failure rather than a filter decision.
+**An empty attribute rule set grants the action and returns `{}`.** It looks like a hydration
+failure. Pass `[{ policy: Policy.always, attribute_filters: ['*'] }]` when everything is meant.
 
-When a code path should return everything, pass an explicit rule:
+**Cache keys carry the model name.** Seed caches with `PrismaHydrator.cacheKey(model, id)`. A bare
+id is a silent miss.
 
-```js
-attributeRules: [{ policy: Policy.always, attribute_filters: ['*'] }]
+**An object seeded into the user cache must be mutable.** `hydrate` writes into it. A frozen object,
+such as `ANONYMOUS_PRINCIPAL`, fails every request with
+`TypeError: Cannot assign to read only property 'subject_id'`.
+
+**Extended Prisma rows cannot be `structuredClone`d.** `grant.expiry`, `grant.is_active`, and the
+`access_request_item` expiry fields throw `DataCloneError`. Use `copyTree` from `utils/expression`.
+
+**Relations named for current state read views.** `group.members`, `collection.datasets`, and
+`dataset.collections` return open rows only. A nested create through them fails with
+`Unknown argument create`; write through `membership_history`, `dataset_history`, or
+`collection_history`. `orderBy` a `_count` through them fails with `Unknown argument _count`.
+`currentStateScan.test.js` fails on a new `removed_at: null`, `revoked_at: null`, or
+`is_archived: false` in `api/src`.
+
+**A sweep for `ARCHIVED` must skip `DATASET_STATES.ARCHIVED`.** That constant in
+`api/src/constants.js` is the SDA tape-archive workflow state. It has nothing to do with archived
+groups or collections, which are `is_archived` columns and the `archived` state names in
+`src/state/builtin/`. `DATASET_STATES.DELETED` is the same kind of false positive for `DELETED`.
+
+**A dataset has two ids, and the name says which.** `dataset_row_id` is the integer `dataset.id`;
+`dataset_resource_id` is the UUID. A bare `dataset_id` is only a column key, and the columns
+disagree: `dataset_file.dataset_id` is an integer, `collection_dataset.dataset_id` a UUID. The wrong
+one fails as a validation error, not a type error.
+
+**Many services return `undefined`.** `addGroupMembers` and similar return their `$transaction`
+callback's value. Assert on a re-read row.
+
+**Grants pin their resource.** `grant.resource` is `onDelete: Restrict`. Test teardown deletes grants
+first, as `deleteCollection` and `deleteDataset` in `tests/services/helpers.js` do.
+
+**A new container fails the suite until it is placed.** It needs a restriction class on every action
+(`registryCompleteness.test.js`), and an entry in `MODELLED_RESOURCE_TYPES` or `NOT_MODELLED`
+(`modelCoverage.test.js`). A new enum value needs a world that reaches it, and counts only after
+`prisma generate`.
+
+**`authorizeAction` expects `identifiers: { user, resource }`.** Passing `{ group_id }` throws
+`User identifier is required to evaluate policy`.
+
+**Heredocs with backticks need a quoted delimiter** (`<<'EOF'`). An unquoted one runs each
+backticked word as a command and drops it from the text.
+
+## Commands
+
+Run the Engine arm against a generated world (about 10 seconds):
+
+```bash
+cd api && node tests/model/runEngineArm.js 2>&1 \
+  | grep -E "^wrote world|^engine arm:|^\[[0-9]+\]|^  shared:"
 ```
 
-This is what the platform-admin short-circuit does. Getting it wrong produced a passing
-`granted: true` with an empty payload.
-
-## Virtual attributes are dead code on the route path
-
-`userHydrator.registerVirtualAttribute('roles', ...)` queried `user_role` through a relation
-named `user`, but the schema calls it `users`. Every call threw, and nothing noticed for
-months, because the auth middleware pre-fetches `req.user` with its roles already attached
-and `authorizeWithFilters` prefers `preFetched` over hydrating.
-
-So a virtual attribute is only exercised when something calls the engine **without**
-pre-fetching that entity. `authorizeAction` from a service or a test is the usual way in.
-When changing a hydrator, write the test that calls `authorizeAction` with only
-`identifiers`, or the change is untested.
-
-## Whatever you put in the user cache must be mutable
-
-`PrismaHydrator.hydrate` writes into the cached record: it assigns
-`recordCache[idAttribute] = id` when a policy needs no columns, and `Object.assign`s the
-row when it does. So the object a caller seeds into `req.policyContext.cache.user` is
-written to, not just read.
-
-Seeding a frozen object there fails with
-`TypeError: Cannot assign to read only property 'subject_id'`, from inside `hydrate`, on
-every request. Nothing catches it before the 500.
-
-This bites the anonymous principal specifically. `ANONYMOUS_PRINCIPAL` is frozen on
-purpose — it is shared by every unauthenticated request and nothing should mutate it — so
-`optionalAuthenticate` puts a shallow copy in the cache and leaves `req.user` pointing at
-the frozen original.
-
-`preFetched` has no such problem: `hydrate` runs `structuredClone` over it first, and a
-clone is never frozen. So the failure appears only when something seeds the cache directly.
-`initializePolicyContext` does exactly that, which is why the shape is worth knowing, and
-it never bit before because a JWT profile is an ordinary mutable object.
-
-## Reading a policy container
-
-`PolicyContainer` exposes `getActionNames()`, `getPolicy(action)`, `getAttributeRules(action)`,
-and `export()`. Policies are renamed on registration to `<resourceType>.<action>`, and a
-composed policy's name carries the names of its parts, so `JSON.stringify(container.export())`
-is enough to assert that a term is absent without reaching inside the combinators.
-
-Registering a container takes two lines in `authorization/index.js`: the `require` in section
-2 and a `policyRegistry.register(...)` in section 4. A resource-free action, such as
-`audit.read_records`, is guarded with `authorize('audit', 'read_records', { resourceIdFn: () => null })`.
-
-## Grants pin their resource, so a resource carrying one cannot be hard-deleted
-
-`grant.resource` is `onDelete: Restrict`. Every dataset and every collection now carries at
-least the owning group's seeded grant, so this is the normal case rather than an edge one.
-
-`deleteCollection` removes the collection's grants in the same transaction before deleting it.
-A revoked grant on a collection that no longer exists is not a fact anybody can use, and who
-held access survives in `authorization_audit`, which stores ids rather than holding foreign
-keys. A test that deletes a collection through Prisma directly has to do the same.
-
-Datasets are soft-deleted, so their grants stay and this does not arise.
-
-## The owning group's grant is a row, not a rule
-
-Membership of the owning group confers no read. Creating a dataset or a collection writes a
-grant to the owning group, carrying the read plane only: `DATASET:LIST_FILES` or
-`COLLECTION:LIST_CONTENTS`, either of which satisfies its `VIEW_METADATA` counterpart through
-the access-type closure. `creation_type` is `SYSTEM_BOOTSTRAP`, so it reads differently from an
-admin's deliberate grant.
-
-The visible consequence is that an ordinary member opening a resource their group owns is
-labelled `GRANT HOLDER`, not `MEMBER`. That is correct: the access came from the row.
-
-@see docs/design/groups/decisions.md — 12. Owning-group members get a seeded grant, not structural read
-
-## A policy that requires an unhydratable attribute is a 500, and only for non-admins
-
-A policy's `requires.resource` names attributes the hydrator must supply. When one is neither
-a column on the model nor a registered virtual attribute, hydration throws
-`HydrationError: [<model>] Unknown attributes: <name>` and the request dies with a 500 before
-`evaluate` runs.
-
-Two things make this hard to notice.
-
-**A platform admin never sees it.** The engine allows a platform admin before any policy runs,
-so the hydrator is never reached. A browser pass driven as `test_user` proves nothing about a
-policy path — sign in as a group admin such as `user-054` instead. This is how a 500 on
-`POST /grants/:id/revoke` survived a phase that was driven end to end in the browser.
-
-**A route that pre-fetches hides it too.** `authorize('grant', 'create', { preFetchedResourceFn })`
-supplies the attributes itself, so the same policy works there and fails only on the routes
-that authorize from an id alone.
-
-The fix is a virtual attribute on the model's hydrator. `grant.resource_type` is not a column —
-the type lives on the `resource` row — so `builtin/hydrators/grant.js` resolves it, and
-`access_request.js` does the same for `resource2` after the identical mistake. A model with no
-entry in `hydratorRegistry` gets `createDefaultHydrator`, which has no virtual attributes at
-all, so adding a policy requirement to such a model is where this bites.
-
-`tests/authorization/grantHydrator.test.js` shows the shape: call
-`hydrator.hydrate({ id, attributes })` — an object, not positional arguments — and assert the
-attribute resolves.
-
-## A list query must widen through the access-type order, as the page does
-
-A page decides with `userHasGrant`, which reads a hydrated set already closed over the
-access-type order. A list query filters grant rows in SQL, and `gat.name IN (...)` matches a
-literal type, not the types that imply it. Two lists got this wrong in opposite directions.
-
-- **Too strict.** `POST /collections/search` matched `COLLECTION:VIEW_METADATA` literally, so a
-  collection held through `COLLECTION:LIST_CONTENTS` opened by id and never appeared in the list.
-- **Too loose.** `GET /v2/datasets` passed no type filter, so a bare collection grant listed
-  every dataset in the collection, and each one's page then refused with 403.
-
-Widen the page's type with `grantService.satisfiedBy([...])` and pass the result to the query.
-`accessibleDatasetIdsByGrantsQuery` throws when given no types, so the loose form cannot
-return there. `api/tests/services/grants/listVisibility.test.js` is the parity harness. Add a
-case when a new grant shape appears. It failed four of its ten cases against the code before
-the fix, so it measures something.
-
-A grant on a collection may carry dataset access types, and those count for the datasets in
-it. A collection access type never counts for a dataset. The collection Datasets tab reads
-`GET /collections/:id/datasets`, which lists every dataset and marks each with
-`_meta.can_view_metadata`, so browsing and opening can differ row by row.
-
-Check a list change against the live API per persona: call the list, then the page for every
-row it returns, and expect no 403.
-
-## Attribute rules stop at the first match, so grant rules run widest first
-
-`attributeFilters.js` evaluates a rule list in order and returns the first rule whose policy
-passes. Every dataset access type implies `DATASET:VIEW_METADATA`, and the hydrated grant set
-is already closed over the order. A `userHasGrant('DATASET:VIEW_METADATA')` rule therefore
-matches every grant holder, and any grant rule placed below it never runs.
-
-This was live until 2026-09-14. The `VIEW_SENSITIVE_METADATA` rule sat below the
-`VIEW_METADATA` rule, so no grant holder ever received paths or `num_files`. The unit test in
-`tests/authorization/dataset.attribute_filters.test.js` only checked that a rule naming
-`staged_path` existed, which is why it passed.
-
-Assert reachability by running the decision, not by reading the rule list.
-`tests/services/grants/grantHolderAttributes.test.js` grants each access type and checks what
-`authorizeAction(...).filter(dataset)` returns. Against the old order it failed three of four
-cases.
-
-## A restriction check with no target allows the action
-
-`restrictionTargetFor` in `builtin/restrictions.js` resolves a grant or an access request to its
-resource only through the pre-fetched resource. With none, it returns null, and a null target
-blocks nothing. Create actions have no resource id and get null the same way.
-
-So an `authorize('grant', 'revoke')` with no `preFetchedResourceFn` is never checked against
-`ARCHIVED`. On 2026-09-14 five routes had this shape, filed as L1 T11. When adding a mutating
-route on a grant or an access request, pass `preFetchedResourceFn` returning `resource_id`, and
-test it by archiving the collection and calling the route.
-
-@see docs/design/groups/access-model-verification-plan.md — Totality: combinations with no answer
-
-## Probing the engine from a script
-
-A one-off script can call the shipped engine against the development database. It must run from
-inside `api/`, because `module-alias` reads `api/package.json`:
+Probe the shipped engine from a one-off script. Write it in the scratchpad, copy it into `api/`,
+run it with `node`, then delete it. macOS has no `timeout`; use the tool timeout.
 
 ```js
 require('module-alias/register');
@@ -214,17 +131,25 @@ const prisma = require('@/db');
 const { authorizeAction, policyRegistry } = require('@/authorization');
 ```
 
-Write the script in the scratchpad, copy it into `api/`, run it with `node`, and delete it.
-macOS has no `timeout` command, so use the tool timeout instead. `policyRegistry.get(type).getActionNames()`
-lists the registered actions.
+Check a list change per persona against the live API. Call the list, then the detail route for
+every row, and expect no 403.
 
-`authorizeAction` expects `identifiers: { user, resource }`. Passing `{ group_id }` throws
-`AuthorizationError: [policy:isPlatformAdmin] User identifier is required`. `GET /groups/slug/:slug`
-does exactly that, which is how it was found.
+## Tests to run for a given change
+
+| Change | Tests |
+|---|---|
+| A policy or container | `tests/authorization/registryCompleteness`, `bootValidation`, `platformAdminShortCircuit`, `tests/model/engineArm` |
+| A hydrator | `tests/authorization/hydrateEveryAttribute`, `grantHydrator`, `nullIdHydration`, `hydrateExtendedRows` |
+| Attribute rules or projection | `tests/authorization/attributeRuleOrdering`, `listFilter`, `tests/services/grants/grantHolderAttributes`, `src/utils/expression/index.test.js` |
+| Paths SQL or a list query | `tests/model/pathsArm`, `listsArm`, `listRowsArm`, `tests/services/grants/listVisibility` |
+| Standing or badges | `tests/model/standingArm`, `badgeCoverage` |
+| A state rule | `tests/state/rules`, `sync`, `tests/model/transitionsArm` |
 
 ## Keeping this current
 
 When a session hits engine behaviour this page does not explain — an injection point that was
 not obvious, a filter that returned something unexpected, a hydrator that never ran — amend
 this file in the same change. Verify a claim by running the suite or the live app before
-writing it down.
+writing it down. Put the explanation in
+[docs/contributing/techniques/authorization-engine.md](../../../docs/contributing/techniques/authorization-engine.md)
+and keep only the rule or trap here.

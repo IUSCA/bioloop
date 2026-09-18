@@ -2,6 +2,10 @@ const path = require('path');
 
 global.__basedir = path.join(__dirname, '..');
 
+// The running API reads the development database, so a suite calling it writes its fixtures
+// there too. This runs before `issue_token` or any service opens a Prisma client.
+require('./testDatabase').useDevelopmentDatabase();
+
 // eslint-disable-next-line import/no-extraneous-dependencies
 const request = require('supertest');
 const issueToken = require('../src/scripts/issue_token');

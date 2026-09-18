@@ -2,17 +2,21 @@ const { GROUP_MEMBER_ROLE } = require('@prisma/client');
 
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
+const { reading } = require('../../core/policies/PolicyContainer');
 
 class UserPolicy extends Policy {
-  constructor({ name, requires, evaluate }) {
+  constructor({
+    name, requires, evaluate, meta,
+  }) {
     super({
-      name, resourceType: 'user', requires, evaluate,
+      name, resourceType: 'user', requires, evaluate, meta,
     });
   }
 }
 
 const isAdminOfAnyGroup = new UserPolicy({
   name: 'isAdminOfAnyGroup',
+  meta: { pathKind: 'admin', of: 'any_group' },
   requires: {
     user: ['group_memberships'],
   },
@@ -31,7 +35,7 @@ const userPolicies = new PolicyContainer({
 // action before any of these run, so repeating the term here would be dead weight.
 // @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
 userPolicies.actions({
-  list: isAdminOfAnyGroup,
+  list: reading(isAdminOfAnyGroup),
 })
   .attributes({
     '*': [
@@ -40,7 +44,8 @@ userPolicies.actions({
         attribute_filters: ['*'],
       },
     ],
-  });
+  })
+  .freeze();
 
 module.exports = {
   userPolicies,

@@ -1,10 +1,7 @@
 const express = require('express');
-const multer = require('multer');
-const fsPromises = require('fs/promises');
 const { param, query, body } = require('express-validator');
 const createError = require('http-errors');
 const _ = require('lodash/fp');
-const assert = require('assert');
 const { isUUID } = require('validator');
 const { GROUP_MEMBER_ROLE, INVITATION_STATUS } = require('@prisma/client');
 
@@ -13,39 +10,23 @@ const { validate } = require('@/middleware/validators');
 const groupService = require('@/services/groups');
 const auditService = require('@/services/audit');
 const profileService = require('@/services/profiles');
-const avatarService = require('@/services/profiles/avatar');
 const invitationService = require('@/services/invitations');
-const { createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray } = require('@/authorization');
+const { buildMeta } = require('@/services/meta');
+const invitationState = require('@/state').import('invitation');
+const authorization = require('@/authorization');
+
+const { createAuthorizationMiddleware: authorize, refusalMessage, callerIsPlatformAdmin } = authorization;
+const groupAuth = authorization.import('group');
+const decideViewGroup = groupAuth.action('view_metadata');
+const groupListFilter = groupAuth.listFilter();
+const groupStandingOfRows = groupAuth.standingOfRows();
 const { pickNonNil } = require('@/utils');
-const prisma = require('@/db');
-const { isPlatformAdmin } = require('@/services/auth');
 // const collectionService = require('@/services/collections');
 // const datasetService = require('@/services/datasets_v2');
 
 const router = express.Router();
 
-/**
- * Helper function to ensure that a user is not removing the last admin from a group
- *
- * @param {string} group_id - UUID of group
- * @param {string} user_id - UUID of user
- */
-async function ensureNotRemovingLastAdmin(group_id, user_id) {
-  // reject if this removal leads to zero admins in the group
-  // This allows platform admins to remove use that leads to zero admins
-  // but prevents group admins from removing the only admin (themselves) and leaving the group without any admins,
-  // which would make it impossible to manage the group going forward
-  const groupAdmins = await prisma.group_user.findMany({
-    where: { group_id, role: GROUP_MEMBER_ROLE.ADMIN, removed_at: null },
-  });
-  const message = 'Cannot remove the only admin from the group.'
-        + ' Please promote another member to admin before removing this member.';
-  if (groupAdmins.length === 1 && groupAdmins[0].user_id === user_id) {
-    assert.fail(message);
-  }
-}
-
-// Search groups by name or description
+// Search groups by name, tagline, or description
 router.post(
   '/search',
   validate([
@@ -55,19 +36,20 @@ router.post(
     body('sort_by').default('depth').isIn(['name', 'created_at', 'updated_at', 'depth']),
     body('sort_order').default('asc').isIn(['asc', 'desc']),
     body('is_archived').optional().isBoolean(),
-    body('scope').default('all').isIn(['all', 'direct', 'oversight', 'admin']),
+    body('scope').default('visible').isIn(groupService.SEARCH_SCOPES),
   ]),
   authorize('group', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
-    // #swagger.summary = 'Search groups by name or description'
+    // #swagger.summary = 'Search groups by name, tagline, or description'
 
     const params = _.pick([
       'search_term', 'limit', 'offset', 'sort_by', 'sort_order',
       'is_archived', 'scope',
     ])(req.body);
 
-    // check if search term is a valid UUID, if so, search by id instead of name/description
+    // A pasted identifier is a lookup, not a text search. The slug stays in `search_term`,
+    // where the `discoverable` scope matches it exactly.
     if (params.search_term && isUUID(params.search_term)) {
       params.group_id = params.search_term;
       delete params.search_term;
@@ -75,7 +57,7 @@ router.post(
 
     // if user is platform admin, search all groups, otherwise search only groups the user has access to
     let promise;
-    if (isPlatformAdmin(req)) {
+    if (await callerIsPlatformAdmin(req)) {
       promise = groupService.searchAllGroups({
         ...params, user_id: req.user.subject_id,
       });
@@ -85,8 +67,13 @@ router.post(
       });
     }
     const { metadata, data } = await promise;
-    const filteredGroups = data.map((g) => req.permission.filter(g));
-    res.json({ metadata, data: filteredGroups });
+    // The query scopes the rows, and the list decision's filter picks every row's fields. The
+    // standing drives each card's badge.
+    const standings = await groupStandingOfRows(req, data.map((g) => g.id));
+    res.json({
+      metadata,
+      data: data.map((group, i) => ({ ...req.permission.filter(group), _meta: { standing: standings[i] } })),
+    });
   }),
 );
 
@@ -197,7 +184,7 @@ router.post(
     // name at least one. A platform admin may still create one deliberately: the platform-admin
     // short-circuit administers every group, and `GET /groups/without-active-admin` lists the
     // groups in that state for repair.
-    if (!isPlatformAdmin(req) && admins.length === 0) {
+    if (!(await callerIsPlatformAdmin(req)) && admins.length === 0) {
       return next(createError.BadRequest('A child group needs at least one admin.'));
     }
 
@@ -219,7 +206,7 @@ router.get(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('group', 'view_metadata', { shouldDeriveCallerRole: true, shouldDeriveCapabilities: true }),
+  authorize('group', 'view_metadata', { shouldDeriveStanding: true, shouldDeriveCapabilities: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Get group details by ID'
@@ -230,12 +217,9 @@ router.get(
       ...req.permission.filter(group),
       // ...group,
       // Derived from the name, the year, and the public URL, so it carries nothing the
-      // caller could not already see. @see docs/design/groups/profiles.md — Schema
+      // caller could not already see. @see docs/design/groups/profiles.md — The columns
       citation: profileService.resolveCitation(group, 'groups'),
-      _meta: {
-        caller_role: req.permission.callerRole,
-        capabilities: toCapabilitiesArray(req.permission.capabilities),
-      },
+      _meta: buildMeta('group', group, req.permission),
     });
   }),
 );
@@ -250,24 +234,21 @@ router.get(
     const { slug } = req.params;
     const group = await groupService.getGroupBySlug(slug);
 
-    const permission = await authorizeAction('group', 'view_metadata', {
-      identifiers: { group_id: group.id },
-      policyExecutionContext: req.policyExecutionContext,
-      preFetched: { resource: group },
-      shouldDeriveCallerRole: true,
+    const permission = await decideViewGroup({
+      identifiers: { user: req.user?.subject_id, resource: group.id },
+      policyExecutionContext: req.policyContext,
+      preFetched: { user: req.user, resource: group },
+      shouldDeriveStanding: true,
       shouldDeriveCapabilities: true,
     });
 
     if (!permission.granted) {
-      return next(createError(403, 'Forbidden'));
+      return next(createError(permission.status, refusalMessage(permission)));
     }
 
     res.json({
       ...permission.filter(group),
-      _meta: {
-        caller_role: permission.callerRole,
-        capabilities: toCapabilitiesArray(permission.capabilities),
-      },
+      _meta: buildMeta('group', group, permission),
     });
   }),
 );
@@ -308,7 +289,7 @@ router.patch(
 
 // Update the group profile. Same authority as any other metadata edit — a profile is
 // informational, so publishing one is not a governance action.
-// @see docs/design/groups/profiles.md — API
+// @see docs/design/groups/profiles.md — The public router
 router.patch(
   '/:id/profile',
   validate([
@@ -317,6 +298,7 @@ router.patch(
     body('tagline').optional({ nullable: true }),
     body('about_md').optional({ nullable: true }),
     body('profile_visibility').optional().isString(),
+    body('type').optional({ nullable: true }),
     body('links').optional({ nullable: true }).isArray(),
     body('citation').optional({ nullable: true }),
     body('publications').optional({ nullable: true }).isArray(),
@@ -331,74 +313,6 @@ router.patch(
       expected_version: req.body.version,
     });
     res.json(req.permission.filter(updated));
-  }),
-);
-
-const avatarUpload = multer({
-  storage: multer.diskStorage({
-    async destination(req, file, cb) {
-      try {
-        await fsPromises.mkdir(avatarService.avatarDir(), { recursive: true });
-        cb(null, avatarService.avatarDir());
-      } catch (e) {
-        cb(e);
-      }
-    },
-    filename(req, file, cb) {
-      try {
-        cb(null, avatarService.newAvatarKey(file.originalname));
-      } catch (e) {
-        cb(e);
-      }
-    },
-  }),
-  limits: { fileSize: avatarService.AVATAR_MAX_BYTES, files: 1 },
-});
-
-// Replace the group's profile picture.
-router.put(
-  '/:id/avatar',
-  validate([param('id').isUUID()]),
-  authorize('group', 'edit_metadata'),
-  avatarUpload.single('avatar'),
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Groups']
-    // #swagger.summary = 'Replace the group profile picture'
-    if (!req.file) return next(createError.BadRequest('No image was uploaded.'));
-
-    const current = await prisma.group.findUniqueOrThrow({
-      where: { id: req.params.id },
-      select: { avatar_key: true },
-    });
-    const updated = await prisma.group.update({
-      where: { id: req.params.id },
-      data: { avatar_key: req.file.filename },
-      select: { id: true, avatar_key: true },
-    });
-    // Only after the new key is committed, so a failure leaves the old picture serving.
-    await avatarService.removeAvatar(current.avatar_key);
-    return res.json(updated);
-  }),
-);
-
-// Remove the group's profile picture. The profile falls back to the group icon.
-router.delete(
-  '/:id/avatar',
-  validate([param('id').isUUID()]),
-  authorize('group', 'edit_metadata'),
-  asyncHandler(async (req, res) => {
-    // #swagger.tags = ['Groups']
-    // #swagger.summary = 'Remove the group profile picture'
-    const current = await prisma.group.findUniqueOrThrow({
-      where: { id: req.params.id },
-      select: { avatar_key: true },
-    });
-    await prisma.group.update({
-      where: { id: req.params.id },
-      data: { avatar_key: null },
-    });
-    await avatarService.removeAvatar(current.avatar_key);
-    res.json({ id: req.params.id, avatar_key: null });
   }),
 );
 
@@ -444,7 +358,7 @@ router.post(
 //
 // An invitation reaches an email address rather than a user, so these routes never take a
 // user id and never say whether the address has an account.
-// @see docs/design/groups/invitations.md — API Reference
+// @see docs/design/groups/invitations.md — Why it is shaped this way
 
 // Invite an email address to the group
 router.post(
@@ -491,12 +405,23 @@ router.get(
     // #swagger.summary = 'List invitations issued by this group'
 
     const { status, limit, offset } = req.query;
-    res.json(await invitationService.listInvitations({
+    const listed = await invitationService.listInvitations({
       group_id: req.params.id,
       status: status === 'all' ? null : status,
       limit,
       offset,
-    }));
+    });
+
+    // What each invitation's own state admits, so the tab offers Withdraw from the answer
+    // rather than from the status. The group's column is what the rules read, and it stays
+    // out of the row the caller sees.
+    res.json({
+      ...listed,
+      data: listed.data.map(({ group, ...row }) => ({
+        ...row,
+        _meta: { available_actions: invitationState.availableActions({ ...row, group }) },
+      })),
+    });
   }),
 );
 
@@ -630,8 +555,6 @@ router.delete(
 
     const { id, userId } = req.params;
 
-    await ensureNotRemovingLastAdmin(id, userId);
-
     const deletedUserIds = await groupService.removeGroupMembers(
       id,
       { user_ids: [userId], actor_id: req.user.subject_id },
@@ -700,8 +623,6 @@ router.delete(
 
     const { id, userId } = req.params;
 
-    await ensureNotRemovingLastAdmin(id, userId);
-
     await groupService.demoteAdminToMember(id, { user_id: userId, actor_id: req.user.subject_id });
     res.status(204).send();
   }),
@@ -723,9 +644,6 @@ router.delete(
     const { id } = req.params;
     const { user_ids } = req.body;
 
-    // check if any of the removals would lead to zero admins in the group
-    await Promise.all(user_ids.map((user_id) => ensureNotRemovingLastAdmin(id, user_id)));
-
     await groupService.removeGroupMembers(id, { user_ids, actor_id: req.user.subject_id });
     res.status(204).send();
   }),
@@ -744,8 +662,8 @@ router.get(
 
     const { id } = req.params;
     const ancestors = await groupService.getGroupAncestors(id);
-    const filteredAncestors = ancestors.map((a) => req.permission.filter(a));
-    res.json(filteredAncestors);
+    // Each ancestor shows the fields a list shows; this route's decision is about the group named.
+    res.json(ancestors.map(await groupListFilter(req)));
   }),
 );
 
@@ -769,8 +687,8 @@ router.get(
       max_depth,
       search_term: search_term?.trim(),
     });
-    const filteredDescendants = descendants.map((d) => req.permission.filter(d));
-    res.json(filteredDescendants);
+    // Each descendant shows the fields a list shows; this route's decision is about the group named.
+    res.json(descendants.map(await groupListFilter(req)));
   }),
 );
 

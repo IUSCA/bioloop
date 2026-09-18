@@ -40,9 +40,9 @@ function buildUploadOriginPath({ id, name, type }) {
  *
  * The dataset row, its origin_path, and its upload log are written in one transaction, so
  * there is never a dataset whose upload nobody is tracking. The transfer itself is the TUS
- * server's job and is unchanged.
+ * server's job, and `onUploadCreate` in `services/upload/UploadService.js` authorizes it.
  *
- * @see docs/design/groups/dataset-creation-plan.md — C1
+ * @see docs/design/groups/dataset-creation.md — The import and upload routes
  * @param {object} options
  * @param {object} options.user - the authenticated user
  * @param {object} options.data - name, type, owner_group_id, description, metadata
@@ -93,11 +93,11 @@ async function registerUpload({ user, data }) {
  * v2 needs its own read because the legacy upload routes are gated by the old role-based
  * middleware, and a contributor who is not an administrator would be refused there.
  *
- * @see docs/design/groups/dataset-creation-plan.md — C1
+ * @see docs/design/groups/dataset-creation.md — Watching an upload afterwards
  */
-async function getUploadLog(dataset_id) {
+async function getUploadLog(dataset_row_id) {
   return prisma.dataset_upload_log.findUnique({
-    where: { dataset_id },
+    where: { dataset_id: dataset_row_id },
     include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
   });
 }

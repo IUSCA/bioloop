@@ -16,7 +16,7 @@ const prisma = require('@/db');
 const auditService = require('@/services/audit');
 const grantsService = require('@/services/grants');
 const { addGroupMembers } = require('@/services/groups');
-const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
+const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/services/audit');
 const {
   createTestUser,
   createTestGroup,
@@ -270,6 +270,7 @@ describe('grants - lifecycle', () => {
     it('returns true when a valid grant exists', async () => {
       const has = await grantsService.userHasGrant({
         user_id: member.subject_id,
+        resource_type: 'DATASET',
         resource_id: dataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });
@@ -280,6 +281,7 @@ describe('grants - lifecycle', () => {
       await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
       const has = await grantsService.userHasGrant({
         user_id: member.subject_id,
+        resource_type: 'DATASET',
         resource_id: dataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });
@@ -292,8 +294,11 @@ describe('grants - lifecycle', () => {
         try {
           await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
         } catch (error) {
-          // NotFoundError: Grant not found or already revoked
-          if (error.name !== 'NotFoundError') {
+          // A missing grant is a 404 and an already-revoked one is a 409, because revoking is
+          // the state the row is in rather than a row that is gone. This cleanup only needs the
+          // grant to end up revoked, so both answers mean it is.
+          // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+          if (![404, 409].includes(error.status)) {
             throw error;
           }
         }
@@ -320,6 +325,7 @@ describe('grants - lifecycle', () => {
     it('member inherits access via group membership', async () => {
       const has = await grantsService.userHasGrant({
         user_id: member.subject_id,
+        resource_type: 'DATASET',
         resource_id: dataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });
@@ -330,6 +336,7 @@ describe('grants - lifecycle', () => {
       const outsider = await createTestUser('_gl_outsider');
       const has = await grantsService.userHasGrant({
         user_id: outsider.subject_id,
+        resource_type: 'DATASET',
         resource_id: dataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });
@@ -380,6 +387,7 @@ describe('grants - lifecycle', () => {
       });
       const has = await grantsService.userHasGrant({
         user_id: member.subject_id,
+        resource_type: 'DATASET',
         resource_id: dataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });
@@ -408,6 +416,7 @@ describe('grants - lifecycle', () => {
 
       const has = await grantsService.userHasGrant({
         user_id: member.subject_id,
+        resource_type: 'DATASET',
         resource_id: dataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });

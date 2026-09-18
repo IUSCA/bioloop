@@ -115,7 +115,7 @@ describe('the access type graph', () => {
   // A preset that lists a type another member already implies asks for the same fact twice.
   // The write path reduces it away, so this asserts the seeded configuration and the code
   // agree about how many rows a preset is worth.
-  // @see docs/design/groups/access-type-order-plan.md — Phase 2
+  // @see docs/design/groups/design.md — What a preset expands to
   test('every seeded preset expands to a set with no implied member', async () => {
     const presets = await prisma.grant_preset.findMany({
       include: { access_type_items: true },

@@ -2,7 +2,7 @@
   <div
     class="flex flex-wrap items-center gap-1 min-w-0 text-sm text-slate-700 dark:text-slate-200"
   >
-    Grant
+    Permission
     <span class="font-semibold">
       {{ record.metadata?.access_type_name || "Unknown" }}
     </span>

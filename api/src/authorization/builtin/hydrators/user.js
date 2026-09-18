@@ -2,12 +2,15 @@ const { Prisma } = require('@prisma/client');
 
 const prisma = require('@/db');
 
-const grantServices = require('@/services/grants');
 const { PrismaHydrator } = require('../../core/hydrators/PrismaHydrator');
 
 const userHydrator = new PrismaHydrator({ prismaClient: prisma, modelName: 'user', idAttribute: 'subject_id' });
 
-userHydrator.registerVirtualAttribute('roles', async ({ id, hydrator }) => {
+// Named `current_roles`, not `roles`, so no request can supply it. A session's JWT profile
+// carries `roles` from login time, and routes pass that profile as the pre-fetched user. A
+// requirement no profile carries is always read from user_role, per request.
+// @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 14
+userHydrator.registerVirtualAttribute('current_roles', async ({ id, hydrator }) => {
   const dbClient = hydrator.prisma;
   const rows = await dbClient.user_role.findMany({
     // The relation on user_role is `users`, not `user`. Naming it wrongly threw only when
@@ -39,22 +42,6 @@ userHydrator.registerVirtualAttribute('group_memberships', async ({ id, hydrator
   return dbClient.$queryRaw(sql);
 });
 
-userHydrator.registerVirtualAttribute('effective_group_ids', async ({ id, hydrator }) => {
-  // ids of all groups the use is a member of, and all ancestor groups of those groups
-
-  const dbClient = hydrator.prisma;
-
-  // find all groups the user is a direct member of, then find all ancestor groups of those groups using the
-  // group_closure table
-  const sql = Prisma.sql`
-    SELECT DISTINCT group_id as id
-    FROM effective_user_groups
-    WHERE user_id = ${id}
-  `;
-  const rows = await dbClient.$queryRaw(sql);
-  return rows.map((row) => row.id);
-});
-
 userHydrator.registerVirtualAttribute('oversight_group_ids', async ({ id, hydrator }) => {
   // ids of strict descendants of groups U admins
   // does not include groups U is directly an admin of, unless U is also admin of descendant group
@@ -71,19 +58,10 @@ userHydrator.registerVirtualAttribute('oversight_group_ids', async ({ id, hydrat
   return rows.map((row) => row.id);
 });
 
-userHydrator.registerVirtualAttribute('accessible_owner_group_ids', async ({ id, hydrator }) => {
-  // ids of groups that own resources the user has grants for (e.g. if U has a grant on a collection owned by G,
-  // then G's id will be in this list)
-  const dbClient = hydrator.prisma;
-  const sql = grantServices.ownerGroupIdsOfResourcesAccessibleByUserQuery(id);
-  const rows = await dbClient.$queryRaw(sql);
-  return rows.map((row) => row.id);
-});
-
 userHydrator.registerVirtualAttribute('is_anonymous', async () => false);
 // A real user is never anonymous, so this loader answers for every signed-in caller. The
 // anonymous principal carries `is_anonymous: true` in the pre-fetched user, which the
 // hydrator prefers over running this, so the loader never sees an unauthenticated request.
-// @see docs/design/groups/profiles.md — The anonymous principal
+// @see docs/design/groups/decisions.md — 19. The anonymous caller is a principal, not a second code path
 
 module.exports = { userHydrator };

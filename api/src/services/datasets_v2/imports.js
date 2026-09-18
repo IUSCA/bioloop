@@ -17,7 +17,7 @@ const { createWorkflow } = require('./workflows');
  * the path lies inside an import source the caller may browse, the source is ACTIVE, and no
  * live dataset already holds that path.
  *
- * @see docs/design/groups/dataset-creation-plan.md — B3
+ * @see docs/design/groups/dataset-creation.md — The import and upload routes
  * @param {object} options
  * @param {object} options.user - the authenticated user
  * @param {object} options.data - name, type, origin_path, owner_group_id, description, metadata

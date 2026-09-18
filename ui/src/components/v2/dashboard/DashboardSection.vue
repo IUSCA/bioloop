@@ -60,7 +60,7 @@
  *   two panels never ask the same question twice.
  * - Loading and empty states, which the caller renders in the default slot.
  *
- * @see docs/design/groups/dashboard-plan.md - Phase 1
+ * @see docs/design/groups/ui-information-architecture.md — Dashboard
  */
 import { useSlots } from "vue";
 

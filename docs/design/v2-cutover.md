@@ -36,7 +36,6 @@ the new module takes the plain name.
 | `api/src/services/collections.js` | Collections |
 | `api/src/services/grants/` | Grants, presets, access-type ordering |
 | `api/src/services/access_requests/` | Access requests and review |
-| `api/src/services/restrictions.js` | The restriction layer |
 | `api/src/services/resources.js` | Resource identity and scopes |
 
 When a file's half is unclear, `git log --diff-filter=A -- <path>` settles it. The legacy
@@ -60,30 +59,27 @@ breaks.
 A constraint only v2 needs cannot sit on a column v1 writes, because both halves write the
 same tables. The requirement belongs in the v2 service and route instead.
 
-`dataset.owner_group_id` is the worked example. Migration
-`20260908010000_dataset_owner_group_required` made it `NOT NULL`, which broke all three
-legacy creation paths at once — they send no owning group, so they began failing at the
-database level rather than returning a useful error. Migration
-`20260909010000_dataset_owner_group_nullable` dropped the constraint again.
+`dataset.owner_group_id` is the worked example. v2 requires a caller to name the owning group.
+The legacy creation paths send none. A bare `NOT NULL` would make them fail at the database
+rather than return a useful error.
 
-The requirement now lives one layer up. `buildDatasetCreateQuery` in
-`api/src/services/datasets_v2/create.js` throws when there is no `owner_group_id`, and
-`POST /v2/datasets` validates it. A dataset created through v2 always has an owning group;
-one created through a legacy route may not.
-
-The `Unassigned Datasets` group and its backfill stay as they are. Rows already moved there
-keep their owner. The group is still where a dataset with no owner belongs once somebody
-assigns one.
+So the column is `NOT NULL` with a database default, the seeded `Unassigned Datasets` group. A
+legacy insert that names no group lands there. The stricter requirement lives one layer up.
+`buildDatasetCreateQuery` in `api/src/services/datasets_v2/create.js` throws when there is no
+`owner_group_id`, and `POST /v2/datasets` validates it. A dataset created through v2 always
+names its owning group. One created through a legacy route is owned by `Unassigned Datasets`
+until somebody assigns it.
 
 ## Shared tables need a v1 story
 
 Every v2 table that a legacy route writes to needs an answer for the rows v1 produces:
 
-- **`dataset.owner_group_id`** — null for legacy rows. They fall outside the ownership path,
-  so `searchDatasetsForUser` does not return them to anyone but a platform admin.
+- **`dataset.owner_group_id`** — the `Unassigned Datasets` group for legacy rows. A legacy
+  insert seeds no grant, so `searchDatasetsForUser` returns them only to a platform admin and
+  to whoever administers or oversees that group.
 - **`resource`** — `dataset.resource_id` is `NOT NULL` with no database default, and nothing
-  populates it on insert. `datasets_v2/create.js` creates the resource row as a nested
-  create. The legacy paths do not, which is a second reason legacy creation currently fails.
+  populates it on insert. Both `datasets_v2/create.js` and the legacy `services/dataset.js`
+  create the resource row as a nested create.
 - **`grant`** — a dataset created through v2 gets a seeded grant seating its owning group.
   A legacy dataset gets none, which is consistent: it has no owning group to seat.
 
@@ -98,6 +94,11 @@ while `DatasetFilesTab` passes the v2 functions. **Extend that pattern rather th
 component or repointing it.** A new prop with a v1 default leaves every legacy caller
 byte-identical in behaviour.
 
+A function passed as such a prop takes the arguments the component passes, and those follow
+the v1 service. The v2 `searchFiles` receives `location`, `minSize`, `maxSize`, `sortBy`, and
+`sortOrder`, and maps them onto the v2 route's query names. A v2 function that names its
+arguments after its own route drops every filter the component sends.
+
 `FileTable`, one level below, does not follow the pattern: it imports the v1 dataset service
 directly and calls `get_file_download_data`. That is why file downloads run through the legacy
 route even on a v2 page, and so are not grant-checked. Giving it a `downloadFileInfo` prop with
@@ -108,12 +109,12 @@ a v1 default closes that hole for v2 without touching v1's path.
 **Step 1 — stop the legacy routes.** Remove them from `api/src/routes/index.js`. They become
 unreachable in one commit, and that commit is trivially revertible. Nothing is deleted.
 
-**Step 2 — assign the orphans.** Every dataset with a null `owner_group_id` needs one. They
-are visible to platform admins in the `Unassigned Datasets` group and through a direct query.
-Seed each an owning-group grant as it is assigned.
+**Step 2 — assign the orphans.** Every dataset owned by `Unassigned Datasets` needs a real
+owning group. Platform admins see them in that group. Seed each an owning-group grant as it is
+assigned.
 
-**Step 3 — restore the constraint.** Re-apply `SET NOT NULL` on `dataset.owner_group_id`
-once no route can write a row without it, and drop the throw from
+**Step 3 — drop the default.** Remove the database default on `dataset.owner_group_id` once no
+route can write a row without naming a group. Then drop the throw from
 `buildDatasetCreateQuery` in favour of the database check.
 
 **Step 4 — delete the legacy code**, gradually, once nothing imports it.
@@ -171,7 +172,7 @@ no invitations in the table the handler does nothing, so legacy behaviour is unc
 
 This is the shape a granted carve-out should take: an extension point in the old code, and the
 feature itself somewhere else. It is not a precedent for editing v1 generally.
-[Invitations](./groups/invitations.md) is the record.
+[Invitations](./groups/invitations.md#why-it-is-shaped-this-way) is the record.
 
 ### Done ahead of the cut-over: a text-size setting on the profile page
 
@@ -187,6 +188,17 @@ browser default, so legacy behaviour is unchanged.
 A replacement profile page must mount `FontSizeSelector`. A replacement app shell must keep the
 `applyFontSize()` call. [V2 design system](../contributing/v2-design-system.md#typography) is
 the record.
+
+### Done ahead of the cut-over: names unique among live datasets only
+
+The per-group key also carried `is_deleted`, so a group could hold one deleted row per name and
+type. Deleting a second dataset of a reused name failed, unless the delete path renamed the row
+first. The key is now a partial unique index over rows where `is_deleted` is false, and deleted
+rows keep their names.
+
+No legacy code was edited. The constraint is shared, so legacy inserts follow the new rule, and
+for them nothing changes: two live rows of one name, type, and group are still refused.
+[Dataset storage](./groups/dataset-storage.md#what-group-scoping-changed) is the record.
 
 ### What only the cut-over may do
 
@@ -212,6 +224,16 @@ same tables. They wait for step 1, and they are listed here so they are not atte
   foreign key, because creating a resource through v2 seeds an owning-group grant and
   `grant.resource` is `ON DELETE RESTRICT`. The fix is to delete grants first. It is a legacy
   developer script, so it waits rather than being repaired inside a v2 change.
+- **Removing the renames that freed a deleted dataset's name.** `tombstoneDataset` in
+  `services/upload/uploadLogService.js` renames a failed upload to `<name>--<id>`, and the
+  workers' `delete` task renames to `<name>-<id>`. Neither is needed since the key covers live
+  rows only, and the comment on `tombstoneDataset` still describes the old key. Both belong to
+  code v1 depends on.
+- **Whitelisting the legacy `PATCH /datasets/:id` body.** It passes `req.body` to the update
+  whole, so a caller permitted by the old RBAC middleware can rewrite `owner_group_id`,
+  `is_deleted`, or `archive_path`. The v2 route now accepts only `name` and `description`. The
+  workers patch sizes and bundles through the legacy route, so its field list is settled at
+  cut-over rather than narrowed while they depend on it.
 
 @see docs/design/groups/dataset-creation.md — What groups break that was safe when everything
 was global

@@ -72,7 +72,11 @@
           </div>
 
           <!-- results -->
-          <div v-else-if="collections.length > 0">
+          <div
+            v-else-if="collections.length > 0"
+            class="v2-table-page"
+            :style="tablePageStyle"
+          >
             <VaDataTable
               :items="collections"
               :columns="columns"
@@ -182,8 +186,7 @@
                 <template v-else>
                   No collections are currently available to you in this group.
                   This group may have no collections, or you may not have been
-                  granted access. Contact your group administrator for
-                  assistance.
+                  given access. Contact your group administrator for assistance.
                 </template>
               </template>
               <template v-if="canCreate" #actions>
@@ -209,12 +212,12 @@
 <script setup>
 import * as datetime from "@/services/datetime";
 import CollectionService from "@/services/v2/collections";
-import { useUIPersonaStore } from "@/stores/v2/uiPersona";
+import { useMeStore } from "@/stores/v2/me";
 
-const uiPersonaStore = useUIPersonaStore();
-const canCreate = computed(
-  () => uiPersonaStore.isPlatformAdmin || uiPersonaStore.isGroupAdmin,
-);
+// `collection.create` needs an admin of the owning group, so the offer needs some group to own it.
+const me = useMeStore();
+me.ensureLoaded();
+const canCreate = computed(() => me.isPlatformAdmin || me.adminGroupCount > 0);
 
 // const props = defineProps({});
 // data
@@ -231,6 +234,10 @@ const searchTerm = ref("");
 const total = ref(0);
 const currentPage = ref(1);
 const itemsPerPage = ref(20);
+
+// Reserves one page of rows on the table container, so the pagination keeps its
+// place when the last page is short.
+const tablePageStyle = useTablePageStyle(total, itemsPerPage);
 const sortBy = ref("created_at");
 const sortOrder = ref("desc");
 

@@ -89,7 +89,7 @@
  * The access a subject already has on a resource, beside the request form.
  *
  * The form loads the coverage, because the access type selector reads the same rows.
- * @see docs/design/groups/access-requests-plan.md — C2
+ * @see docs/design/groups/ui-information-architecture.md — Access types in forms
  */
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";

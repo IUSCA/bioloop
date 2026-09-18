@@ -29,10 +29,15 @@ A preset removed from `GRANT_PRESETS` stays in the table with `is_active` set to
 and access request items still reference it, so the seed retires it rather than deleting it.
 A preset the constant lists is set active on every run.
 
-Three further sets of rows are created by migrations rather than by the seed, because the
+Two further sets of rows are created by migrations rather than by the seed, because the
 constraints that reference them are added in the same migration: the `Authenticated Users`
-and `Public` principals, the `Unassigned Datasets` group, and the restriction types. The
-seed checks all three are present and refuses if they are not.
+and `Public` principals, and the `Unassigned Datasets` group. The seed checks both are present
+and refuses if they are not.
+
+A migration once created restriction types as a third set, and the seed checked for them. Both
+are gone: what an archived group or a deleted dataset forbids is decided by each resource type's
+own state rules in `api/src/state/builtin/`, from the archived and deleted columns, with no
+lookup table to seed.
 
 ## Running it
 

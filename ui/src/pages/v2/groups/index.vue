@@ -18,7 +18,7 @@
             </div>
 
             <VaButton
-              v-if="auth.canAdmin"
+              v-if="me.isPlatformAdmin"
               preset="primary"
               icon="add"
               @click="openCreateGroupModal"
@@ -95,9 +95,9 @@
 
 <script setup>
 import GroupService from "@/services/v2/groups";
-import { useAuthStore } from "@/stores/auth";
+import { useMeStore } from "@/stores/v2/me";
 
-const auth = useAuthStore();
+const me = useMeStore();
 
 // ── State ─────────────────────────────────────────────────────────────────
 const searchTerm = ref("");
@@ -128,13 +128,17 @@ async function fetchGroups() {
       limit: itemsPerPage.value,
       offset: (currentPage.value - 1) * itemsPerPage.value,
     };
-    if (activeScope.value === "mine") {
-      params.scope = "direct";
-    } else if (activeScope.value === "admin") {
-      params.scope = "admin";
-    } else if (activeScope.value === "oversight") {
-      params.scope = "oversight";
-    }
+    // The tabs are the API's scopes under the words a person would use. "All Groups" is
+    // `visible`, which for a platform admin is every group and for everybody else is every
+    // group they have a path to.
+    // @see docs/design/groups/access-model.md — What each search scope shows
+    const SCOPE_OF_TAB = {
+      mine: "member_of",
+      admin: "administered",
+      oversight: "overseen",
+      all: "visible",
+    };
+    params.scope = SCOPE_OF_TAB[activeScope.value];
     const {
       data: { metadata, data: items },
     } = await GroupService.search(params);
@@ -165,7 +169,7 @@ watch([searchTerm, activeScope], () => {
 
 function resetFilters() {
   searchTerm.value = "";
-  activeScope.value = auth.canAdmin ? "all" : "mine";
+  activeScope.value = me.isPlatformAdmin ? "all" : "mine";
 }
 
 watch(currentPage, () => {
@@ -173,9 +177,11 @@ watch(currentPage, () => {
 });
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────
-onMounted(() => {
-  // Default scope: platform admins see all, others see mine
-  activeScope.value = auth.canAdmin ? "all" : "mine";
+onMounted(async () => {
+  // Default scope: platform admins see all, others see mine. Only a platform admin creates a
+  // root group, so the same fact decides the Create Group offer.
+  await me.ensureLoaded();
+  activeScope.value = me.isPlatformAdmin ? "all" : "mine";
   fetchGroups();
 });
 

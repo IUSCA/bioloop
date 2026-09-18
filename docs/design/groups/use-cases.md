@@ -3,7 +3,7 @@ title: Group Use Cases
 order: 3
 status: active
 implemented: partial
-last_verified: 2026-09-08
+last_verified: 2026-09-17
 ---
 
 ::: warning Design record — active
@@ -38,7 +38,7 @@ first and "yes" to the second.
 ## How to read this page
 
 **Numbers are permanent identifiers, not an order.** Item 43 stays item 43 forever, even
-when it changes tier. Numbers are never reused, and new items start at 61. Other records
+when it changes tier. Numbers are never reused, and new items start at 63. Other records
 cite these numbers, so renumbering breaks them. Items in section 5 carry a letter as part
 of the identifier, so `C.9` is a different item from `9`.
 
@@ -82,8 +82,8 @@ today or it is not, and the difference matters more than the list.
 | A dataset has one owning group but may be reachable by many. | Yes for governance. See Q3 for attribution. |
 | Access can be granted on a single dataset or on a collection. | Yes, though a collection may only hold datasets its own group owns. See Q5. |
 | Access is revocable. | Yes. |
-| Access is time-bound. | Grants carry an expiry, but no scheduled job enforces it. See item 33. |
-| Access history is auditable. | Partly. Grant history survives; membership and collection history is deleted. See item 34. |
+| Access is time-bound. | Yes. A grant past its `valid_until` confers nothing, because authorization reads the `valid_grants` view. See item 33. |
+| Access history is auditable. | Partly. Grant, membership, and collection history survive, and nothing reconstructs past access from them. See item 34. |
 | Membership itself can be time-bound. | **No.** A member is added or removed, with no end date. See item 43. |
 | Group admin authority is scoped, and differs from platform admin. | Yes. |
 
@@ -181,7 +181,7 @@ These users are the operational backbone, and they push the system hardest.
 
 17. **Deactivate or archive a group** — `Next` · **foundation**
     * Outcome: a finished grant stops changing, and its history stays readable.
-    * Why foundation: archiving is a prohibition, and the model has no way to express one. The design currently lists about thirty forbidden actions in prose, and three are enforced. Either archiving is expressed through a general denial rule or that prose list keeps growing. See Q6.
+    * Why foundation: archiving forbids about thirty actions. It is resource state, checked by the service after authorization, and one table lists what it forbids. See [decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization).
 
 ### 2.2 Membership management
 
@@ -239,9 +239,9 @@ These users are the operational backbone, and they push the system hardest.
 32. **View all active access grants** — `MVP`
     * Outcome: an admin lists every live grant on their group's data.
 
-33. **Expire access automatically** — `Next`
+33. **Expire access automatically** — `Next` · **built**
     * Outcome: a grant with an end date stops working on that date with no human action.
-    * Note: the expiry logic exists and is tested, but nothing schedules it. This is a cron entry, not a design question.
+    * Note: no job is needed. Every access path joins the `valid_grants` view, which drops a grant once `valid_until` passes. A request left `UNDER_REVIEW` is expired by a scheduled job in `notification/cron.js`.
 
 ### 2.5 Auditing & compliance
 
@@ -442,6 +442,16 @@ Users will not report these, because users cannot see them.
     * Today: `/datasets` and `/projects` use the older role-based middleware, and `project`, `project_user`, and `project_dataset` remain in the schema with no migration path written down.
     * Why in the first release: items 11, 12, and 56 are false while this stands, and a release where the portal and the API disagree teaches the first cohort that the system cannot be trusted.
 
+61. **An invitation that has lapsed can be sent again** — `MVP` · **built**
+    * Outcome: an admin whose invitation ran out invites the same address again, and the person gets a new mail. No withdrawal first, and no waiting.
+    * An invitation lasts seven days, so an admin meets this the first time somebody leaves the mail unopened for a week. Until 2026-09-17 the second invitation failed, because the lapsed row still counted against the one-open-invitation index while the service treated it as closed.
+    * The lapsed row is now cancelled with the reason `expired` in the transaction that issues the replacement. See [Invitations — Re-inviting after an invitation lapses](./invitations.md#re-inviting-after-an-invitation-lapses).
+
+62. **A withdrawn invitation never produces a membership** — `MVP` · **built**
+    * Outcome: once an admin withdraws an invitation, nothing puts that person in the group, including a signup that is already under way.
+    * The case that makes it matter is a mistyped address. A stranger holds a working link, the admin withdraws it and invites the right person, and the stranger must not get in by signing up in the meantime.
+    * Accepting closes the invitation with a guarded update before it writes the membership, so a withdrawal and an accept cannot both succeed.
+
 ---
 
 ## Questions, and how they were settled
@@ -457,7 +467,7 @@ its own.
 | Q3. Does "owning group" mean governance only? | **Governance only.** Attribution is a separate relationship, designed later. `owner_group_id` must never be widened to carry it. |
 | Q4. Will Bioloop exchange access decisions with other institutions? | **Undecided, and it can stay that way.** Consent codes are captured at registration because that information decays; nothing enforces them. |
 | Q5. Can a collection span groups? | **No.** A separate non-authorization concept for describing a set of datasets comes later. |
-| Q6. Should inheritance be breakable? | **Yes, by a restriction layer that composes by AND**, never by subtracting from grants. One restriction type ships: archiving. |
+| Q6. Should inheritance be breakable? | **Yes, by a restriction layer that composes by AND**, never by subtracting from grants. No restriction type ships yet, and archiving is resource state. |
 | Q7. Is a role an enum or a row? | **An enum.** Validity columns on `group_user` give membership an expiry without the row-based model. |
 | Q8. Do access types imply one another? | **Yes.** A seeded partial order, closed over at evaluation time. |
 
@@ -474,7 +484,7 @@ constraint that keeps it possible.
 | 59 — non-null owning group | **Built.** Datasets that had no owner were moved into an archived quarantine group. |
 | A.1 — a principal for people who are not logged in | **Principal built.** `Public` sits alongside `Authenticated Users`. Serving unauthenticated requests is deferred. |
 | 43 — time-bound membership | **Unblocked.** `group_user` carries `valid_until`; a service and UI change with no migration remains. |
-| 17, 39, 45, 46, 47 — a way to say no | **Primitive built.** Restrictions compose by AND, with archiving as the only type. The rest become a seed row each. |
+| 17, 39, 45, 46, 47 — a way to say no | **Hook built.** Every action passes the restriction check, which allows every action until restriction types are specified. |
 | 38 — an order over access types | **Built.** A seeded partial order, closed over once at startup. |
 | 4, 55 — explanation from the deciding query | **Constraint accepted.** The access-type closure and the restriction check both run inside the deciding query. |
 | 58 — derived datasets no more open than their sources | **Withdrawn.** Built, then removed. Derived and source access are independent — see [decision 10](./decisions.md). |
@@ -493,7 +503,7 @@ Sequencing lives in the local backlog rather than here.
 
 - **Invitations — built 2026-09-09, one part outstanding.** The flow works end to end; only the
   signup-time email mismatch dialog is missing, and the server refuses that case anyway. See
-  [the design record](./invitations.md).
+  [the design record](./invitations.md#not-built).
 - **Ownership transfer / dual consent.** `authority_transfer` is in the schema and referenced by **zero lines of code**. Settled by [decision 15](./decisions.md): not in the MVP, the table stays, and nothing is wired to it. `route_policy_bindings.test.js` asserts no route binds `transfer_ownership` or exposes a transfer path.
 - **Reparenting.** Deliberately deferred — [routes/groups.js:536](https://github.com/IUSCA/bioloop/blob/main/api/src/routes/groups.js#L536) says not until there is a use case. The closure-table rewrite it needs does not exist.
 - **Visibility presets.** The `EVERYONE` / `OWNING_GROUP` / `INSTITUTION` / `PARENT_GROUP` subject-resolution presets and the composite `OWNING_GROUP:DOWNLOADABLE` form are not modeled. Only access presets exist; subjects are always picked explicitly.
@@ -512,21 +522,13 @@ Sequencing lives in the local backlog rather than here.
 Anything seeded, modeled, or exported and never called reads as shipped. Each of these is
 either wiring to finish or code to delete.
 
-- **`expireStaleRequests`** is implemented and tested and called by no cron, route, or worker. Requests will sit `UNDER_REVIEW` forever in a running deployment.
 - **`group.add_dataset`** and **`group.add_collection`** are defined and never passed to `authorize()`.
 - **`allow_user_contributions`** can be set and read, and nothing enforces it. The contributor upload path is not implemented, and `user_dataset_contribution` is written by no code.
-- **Dataset unarchive.** The archive route exists; the unarchive route is commented out, the service has no counterpart, and the UI has no call. A dataset archived through the UI cannot be brought back through it.
 
 ### Enforcement holes
 
 Two remain, and both are live.
 
-- **Access-request creation is ungated on the resource.** `authorize('access_request', 'create')` is `Policy.always` and the service validates only the *subject*, so a user holding any resource UUID can file against a resource they cannot see. `assertGrantItemsApplicableToResourceType` runs on grant creation but not here, so a request can also name access types that do not apply to the resource type.
-- ~~**`unarchive` binds the wrong policy.**~~ **Fixed.** `routes/groups.js` now authorizes the
-  unarchive endpoint with `'group', 'unarchive'`, which `groupPolicies` defines as
-  platform-admin-only. Verified end to end 2026-09-11: an archived group's own admin is
-  refused, the group stays archived, and a platform admin can reactivate it
-  (`e2e/src/specs/restrictions/archive.spec.js`, flow A5).
 - **The platform-wide audit query has no scoped form.** `GET /audit/records` spans every resource and stays platform admin only. Owning-group admins and oversight read their own resources through the per-resource endpoints in item 57; a feed across everything a caller governs would need the query filtered by their authority and does not exist.
 - **Legacy `/datasets` routes bypass the group model.** They still use the old RBAC `accessControl()` middleware, so "consistency across interfaces" (11, 56) does not hold on them. These retire as the surfaces above them are rebuilt on `/v2`, rather than as a migration of their own.
 

@@ -75,7 +75,7 @@ const ROLES = {
   GRANT_HOLDER: {
     color: "violet",
     icon: "mdi-certificate-outline",
-    text: "Grant Holder",
+    text: "Has Access",
   },
   MEMBER: {
     color: "sky",
@@ -86,6 +86,16 @@ const ROLES = {
     color: "indigo",
     icon: "mdi-account-arrow-right-outline",
     text: "Member (Transitive)",
+  },
+  RESOURCE_ACCESS: {
+    color: "violet",
+    icon: "mdi-certificate-outline",
+    text: "Resource Access",
+  },
+  PROFILE_VIEWER: {
+    color: "neutral",
+    icon: "mdi-card-account-details-outline",
+    text: "Profile Viewer",
   },
 };
 

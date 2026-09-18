@@ -86,10 +86,7 @@
               </span>
             </span>
           </VaTab>
-          <VaTab
-            name="grants"
-            v-if="can('list_grants') || callerRole === 'GRANT_HOLDER'"
-          >
+          <VaTab name="grants">
             <span class="flex items-center gap-1.5">
               Access
               <span v-if="counts.grants !== null" class="tab-count-badge">
@@ -114,7 +111,9 @@
           :can-archive="canArchive"
           :can-unarchive="canUnarchive"
           :can-issue-grants="can('manage_grants')"
+          :can-request-access="can('request_access')"
           :can-add-dataset="can('add_dataset')"
+          :available-actions="availableActionList"
           @update="fetchCollectionData"
           @toggle-archive="openArchiveModal"
           @action-requested="handleActionRequested"
@@ -126,6 +125,7 @@
           :collection="collection"
           :can-create="can('add_dataset')"
           :can-remove="can('remove_dataset')"
+          :available-actions="availableActionList"
           @count-changed="fetchDatasetCount"
           @request-access="
             handleActionRequested({
@@ -140,14 +140,16 @@
           v-else-if="activeTab === 'grants' && can('list_grants')"
           :collection="collection"
           :can-manage-grants="can('manage_grants')"
+          :available-actions="availableActionList"
           @count-changed="fetchGrantsCount"
         />
 
-        <!-- A grant holder sees why they can see this collection, never the grant table. -->
+        <!-- Every other viewer sees why they can see this collection, never the grant table. -->
         <MyAccessTab
           v-else-if="activeTab === 'grants'"
           resource-type="COLLECTION"
           :resource-id="collection.id"
+          :standing="collection._meta?.standing"
         />
 
         <CollectionRequestsTab
@@ -170,7 +172,7 @@
         :collection-id="props.id"
         :collection-name="collection.name"
         :collection-slug="collection.slug"
-        :is-archived="collection.is_archived"
+        :action="canUnarchive ? 'unarchive' : 'archive'"
         :affected-datasets="counts.datasets"
         @update="fetchCollectionData"
       />
@@ -179,10 +181,12 @@
 </template>
 
 <script setup>
+import { useCapabilities } from "@/composables/useCapabilities";
 import constants from "@/constants";
 import AccessRequestService from "@/services/v2/access-requests";
 import CollectionService from "@/services/v2/collections";
 import GrantService from "@/services/v2/grants";
+import { badgeFor } from "@/services/v2/standing";
 import { useNavStore } from "@/stores/nav";
 
 const props = defineProps({ id: { type: String, required: true } });
@@ -200,21 +204,23 @@ const grantsTabRef = ref(null);
 const datasetsTabRef = ref(null);
 const requestsTabRef = ref(null);
 
-const capabilities = computed(
-  () => new Set(collection.value?._meta?.capabilities ?? []),
-);
-const callerRole = computed(() => collection.value?._meta?.caller_role);
+// `can` is the caller's authority and `enabled` adds what the collection's state admits.
+// @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+const { can, enabled, availableActions } = useCapabilities(collection);
 
-function can(action) {
-  return capabilities.value.has(action);
-}
-
-const canArchive = computed(
-  () => can("archive") && collection.value?.is_archived === false,
+const callerRole = computed(() =>
+  badgeFor(collection.value?._meta?.standing, "collection"),
 );
 
-const canUnarchive = computed(
-  () => can("unarchive") && collection.value?.is_archived === true,
+// Both are capabilities a collection admin holds whatever the state, so the state is what
+// decides which way the toggle points.
+const canArchive = computed(() => enabled("archive"));
+
+const canUnarchive = computed(() => enabled("unarchive"));
+
+/** The state's answer as the Overview tab takes it: a list, or null when unanswered. */
+const availableActionList = computed(() =>
+  availableActions.value ? [...availableActions.value] : null,
 );
 
 function setNavBreadcrumbs(c) {

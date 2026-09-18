@@ -4,10 +4,11 @@ const {
 const createError = require('http-errors');
 
 const prisma = require('@/db');
-const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
+const { assertPossible, withStateFields } = require('@/state').import('access_request');
+const { resolveEntityName } = require('@/services/audit/helpers');
 const { setsEqual } = require('@/utils');
-const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
-const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
+const { AUTH_EVENT_TYPE } = require('@/services/audit/events');
+const AuditBuilder = require('@/services/audit/AuditBuilder');
 
 const { _getRequestById } = require('./fetch');
 const { notifyRequesterOfDecision } = require('./notify');
@@ -157,7 +158,7 @@ class Review {
     }
 
     this.reviewerName = await resolveEntityName(prisma, 'user', this.reviewerId);
-    this.subjectName = this.request.subject.user?.name || this.request.subject.group?.name || 'Unknown Subject';
+    this.subjectName = this.request.subject.user?.name || this.request.subject.group?.name || 'Unknown user or group';
     this.resourceOwnerGroupId = this.request.resource?.dataset?.owner_group_id
       || this.request.resource?.collection?.owner_group_id;
 
@@ -172,6 +173,13 @@ class Review {
     } = evaluateReviewDecisions(this.request.access_request_items, this.itemDecisions);
 
     return prisma.$transaction(async (tx) => {
+      // Approving issues grants, so an archived or deleted resource refuses the review. The
+      // WHERE guard below still makes the write atomic against a second reviewer.
+      assertPossible('review', await tx.access_request.findUniqueOrThrow(withStateFields({
+        where: { id: this.requestId },
+        select: { id: true },
+      })));
+
       // Update request with review outcome first to ensure request is locked for concurrent modifications (e.g.
       // another reviewer trying to review or requester trying to withdraw)
       const updated = await tx.access_request.updateMany({
@@ -241,7 +249,7 @@ async function submitReview(reviewData) {
   const result = await review.submit();
   // After the commit, and never able to fail it. An un-notified approval reads as a
   // rejection, but a notification that cannot be delivered must not undo the decision.
-  // @see docs/design/groups/access-requests-plan.md — D1
+  // @see docs/design/groups/design.md — Notifications and expiry
   await notifyRequesterOfDecision(result);
   return result;
 }

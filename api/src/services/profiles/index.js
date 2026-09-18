@@ -3,7 +3,11 @@ const createError = require('http-errors');
 const config = require('config');
 
 const prisma = require('@/db');
-const audit = require('@/authorization/builtin/audit');
+const state = require('@/state');
+
+// A profile belongs to a group or a collection. Each type's state is bound here, at load.
+const STATE_BY_MODEL = { group: state.import('group'), collection: state.import('collection') };
+const audit = require('@/services/audit');
 const validate = require('./validate');
 
 /**
@@ -16,12 +20,16 @@ const validate = require('./validate');
  */
 
 const CONFLICT_ERROR_MESSAGE = 'This profile was changed by somebody else. Reload and try again.';
-const ARCHIVED_ERROR_MESSAGE = 'This resource is archived and cannot be edited.';
 
 const VISIBILITIES = Object.values(PROFILE_VISIBILITY);
 
-/** The three JSON keys a profile owns. Everything else under `metadata` is left alone. */
-const PROFILE_METADATA_KEYS = ['links', 'citation', 'publications'];
+/**
+ * The JSON keys a profile owns. Everything else under `metadata` is left alone.
+ *
+ * `type` is a group's short word under its name and is written only on a group; a collection
+ * renders nothing from it, so the collection route cannot set it.
+ */
+const PROFILE_METADATA_KEYS = ['links', 'citation', 'publications', 'type'];
 
 /**
  * The citation rendered when an admin has set none.
@@ -29,7 +37,7 @@ const PROFILE_METADATA_KEYS = ['links', 'citation', 'publications'];
  * Follows DataCite's human-readable order — creator, year, title, publisher, identifier.
  * This is a display field, so an approximation that reads correctly is the right answer
  * and precision work here is wasted.
- * @see docs/design/groups/profiles.md — Schema
+ * @see docs/design/groups/profiles.md — The columns
  */
 function generateCitation({
   creator, year, title, url, isCollection = false,
@@ -69,8 +77,12 @@ function resolveCitation(row, kind) {
  *
  * Absent keys are left alone; an explicit null clears the field. Returns `null` for a body
  * that asks for no change at all, so a caller can refuse it rather than burning a version.
+ *
+ * @param {Object} body - the request body
+ * @param {Object} currentMetadata - the row's `metadata` as it stands
+ * @param {'group'|'collection'} model - which type is being written; `type` is a group's field
  */
-function buildProfileUpdate(body, currentMetadata) {
+function buildProfileUpdate(body, currentMetadata, model = 'group') {
   const columns = {};
   const metadata = {};
 
@@ -83,6 +95,12 @@ function buildProfileUpdate(body, currentMetadata) {
       );
     }
     columns.profile_visibility = body.profile_visibility;
+  }
+
+  // Only a group carries a type. A collection sending one is ignored rather than refused,
+  // the same way every other unknown key in the body is.
+  if (model === 'group' && 'type' in body) {
+    metadata.type = validate.validateGroupType(body.type);
   }
 
   if ('links' in body) metadata.links = validate.validateLinks(body.links);
@@ -103,14 +121,28 @@ function buildProfileUpdate(body, currentMetadata) {
   };
 }
 
+/**
+ * The profile row, fetched with everything its type's state rules read, and refused with 409 when
+ * that state does not admit an edit.
+ * @param {Object} tx
+ * @param {'group'|'collection'} model
+ * @param {string} id
+ * @returns {Promise<Object>} the row
+ */
+async function lockedForEdit(tx, model, id) {
+  const { withStateFields, assertPossible } = STATE_BY_MODEL[model];
+  const current = await tx[model].findUniqueOrThrow(withStateFields({ where: { id } }));
+  assertPossible('edit_metadata', current);
+  return current;
+}
+
 async function updateProfile({
   model, id, body, expected_version, actor_id, auditTarget, auditEvent,
 }) {
   return prisma.$transaction(async (tx) => {
-    const current = await tx[model].findUniqueOrThrow({ where: { id } });
-    if (current.is_archived) throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
+    const current = await lockedForEdit(tx, model, id);
 
-    const update = buildProfileUpdate(body, current.metadata);
+    const update = buildProfileUpdate(body, current.metadata, model);
     if (!update) throw createError.BadRequest('No profile fields were supplied.');
 
     let updated;
@@ -180,7 +212,7 @@ function getGroupForProfile(group_id) {
     where: { id: group_id },
     include: {
       members: {
-        where: { role: 'ADMIN', removed_at: null },
+        where: { role: 'ADMIN' },
         include: { user: true },
       },
     },

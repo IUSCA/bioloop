@@ -5,11 +5,10 @@
  *
  * The policy bound to the route is `Policy.always`, because the create body names a
  * `resource_id` and no resource type, so which policy container applies is not known until
- * the row is read. The real check runs in the handler. These tests hold that check in place:
- * before it landed, a user holding any resource UUID could file a request against a dataset
- * they could not see.
+ * the row is read. The real check runs in the handler. These tests hold that check in place,
+ * so a user holding a resource UUID cannot file a request against a dataset they cannot see.
  *
- * @see docs/design/groups/access-requests-plan.md — A1
+ * @see docs/design/groups/design.md — Filing a request
  */
 
 const path = require('path');
@@ -25,7 +24,7 @@ const { randomUUID } = require('crypto');
 const prisma = require('@/db');
 // Submitting and reviewing write an in-app notification, which pulls in the SSE
 // manager's two long-lived Redis connections. Without closing them the process never
-// exits. @see docs/design/groups/access-requests-plan.md — D1
+// exits. @see docs/contributing/techniques/api-tests.md — The SSE manager keeps Jest alive
 const { sseManager } = require('@/notification/inApp/sseManager');
 const { errorHandler } = require('@/middleware/error');
 const accessRequestRoutes = require('@/routes/access_requests');
@@ -118,12 +117,14 @@ function body(overrides = {}) {
 }
 
 describe('POST /access-requests is gated on the resource', () => {
-  test('a user who cannot see the dataset is refused', async () => {
+  test('a user who cannot see the dataset is refused as if it did not exist', async () => {
     currentUser = outsider;
 
     const res = await request(app).post('/access-requests').send(body());
 
-    expect(res.status).toBe(403);
+    // No standing on the dataset, so the answer is the one an unknown id gets.
+    // @see docs/design/groups/access-model.md — Refusal shapes
+    expect(res.status).toBe(404);
 
     const filed = await prisma.access_request.count({
       where: { requester_id: outsider.subject_id, resource_id: dataset.resource_id },

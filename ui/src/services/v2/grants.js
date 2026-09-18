@@ -75,6 +75,15 @@ export default {
   },
 
   /**
+   * What revoking a grant leaves its subject: for the grant's type and each type it implies,
+   * the other grants that still confer it.
+   * @param {string} id - grant UUID
+   */
+  revokePreview(id) {
+    return api.get(`/grants/${id}/revoke-preview`);
+  },
+
+  /**
    * Revoke all active grants for a subject on a resource in a single transaction.
    * @param {'USER'|'GROUP'} subject_type
    * @param {string} subject_id
@@ -140,7 +149,7 @@ export default {
    * Each row carries `via` of DIRECT, GROUP, or PRINCIPAL, plus `via_group_name` and
    * `via_collection_name` where they apply.
    *
-   * @see docs/design/groups/access-requests-plan.md — C1
+   * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
    */
   getCoverageForSubject(subject_type, subject_id, resource_type, resource_id) {
     return api.get(

@@ -28,7 +28,7 @@
         </div>
 
         <!-- content -->
-        <div>
+        <div class="mt-5">
           <!-- loading state -->
           <div v-if="loading"></div>
 
@@ -49,7 +49,6 @@
                 v-for="request in requests"
                 :key="request.id"
                 :request="request"
-                :can-act="props.canReview"
                 @review="openReviewModal"
                 @view="viewRequest"
               />

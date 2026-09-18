@@ -468,6 +468,15 @@ python -m workers.scripts.purge_stale_uploaded --ttl-days=7 --stale-uploading-da
 
 ### Deployment Notes
 
+These notes cover any deployment. For the CDMD instance, follow
+[Deploying v2 to CDMD production](../../operations/cdmd/cdmd-v2-cutover.md) instead, which
+carries the same steps with that deployment's own paths, hosts, and verification.
+
+`UPLOAD_API_DIR` is not removed. It sets `upload.api_dir`, the upload directory as the API
+process itself sees it, and it is needed only when the API runs outside a container. In a
+container deployment `api/config/default.json` already holds the container value, and
+`UPLOAD_HOST_DIR` supplies the other half.
+
 #### 1. Update properties
 
 - Some properties are now outdated and may need to be removed in your `.env` files (if these outdated properties currently exist in your Bioloop instance):
@@ -485,7 +494,6 @@ VITE_UPLOAD_API_BASE_PATH=https://...
 # Remove these properties:
 OAUTH_UPLOAD_CLIENT_ID=xxx
 OAUTH_UPLOAD_CLIENT_SECRET=xxx
-UPLOAD_API_DIR=/x/y/z
 
 # ---
 

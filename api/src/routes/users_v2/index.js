@@ -5,9 +5,9 @@ const { query } = require('express-validator');
 const userService = require('@/services/user');
 const { validate } = require('@/middleware/validators');
 const asyncHandler = require('@/middleware/asyncHandler');
-const { createAuthorizationMiddleware: authorize } = require('@/authorization');
-const auth = require('@/services/auth');
+const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin } = require('@/authorization');
 const groupService = require('@/services/groups');
+const directory = require('@/services/user_directory');
 
 const router = express.Router();
 
@@ -15,28 +15,16 @@ router.get(
   '/me',
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Users']
-    // returns the authenticated user's dashboard role information
+    // #swagger.summary = 'The signed-in user, and three facts pages use to choose what to offer'
 
-    const isPlatformAdmin = auth.isPlatformAdmin(req);
-
-    let isGroupAdmin = false;
-    if (!isPlatformAdmin) {
-      isGroupAdmin = await groupService.isGroupAdmin(req.user.subject_id);
-    }
-
-    // NOTE: these values are used for UI routing/dashboard selection only.
-    // They are not used for access control.
-    let uiPersona = 'standard_user';
-    if (isPlatformAdmin) {
-      uiPersona = 'platform_admin';
-    } else if (isGroupAdmin) {
-      uiPersona = 'group_admin';
-    }
-
-    return res.json({
-      user: req.user,
-      uiPersona,
-    });
+    // Read from `user_role` and the membership views, as the engine reads them. The pages use
+    // these to choose sections and offers; every action is still decided by its own route.
+    // @see docs/design/groups/access-model.md — The UI consumption contract
+    const [is_platform_admin, counts] = await Promise.all([
+      callerIsPlatformAdmin(req),
+      groupService.governanceCounts(req.user.subject_id),
+    ]);
+    return res.json({ user: req.user, is_platform_admin, ...counts });
   }),
 );
 
@@ -51,11 +39,22 @@ router.get(
       .isIn(['name', 'username', 'email', 'created_at', 'last_login', 'login_method', 'is_deleted']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
-  asyncHandler(async (req, res, next) => {
+  asyncHandler(async (req, res) => {
     // #swagger.tags = ['Users']
     const {
       search, sortBy, sort_order, skip, take,
     } = req.query;
+
+    // Only a platform admin reads the whole account record, with roles and last login.
+    // Everyone else the policy admits reads the directory: names and addresses, nothing about
+    // the account as an account.
+    // @see docs/design/groups/user-directory.md — Who may search, and what a search returns
+    if (!(await callerIsPlatformAdmin(req))) {
+      const { users, count } = await directory.searchDirectory({
+        search: search.trim(), skip, take,
+      });
+      return res.json({ metadata: { count }, users });
+    }
 
     const { users, count } = await userService.findAll({
       search,

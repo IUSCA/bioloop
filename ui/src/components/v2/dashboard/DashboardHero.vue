@@ -60,7 +60,7 @@
  * - Deciding which role the caller holds. The page maps a persona to a role name.
  * - The meta line's content, which differs per persona and arrives through the slot.
  *
- * @see docs/design/groups/dashboard-plan.md - Phase 1
+ * @see docs/design/groups/ui-information-architecture.md — Dashboard
  * @see docs/contributing/v2-design-system.md - Typography
  */
 import { useSlots } from "vue";

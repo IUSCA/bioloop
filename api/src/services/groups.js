@@ -4,22 +4,92 @@ const createError = require('http-errors');
 const { randomUUID } = require('crypto');
 
 const prisma = require('@/db');
+const { accessPathsQuery } = require('@/authorization');
 
 const { generate_slug } = require('@/utils/slug');
-const audit = require('@/authorization/builtin/audit');
+const audit = require('@/services/audit');
 
 const { AuditBuilder } = audit;
-const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
+const { resolveEntityName } = require('@/services/audit/helpers');
 const sqlUtils = require('@/utils/sql');
 const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
-const restrictionService = require('@/services/restrictions');
+const { assertNotSystemPrincipal } = require('@/services/system_principals');
+const { assertPossible, withStateFields } = require('@/state').import('group');
 const assert = require('assert');
 
 const PRISMA_GROUP_INCLUDES = {};
 
+/**
+ * The system principals are grant subjects, not groups anybody joins or manages, so they never
+ * appear in a group listing. Excluded by id rather than slug, because a rename would silently
+ * put them back.
+ * @see docs/design/groups/decisions.md — 3. A public principal exists, and `Everyone` is renamed
+ */
+const EXCLUDE_SYSTEM_PRINCIPALS = Prisma.sql`g.id NOT IN (${Prisma.join(SYSTEM_PRINCIPAL_GROUP_IDS)})`;
+
+/**
+ * Each row's ancestors, root first, as a JSON array of { id, name, slug, depth }.
+ *
+ * A name identifies a group only among its siblings, so anything that offers a group for
+ * selection shows where it sits. The array is built from `group_closure` at read time and is
+ * never stored, which is what keeps a future re-parent a change to one table.
+ * @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+ */
+const ANCESTORS_JSON = Prisma.sql`(
+      SELECT COALESCE(
+        json_agg(
+          json_build_object('id', a.id, 'name', a.name, 'slug', a.slug, 'depth', ac.depth)
+          ORDER BY ac.depth DESC
+        ), '[]'::json)
+      FROM group_closure ac
+      JOIN "group" a ON a.id = ac.ancestor_id
+      WHERE ac.descendant_id = g.id AND ac.depth > 0
+    ) AS ancestors`;
+
+/**
+ * The scopes `POST /groups/search` accepts, and what each one means.
+ *
+ * Three of them are facts about the caller's own membership rows and mean the same thing for
+ * everybody. Three ask what the caller may reach, so the platform-admin short-circuit applies
+ * and all three become every group — which is why a platform admin is served by
+ * `searchAllGroups` and everyone else by `searchGroupsForUser`.
+ *
+ * @see docs/design/groups/access-model.md — What each search scope shows
+ */
+const SEARCH_SCOPES = Object.freeze([
+  'member_of', 'administered', 'overseen', 'visible', 'can_administer', 'discoverable',
+]);
+
+/**
+ * Whether a write failed because a sibling already holds the name.
+ *
+ * The unique index is on (parent_id, name), so the only groups that can collide are the
+ * caller's own siblings under the same parent, or the other roots when the parent is null.
+ * @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+ */
+function isGroupNameTaken(e) {
+  return e instanceof Prisma.PrismaClientKnownRequestError
+    && e.code === 'P2002'
+    && Array.isArray(e.meta?.target) && e.meta.target.includes('name');
+}
+
+/**
+ * The 409 for a taken group name. `field` tells a form which input to mark.
+ *
+ * The message says where the name is taken, because a sibling is a group the caller can see.
+ * The old system-wide rule could not say that: the holder might have been invisible to them.
+ */
+function groupNameTakenError(hasParent) {
+  const scope = hasParent
+    ? 'Another group under the same parent already has this name.'
+    : 'Another top-level group already has this name.';
+  return createError(409, `This name is already taken. ${scope}`, {
+    field: 'name',
+  });
+}
+
 // eslint-disable-next-line max-len
 const CONFLICT_ERROR_MESSAGE = 'Failed to update group metadata due to concurrent modification. Please refresh and try again.';
-const ARCHIVED_ERROR_MESSAGE = 'Cannot modify an archived group.';
 
 /** Helper function to create audit records for group member role changes
  * @param {Prisma.TransactionClient} tx - Prisma transaction client
@@ -48,7 +118,7 @@ async function createMembershipAuditRecords(tx, {
 
 async function _getGroup(by, value) {
   assert(by === 'id' || by === 'slug', 'Invalid "by" parameter');
-  const group = await prisma.group.findUniqueOrThrow({
+  const group = await prisma.group.findUniqueOrThrow(withStateFields({
     where: { [by]: value },
     include: {
       ancestor_edges: {
@@ -82,7 +152,7 @@ async function _getGroup(by, value) {
         },
       },
     },
-  });
+  }));
   const {
     ancestor_edges, members, ...groupData
   } = group;
@@ -181,10 +251,37 @@ function make_slug_unique_fn(tx) {
  * @param {Array<string>} [options.admins] - UUIDs of users to add as admins
  * @returns {Promise<Object>} Created group with closure entries
  */
+/**
+ * Locks a group row, then reads it with the fields its state rules read.
+ *
+ * The lock comes before the state check, so an archive committed by another transaction either
+ * lands before this read or waits for this transaction to finish. The state a write sees is
+ * therefore the state the check read. A raw lock cannot take the state layer's select fragment,
+ * so the row is read after it rather than by it.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ *
+ * @param {import('@prisma/client').Prisma.TransactionClient} tx
+ * @param {string} group_id
+ * @returns {Promise<Object>} every column of the group, and the state fields
+ * @throws {HttpError} 404 when no group has that id
+ */
+async function lockGroup(tx, group_id) {
+  const rows = await tx.$queryRaw`SELECT id FROM "group" WHERE id = ${group_id} FOR UPDATE`;
+  if (rows.length === 0) throw createError.NotFound('Group not found');
+  return tx.group.findUniqueOrThrow(withStateFields({ where: { id: group_id } }));
+}
+
 async function createGroup({
   data, actor_id, parent_id = null, members = [], admins = [],
 }) {
   return prisma.$transaction(async (tx) => {
+    // Archiving reaches the group itself and what it owns, so an archived parent takes no new
+    // sub-group. A deeper descendant of an archived group keeps its own state.
+    if (parent_id != null) {
+      assertNotSystemPrincipal(parent_id, 'parent');
+      assertPossible('create_child', await lockGroup(tx, parent_id));
+    }
+
     // create slug - URL-friendly identifier based on name, e.g. "My Group" -> "my-group"
     const slug = await generate_slug({
       name: data.name,
@@ -202,6 +299,10 @@ async function createGroup({
         id,
         name: data.name,
         slug,
+        // The authority for parentage. group_closure below is derived from it, and the
+        // sibling-name unique index is keyed on it.
+        // @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+        parent_id,
         // Frozen at creation. updateGroup regenerates slug on rename and must never touch
         // this, or a rename would fragment the group's archive directory.
         // @see docs/design/groups/dataset-storage.md — Archival
@@ -211,6 +312,8 @@ async function createGroup({
         metadata: data.metadata ?? Prisma.skip,
       },
       include: PRISMA_GROUP_INCLUDES,
+    }).catch((e) => {
+      throw isGroupNameTaken(e) ? groupNameTakenError(parent_id != null) : e;
     });
 
     // create closure entry for group being its own ancestor
@@ -341,14 +444,8 @@ async function updateGroupMetadata(group_id, { data, expected_version, actor_id 
   return prisma.$transaction(async (tx) => {
     // check if name changed and if so, generate new slug
     let slug;
-    const currentGroup = await tx.group.findUniqueOrThrow({
-      where: { id: group_id },
-    });
-
-    // ensure group is not archived before allowing metadata updates
-    if (currentGroup.is_archived) {
-      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
-    }
+    const currentGroup = await lockGroup(tx, group_id);
+    assertPossible('edit_metadata', currentGroup);
 
     if (data.name && data.name !== currentGroup.name) {
       slug = await generate_slug({
@@ -385,6 +482,7 @@ async function updateGroupMetadata(group_id, { data, expected_version, actor_id 
         && (e.code === 'P2025' || e.code === 'P2015')) {
         throw createError.Conflict(CONFLICT_ERROR_MESSAGE);
       }
+      if (isGroupNameTaken(e)) throw groupNameTakenError(currentGroup.parent_id != null);
       throw e;
     }
 
@@ -424,6 +522,8 @@ async function updateGroupMetadata(group_id, { data, expected_version, actor_id 
  */
 async function archiveGroup(group_id, actor_id) {
   return prisma.$transaction(async (tx) => {
+    assertPossible('archive', await lockGroup(tx, group_id));
+
     const updatedGroup = await tx.group.update({
       where: { id: group_id },
       data: {
@@ -431,15 +531,6 @@ async function archiveGroup(group_id, actor_id) {
         archived_at: new Date(),
       },
       include: PRISMA_GROUP_INCLUDES,
-    });
-
-    // The restriction is what evaluation reads; is_archived above is its denormalisation
-    // for listings and the UI badge. Written in the same transaction so they cannot drift.
-    // @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
-    await restrictionService.applyRestriction(tx, {
-      type_name: restrictionService.RESTRICTION_TYPE.ARCHIVED,
-      group_id,
-      actor_id,
     });
 
     // create audit record for group archival
@@ -459,6 +550,8 @@ async function archiveGroup(group_id, actor_id) {
  */
 async function unarchiveGroup(group_id, actor_id) {
   return prisma.$transaction(async (tx) => {
+    assertPossible('unarchive', await lockGroup(tx, group_id));
+
     const updatedGroup = await tx.group.update({
       where: { id: group_id },
       data: {
@@ -466,12 +559,6 @@ async function unarchiveGroup(group_id, actor_id) {
         archived_at: null,
       },
       include: PRISMA_GROUP_INCLUDES,
-    });
-
-    await restrictionService.liftRestriction(tx, {
-      type_name: restrictionService.RESTRICTION_TYPE.ARCHIVED,
-      group_id,
-      actor_id,
     });
 
     // create audit record for group unarchival
@@ -513,7 +600,7 @@ async function listGroupMembers(group_id, {
   }
 
   const groupIdFilterClause = Prisma.sql`gc.ancestor_id = ${group_id}`;
-  const enabledUsersClause = only_enabled_users ? Prisma.sql`u.is_disabled = false` : Prisma.empty;
+  const enabledUsersClause = only_enabled_users ? Prisma.sql`u.is_deleted = false` : Prisma.empty;
   let membershipTypeClause = Prisma.empty;
   if (membership_type === 'direct') {
     membershipTypeClause = Prisma.sql`gc.depth = 0`;
@@ -613,12 +700,7 @@ async function listGroupMembers(group_id, {
     const total = Number(totalRows[0].count);
 
     // Step 7: get direct members count for metadata
-    const directMembershipCount = await tx.group_user.count({
-      where: {
-        group_id,
-        removed_at: null,
-      },
-    });
+    const directMembershipCount = await tx.active_group_user.count({ where: { group_id } });
 
     return {
       metadata: {
@@ -630,6 +712,42 @@ async function listGroupMembers(group_id, {
       data: sanitizedMembers,
     };
   });
+}
+
+const LAST_ADMIN_MESSAGE = 'Cannot remove the only admin from the group.'
+  + ' Please promote another member to admin before removing this member.';
+
+/**
+ * Refuses a membership change that would leave a group with no admin.
+ *
+ * Runs inside the caller's transaction after the group row is locked, so two removals in one
+ * call, or in two concurrent calls, see each other. It used to run in the route before the
+ * transaction and ask "is this user the only admin" once per user against the state before
+ * any removal, so removing both of two admins in one call passed both checks.
+ *
+ * An admin is an active membership, read from `active_group_user`, of an account that is not
+ * deleted. That is the definition `getGroupsWithoutActiveAdmins` reports on. A change that
+ * touches no current admin is never refused, even in a group that already has none.
+ *
+ * @param {Object} tx - Prisma transaction holding the group row lock
+ * @param {string} group_id
+ * @param {string[]} leaving_user_ids - users whose admin standing the change ends
+ * @see docs/design/groups/access-model.md — Derived relations
+ */
+async function assertAdminsRemain(tx, group_id, leaving_user_ids) {
+  const [counts] = await tx.$queryRaw`
+    SELECT
+      count(*) FILTER (WHERE gu.user_id = ANY(${leaving_user_ids}::text[])) AS leaving,
+      count(*) FILTER (WHERE NOT (gu.user_id = ANY(${leaving_user_ids}::text[]))) AS remaining
+    FROM active_group_user gu
+    JOIN "user" u ON u.subject_id = gu.user_id
+    WHERE gu.group_id = ${group_id}
+      AND gu.role = ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
+      AND u.is_deleted = false
+  `;
+  if (Number(counts.leaving) > 0 && Number(counts.remaining) === 0) {
+    throw createError.Conflict(LAST_ADMIN_MESSAGE);
+  }
 }
 
 /**
@@ -644,20 +762,10 @@ async function removeGroupMembers(group_id, {
 }) {
   return prisma.$transaction(async (tx) => {
     // lock the group row to prevent concurrent modifications (e.g. adding members) while we're modifying memberships
-    const groupRecords = await tx.$queryRaw`
-      SELECT is_archived
-      FROM "group" g
-      where g.id = ${group_id}
-      FOR UPDATE;
-    `;
+    // The group must exist, and its state must admit a membership change.
+    assertPossible('remove_member', await lockGroup(tx, group_id));
 
-    // validate group exists and is not archived before allowing membership removals
-    if (groupRecords.length === 0) {
-      throw createError.NotFound('Group not found');
-    }
-    if (groupRecords[0].is_archived) {
-      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
-    }
+    await assertAdminsRemain(tx, group_id, user_ids);
 
     // Close the membership rather than deleting it, so that "who was a member on date X?"
     // stays answerable. Re-adding the user later opens a new row.
@@ -697,18 +805,8 @@ async function removeGroupMembers(group_id, {
  */
 async function addGroupMembers(group_id, { user_ids, actor_id }) {
   return prisma.$transaction(async (tx) => {
-    const groupRows = await tx.$queryRaw`
-      SELECT is_archived
-      FROM "group" g
-      where g.id = ${group_id}
-      FOR UPDATE;
-    `;
-    if (groupRows.length === 0) {
-      throw createError.NotFound('Group not found');
-    }
-    if (groupRows[0].is_archived) {
-      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
-    }
+    assertNotSystemPrincipal(group_id, 'member');
+    assertPossible('add_member', await lockGroup(tx, group_id));
 
     const createdRecords = await tx.$queryRaw`
       INSERT INTO group_user (group_id, user_id, role)
@@ -746,9 +844,9 @@ async function promoteGroupMemberToAdmin(group_id, {
   user_id, actor_id,
 }) {
   return prisma.$transaction(async (tx) => {
-    const membership = await tx.group_user.findFirst({
-      where: { group_id, user_id, removed_at: null },
-    });
+    assertPossible('edit_member_role', await lockGroup(tx, group_id));
+
+    const membership = await tx.active_group_user.findFirst({ where: { group_id, user_id } });
 
     if (!membership) {
       throw createError.Conflict('User is not a member of the group.');
@@ -791,9 +889,11 @@ async function demoteAdminToMember(group_id, {
   user_id, actor_id,
 }) {
   return prisma.$transaction(async (tx) => {
-    const membership = await tx.group_user.findFirst({
-      where: { group_id, user_id, removed_at: null },
-    });
+    // Lock the group row first, as removal does, so a demotion and a removal of the other
+    // admin cannot both pass the last-admin check.
+    assertPossible('edit_member_role', await lockGroup(tx, group_id));
+
+    const membership = await tx.active_group_user.findFirst({ where: { group_id, user_id } });
 
     if (!membership) {
       throw createError.Conflict('User is not a member of the group.');
@@ -801,6 +901,8 @@ async function demoteAdminToMember(group_id, {
     if (membership.role === GROUP_MEMBER_ROLE.MEMBER) {
       return membership;
     }
+
+    await assertAdminsRemain(tx, group_id, [user_id]);
 
     const updatedMembership = await tx.group_user.update({
       where: { id: membership.id },
@@ -824,15 +926,29 @@ async function demoteAdminToMember(group_id, {
 }
 
 /**
+ * Refuses a scope this file does not know.
+ *
+ * Both queries build the visibility clause from a chain of comparisons, so an unrecognised name
+ * matched nothing and left the clause empty — which is not "no rows" but "no restriction", and
+ * the search answered with every group in the database. Renaming the scopes is what surfaced it.
+ * @see docs/design/groups/access-model.md — What each search scope shows
+ */
+function assertKnownScope(scope) {
+  if (!SEARCH_SCOPES.includes(scope)) {
+    throw createError.BadRequest(`Unknown group search scope: ${scope}`);
+  }
+}
+
+/**
  * Search all groups with optional filters and pagination
  * @param {string} [group_id] - Optional group ID to filter by
- * @param {string} [search_term] - Optional search term to filter groups by name, description, or slug
+ * @param {string} [search_term] - Optional search term to filter groups by name, tagline, description, or slug
  * @param {string} sort_by - Field to sort by (e.g. 'name', 'created_at')
  * @param {string} sort_order - Sort order ('asc' or 'desc')
  * @param {number} limit - Number of results to return
  * @param {number} offset - Pagination offset
  * @param {boolean|null} is_archived - Optional filter to include only archived (true), only non-archived (false), or all (null) groups
- * @param {string} scope - Scope of the search ('all', 'direct', 'oversight', 'admin')
+ * @param {string} scope - one of SEARCH_SCOPES; see its comment for what each shows
  * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching groups
  */
 async function searchGroupsForUser({
@@ -844,13 +960,16 @@ async function searchGroupsForUser({
   limit,
   offset,
   is_archived = null,
-  scope = 'all',
+  scope = 'visible',
 }) {
+  assertKnownScope(scope);
+
   let searchClause = Prisma.empty;
   if (search_term) {
     searchClause = Prisma.sql`(
       g.name ILIKE ${`%${search_term}%`} OR
       g.description ILIKE ${`%${search_term}%`} OR
+      g.tagline ILIKE ${`%${search_term}%`} OR
       g.slug ILIKE ${`%${search_term}%`}
     )`;
   }
@@ -864,56 +983,73 @@ async function searchGroupsForUser({
     archivedClause = Prisma.sql`g.is_archived = ${is_archived}`;
   }
 
+  // An exact identifier is how somebody reaches a group that is not discoverable: its admin
+  // sends them the slug, and this resolves it. Matched exactly rather than as a pattern, so it
+  // answers about the one name the caller already holds and cannot be used to enumerate.
+  let exactIdentifierClause = Prisma.empty;
+  if (scope === 'discoverable') {
+    const exact = [];
+    if (group_id) exact.push(Prisma.sql`g.id = ${group_id}`);
+    if (search_term) exact.push(Prisma.sql`g.slug = ${search_term}`);
+    if (exact.length > 0) exactIdentifierClause = Prisma.sql` OR ${Prisma.join(exact, ' OR ')}`;
+  }
+
+  // `p` is the access-path CTE: one row per way this caller reaches the group, including a
+  // grant on a dataset it owns. `member_of` and `administered` read the caller's own
+  // membership row instead and never consult it.
+  // @see src/authorization/builtin/paths
+  // @see docs/design/groups/access-model.md — What each search scope shows
   let membershipClause = Prisma.empty;
-  if (scope === 'admin') {
+  if (scope === 'administered' || scope === 'can_administer') {
+    // For this caller the two are the same list. They differ only for a platform admin, and
+    // that caller is served by searchAllGroups.
     membershipClause = Prisma.sql`
         gu.role = ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
       `;
-  } else if (scope === 'direct') {
+  } else if (scope === 'member_of') {
     membershipClause = Prisma.sql`
         gu.role IS NOT NULL
       `;
-  } else if (scope === 'oversight') {
-    // only show groups user administers
+  } else if (scope === 'overseen') {
     membershipClause = Prisma.sql`
-      og.id IS NOT NULL
+      p.oversight
     `;
-  } else if (scope === 'all') {
+  } else if (scope === 'discoverable') {
+    // A group that published its profile has opted into being found, so it is offered
+    // alongside the ones this caller already reaches.
+    membershipClause = Prisma.sql`(
+      p.id IS NOT NULL
+      OR g.profile_visibility IN (
+        ${sqlUtils.enumToSql('AUTHENTICATED')}, ${sqlUtils.enumToSql('PUBLIC')}
+      )${exactIdentifierClause}
+    )`;
+  } else if (scope === 'visible') {
     membershipClause = Prisma.sql`
-    (ag.id IS NOT NULL OR og.id IS NOT NULL)
+    p.id IS NOT NULL
   `;
   }
 
   const finalWhereClause = sqlUtils.buildWhereClause(
-    [searchClause, idFilterClause, archivedClause, membershipClause],
+    [searchClause, idFilterClause, archivedClause, membershipClause, EXCLUDE_SYSTEM_PRINCIPALS],
     ' AND ',
   );
 
   const dataSql = Prisma.sql`
-    WITH all_groups AS (
-      SELECT DISTINCT group_id AS id
-      FROM effective_user_groups
-      WHERE user_id = ${user_id}
-    ),
-    oversight_groups AS (
-      SELECT DISTINCT group_id AS id
-      FROM effective_user_oversight_groups
-      WHERE user_id = ${user_id}
+    WITH paths AS (
+      SELECT ap.resource_id AS id,
+        bool_or(ap.path_kind = 'oversight') AS oversight
+      FROM (${accessPathsQuery({ userId: user_id, resourceType: 'group' })}) ap
+      GROUP BY ap.resource_id
     )
     SELECT 
       g.*, 
-      COALESCE(
-        gu.role::text,
-        CASE WHEN og.id IS NOT NULL THEN 'OVERSIGHT' END,
-        'TRANSITIVE_MEMBER'
-      ) AS user_role,
       ( select count(*) from active_group_user where group_id = g.id ) as size,
-      ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth -- for sorting
+      ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth, -- for sorting
+      ${ANCESTORS_JSON}
     FROM "group" g
     -- 1-on-1 join because of unique constraint on (group_id, user_id)
-    LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id} 
-    LEFT JOIN oversight_groups og ON og.id = g.id -- 1-on-1 join because of distinct in CTE
-    LEFT JOIN all_groups ag ON ag.id = g.id -- 1-on-1 join because of distinct in CTE; for where clause
+    LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
+    LEFT JOIN paths p ON p.id = g.id -- 1-on-1 join because the CTE groups by id
     ${finalWhereClause}
     ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
     LIMIT ${limit} OFFSET ${offset}
@@ -922,21 +1058,16 @@ async function searchGroupsForUser({
   // console.log(dataSql.sql, dataSql.values); // log the generated SQL for debugging
 
   const countSql = Prisma.sql`
-    WITH all_groups AS (
-      SELECT DISTINCT group_id AS id
-      FROM effective_user_groups
-      WHERE user_id = ${user_id}
-    ),
-    oversight_groups AS (
-      SELECT DISTINCT group_id AS id
-      FROM effective_user_oversight_groups
-      WHERE user_id = ${user_id}
+    WITH paths AS (
+      SELECT ap.resource_id AS id,
+        bool_or(ap.path_kind = 'oversight') AS oversight
+      FROM (${accessPathsQuery({ userId: user_id, resourceType: 'group' })}) ap
+      GROUP BY ap.resource_id
     )
     SELECT COUNT(DISTINCT g.id) as total_count
     FROM "group" g
-    LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id} 
-    LEFT JOIN oversight_groups og ON og.id = g.id
-    LEFT JOIN all_groups ag ON ag.id = g.id
+    LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
+    LEFT JOIN paths p ON p.id = g.id
     ${finalWhereClause}
   `;
 
@@ -950,10 +1081,10 @@ async function searchGroupsForUser({
       offset,
     },
     data: results
-      .map((group) => ({
+      .map(({ size, depth, ...group }) => ({
         ...group,
-        _count: { members: Number(group.size) },
-        depth: Number(group.depth),
+        _count: { members: Number(size) },
+        depth: Number(depth),
       })),
   };
 }
@@ -962,13 +1093,13 @@ async function searchGroupsForUser({
  * Search groups that a user is a member of with optional filters and pagination
  * @param {string} user_id - ID of the user to search groups for
  * @param {string} [group_id] - Optional group ID to filter by
- * @param {string} [search_term] - Optional search term to filter groups by name, description, or slug
+ * @param {string} [search_term] - Optional search term to filter groups by name, tagline, description, or slug
  * @param {string} sort_by - Field to sort by (e.g. 'name', 'created_at')
  * @param {string} sort_order - Sort order ('asc' or 'desc')
  * @param {number} limit - Number of results to return
  * @param {number} offset - Pagination offset
  * @param {boolean|null} is_archived - Optional filter to include only archived (true), only non-archived (false), or all (null) groups
- * @param {string} scope - direct | oversight | admin | all
+ * @param {string} scope - one of SEARCH_SCOPES; see its comment for what each shows
  * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching groups
  */
 async function searchAllGroups({
@@ -980,13 +1111,16 @@ async function searchAllGroups({
   limit,
   offset,
   is_archived = null,
-  scope = 'all',
+  scope = 'visible',
 }) {
+  assertKnownScope(scope);
+
   let searchClause = Prisma.empty;
   if (search_term) {
     searchClause = Prisma.sql`(
       g.name ILIKE ${`%${search_term}%`} OR
       g.description ILIKE ${`%${search_term}%`} OR
+      g.tagline ILIKE ${`%${search_term}%`} OR
       g.slug ILIKE ${`%${search_term}%`}
     )`;
   }
@@ -1000,30 +1134,29 @@ async function searchAllGroups({
     archivedClause = Prisma.sql`g.is_archived = ${is_archived}`;
   }
 
+  // Only the three membership scopes narrow anything here. `visible`, `can_administer`, and
+  // `discoverable` ask what this caller may reach, and a platform admin reaches every group,
+  // so they add no clause at all.
+  // @see docs/design/groups/access-model.md — What each search scope shows
   let membershipClause = Prisma.empty;
-  if (scope === 'admin') {
+  if (scope === 'administered') {
     membershipClause = Prisma.sql`
         gu.role = ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
       `;
-  } else if (scope === 'direct') {
+  } else if (scope === 'member_of') {
     membershipClause = Prisma.sql`
         gu.role IS NOT NULL
       `;
-  } else if (scope === 'oversight') {
-    // only show groups user administers
+  } else if (scope === 'overseen') {
+    // strictly below a group this platform admin holds an admin row in, which is their own
+    // standing rather than their platform authority
     membershipClause = Prisma.sql`
       og.id IS NOT NULL
     `;
   }
 
-  // The system principals are grant subjects, not groups anybody joins or manages, so they
-  // never appear in a group listing. Excluded by id rather than slug, because a rename
-  // would silently put them back.
-  // @see docs/design/groups/decisions.md — 3. A public principal exists, and `Everyone` is renamed
-  const excludeSystemPrincipalsClause = Prisma.sql`g.id NOT IN (${Prisma.join(SYSTEM_PRINCIPAL_GROUP_IDS)})`;
-
   const finalWhereClause = sqlUtils.buildWhereClause(
-    [searchClause, idFilterClause, archivedClause, membershipClause, excludeSystemPrincipalsClause],
+    [searchClause, idFilterClause, archivedClause, membershipClause, EXCLUDE_SYSTEM_PRINCIPALS],
     ' AND ',
   );
 
@@ -1038,12 +1171,9 @@ async function searchAllGroups({
       )
       SELECT 
         g.*,
-        COALESCE(
-          gu.role::text,
-          CASE WHEN og.id IS NOT NULL THEN 'OVERSIGHT' END
-        ) AS user_role,
         ( select count(*) from active_group_user where group_id = g.id ) as size,
-        ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth -- for sorting
+        ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth, -- for sorting
+        ${ANCESTORS_JSON}
       FROM "group" g
       LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
       LEFT JOIN oversight_groups og ON og.id = g.id
@@ -1077,10 +1207,10 @@ async function searchAllGroups({
       offset,
     },
     data: results
-      .map((group) => ({
+      .map(({ size, depth, ...group }) => ({
         ...group,
-        _count: { members: Number(group.size) },
-        depth: Number(group.depth),
+        _count: { members: Number(size) },
+        depth: Number(depth),
       })),
   };
 }
@@ -1109,7 +1239,7 @@ async function getGroupAncestors(group_id) {
  * @param {Object} options - Optional filters
  * @param {boolean|null} options.archived - Optional filter to include only archived (true), only non-archived (false), or all (null) descendant groups
  * @param {number} options.max_depth - Maximum depth of descendant groups to include (e.g. max_depth=1 to include only direct children)
- * @param {string} search_term - Optional search term to filter descendant groups by name, description, or slug
+ * @param {string} search_term - Optional search term to filter descendant groups by name, tagline, description, or slug
  * @returns {Promise<Array<{id: string, name: string, slug: string, depth: number}>>} List of descendant groups with depth
  */
 async function getGroupDescendants(group_id, opts = {}) {
@@ -1135,6 +1265,7 @@ async function getGroupDescendants(group_id, opts = {}) {
       OR: [
         { name: { contains: opts.search_term, mode: 'insensitive' } },
         { description: { contains: opts.search_term, mode: 'insensitive' } },
+        { tagline: { contains: opts.search_term, mode: 'insensitive' } },
         { slug: { contains: opts.search_term, mode: 'insensitive' } },
       ],
     };
@@ -1159,7 +1290,7 @@ async function getGroupDescendants(group_id, opts = {}) {
  *
  * @param {Object} options
  * @param {boolean|null} options.is_archived - Filter by archived status. Null returns all.
- * @param {string|null} options.search_term - Optional search term to filter groups by name/slug/description.
+ * @param {string|null} options.search_term - Optional search term to filter groups by name/slug/tagline/description.
  * @param {number} options.root_limit - Max number of root groups to return.
  * @param {number} options.root_offset - Offset for root group pagination.
  * @returns {Promise<Array<Object>>} Array of group objects with an `_children` array.
@@ -1179,6 +1310,7 @@ async function getGroupHierarchy({
       { name: { contains: search_term, mode: 'insensitive' } },
       { slug: { contains: search_term, mode: 'insensitive' } },
       { description: { contains: search_term, mode: 'insensitive' } },
+      { tagline: { contains: search_term, mode: 'insensitive' } },
     ];
   }
 
@@ -1281,18 +1413,34 @@ async function getGroupsWithoutActiveAdmins() {
   });
 }
 
-async function isGroupAdmin(user_id) {
-  const row = await prisma.group_user.findFirst({
-    where: {
-      user_id,
-      role: GROUP_MEMBER_ROLE.ADMIN,
-      removed_at: null,
-    },
-  });
-  return row !== null;
+/**
+ * How many groups a user administers and how many they oversee, from the membership views.
+ *
+ * Oversight is a strict descendant of a group the user administers, so a group can count in
+ * both. The dashboard and the list pages read these facts to choose what to offer; no decision
+ * reads them.
+ *
+ * @param {string} user_id - subject id
+ * @returns {Promise<{admin_group_count: number, oversight_group_count: number}>}
+ * @see docs/design/groups/access-model.md — The UI consumption contract
+ */
+async function governanceCounts(user_id) {
+  const [row] = await prisma.$queryRaw(Prisma.sql`
+    SELECT
+      (SELECT COUNT(DISTINCT group_id) FROM active_group_user
+        WHERE user_id = ${user_id} AND role = ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.ADMIN)}) AS admin_group_count,
+      (SELECT COUNT(DISTINCT group_id) FROM effective_user_oversight_groups
+        WHERE user_id = ${user_id}) AS oversight_group_count
+  `);
+  return {
+    admin_group_count: Number(row.admin_group_count),
+    oversight_group_count: Number(row.oversight_group_count),
+  };
 }
 
 module.exports = {
+  SEARCH_SCOPES,
+  governanceCounts,
   createGroup,
   getGroupById,
   getGroupBySlug,
@@ -1312,5 +1460,4 @@ module.exports = {
   getGroupAncestors,
   getGroupDescendants,
   getGroupsWithoutActiveAdmins,
-  isGroupAdmin,
 };

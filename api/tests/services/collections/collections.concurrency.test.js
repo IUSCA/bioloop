@@ -151,7 +151,7 @@ describe('collections - concurrency', () => {
       await runRace(
         async () => freshCollection('_add_conc'),
         (c) => fanOut(5, () => collectionsService.addDatasets(c.id, {
-          dataset_ids: [dsA.resource_id],
+          dataset_resource_ids: [dsA.resource_id],
           actor_id: actor.subject_id,
         })),
         async (results, c) => {
@@ -172,8 +172,8 @@ describe('collections - concurrency', () => {
       await runRace(
         async () => freshCollection('_add_diff'),
         (c) => [
-          collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
-          collectionsService.addDatasets(c.id, { dataset_ids: [dsB.resource_id], actor_id: actor.subject_id }),
+          collectionsService.addDatasets(c.id, { dataset_resource_ids: [dsA.resource_id], actor_id: actor.subject_id }),
+          collectionsService.addDatasets(c.id, { dataset_resource_ids: [dsB.resource_id], actor_id: actor.subject_id }),
         ],
         async (results, c) => {
           const count = await prisma.collection_dataset.count({ where: { collection_id: c.id } });
@@ -188,11 +188,14 @@ describe('collections - concurrency', () => {
       await runRace(
         async () => {
           const c = await freshCollection('_rm_conc');
-          await collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id });
+          await collectionsService.addDatasets(c.id, {
+            dataset_resource_ids: [dsA.resource_id],
+            actor_id: actor.subject_id,
+          });
           return c;
         },
         (c) => fanOut(5, () => collectionsService.removeDatasets(c.id, {
-          dataset_ids: [dsA.resource_id],
+          dataset_resource_ids: [dsA.resource_id],
           actor_id: actor.subject_id,
         })),
         async (results, c) => {
@@ -218,7 +221,10 @@ describe('collections - concurrency', () => {
     it('remove on already-empty collection resolves without error', async () => {
       const c = await freshCollection('_rm_empty');
       await expect(
-        collectionsService.removeDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
+        collectionsService.removeDatasets(c.id, {
+          dataset_resource_ids: [dsA.resource_id],
+          actor_id: actor.subject_id,
+        }),
       ).resolves.not.toThrow();
     });
   });
@@ -238,7 +244,7 @@ describe('collections - concurrency', () => {
         async () => freshCollection('_arch_race'),
         (c) => [
           collectionsService.archiveCollection(c.id, actor.subject_id),
-          collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
+          collectionsService.addDatasets(c.id, { dataset_resource_ids: [dsA.resource_id], actor_id: actor.subject_id }),
         ],
         async (results, c) => {
           // At least one operation succeeded
@@ -257,7 +263,7 @@ describe('collections - concurrency', () => {
       await collectionsService.archiveCollection(c.id, actor.subject_id);
 
       await expect(
-        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
+        collectionsService.addDatasets(c.id, { dataset_resource_ids: [dsA.resource_id], actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 409 });
     });
   });

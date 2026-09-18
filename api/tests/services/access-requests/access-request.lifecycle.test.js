@@ -20,12 +20,12 @@ require('module-alias/register');
 const prisma = require('@/db');
 // Submitting and reviewing write an in-app notification, which pulls in the SSE
 // manager's two long-lived Redis connections. Without closing them the process never
-// exits. @see docs/design/groups/access-requests-plan.md — D1
+// exits. @see docs/contributing/techniques/api-tests.md — The SSE manager keeps Jest alive
 const { sseManager } = require('@/notification/inApp/sseManager');
 const arService = require('@/services/access_requests');
 const grantsService = require('@/services/grants');
 const Expiry = require('@/utils/expiry');
-const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
+const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/services/audit');
 const {
   createTestUser,
   createTestGroup,
@@ -281,7 +281,8 @@ describe('access requests - lifecycle', () => {
       const hasGrant = await grantsService.userHasGrant({
         user_id: requester.subject_id,
         resource_id: dataset.resource_id,
-        access_type_id: viewMetadataTypeId,
+        resource_type: 'DATASET',
+        access_types: ['DATASET:VIEW_METADATA'],
       });
       expect(hasGrant).toBe(true);
     });
@@ -748,7 +749,8 @@ describe('access requests - lifecycle', () => {
       const hasAccess = await grantsService.userHasGrant({
         user_id: groupMember.subject_id,
         resource_id: dataset.resource_id,
-        access_type_id: viewMetadataTypeId,
+        resource_type: 'DATASET',
+        access_types: ['DATASET:VIEW_METADATA'],
       });
       expect(hasAccess).toBe(true);
     });

@@ -14,7 +14,7 @@ import { computed, reactive, ref, watch } from "vue";
  * `formState.decisionReason` replaced a ref nothing was watching. `reactive` unwraps the refs
  * on read and writes through on assignment, which is what every consumer already assumed.
  *
- * @see docs/design/groups/access-requests-plan.md — B4
+ * @see docs/contributing/techniques/v2-ui-changes.md — Composable state
  */
 export function useReviewRequestForm(request) {
   // Per-item decision state: Map<itemId, 'APPROVED' | 'REJECTED' | null>

@@ -95,11 +95,9 @@ const subjectMeta = computed(() => {
 
 const MAX_PREVIEW = 3;
 
-function isGrantActive(grant) {
-  return grant.revoked_at == null && daysUntilExpiry(grant) >= 0;
-}
-
-const activeGrants = computed(() => (props.grants ?? []).filter(isGrantActive));
+const activeGrants = computed(() =>
+  (props.grants ?? []).filter((grant) => grant.is_active),
+);
 
 const sortedPreviewGrants = computed(() => {
   return [...activeGrants.value].sort((a, b) => {

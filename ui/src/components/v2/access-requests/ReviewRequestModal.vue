@@ -10,20 +10,18 @@
     title=""
   >
     <template #header>
-      <div class="w-full">
-        <div class="flex items-center gap-3 mb-2">
-          <div
-            class="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex-shrink-0"
-          >
-            <i-mdi-clipboard-check-outline class="text-2xl" />
-          </div>
-          <div>
-            <h2 class="text-xl font-semibold">Review Access Request</h2>
-            <span class="text-sm text-gray-600 dark:text-gray-400">
-              Submitted {{ submittedTimeAgo }} ·
-              <va-chip size="small" :color="statusColor">
-                {{ request?.status }}
-              </va-chip>
+      <div class="flex items-start gap-3 pr-8">
+        <div
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+        >
+          <i-mdi-clipboard-check-outline class="text-2xl" />
+        </div>
+        <div class="min-w-0">
+          <h2 class="text-xl font-semibold">Review access request</h2>
+          <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <Badge :color="statusTone">{{ statusLabel }}</Badge>
+            <span class="text-sm va-text-secondary">
+              {{ resourceName }} · submitted {{ submittedTimeAgo }}
             </span>
           </div>
         </div>
@@ -42,9 +40,8 @@
       />
 
       <!-- Main content -->
-      <div v-else class="min-h-[500px] grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Left panel: Form (2 cols) -->
-        <div class="col-span-2 flex flex-col overflow-hidden">
+      <div v-else class="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <div class="min-w-0 lg:col-span-3">
           <ReviewRequestForm
             v-if="request && formState"
             :request="request"
@@ -56,16 +53,23 @@
           />
         </div>
 
-        <!-- Right panel: Preview (1 col) -->
-        <div
-          class="col-span-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-solid border-gray-200 dark:border-gray-700"
-        >
+        <!-- The preview follows the decisions, so it stays in view while the left column
+             scrolls rather than sitting in a panel the reader has scrolled past. -->
+        <div class="min-w-0 self-start lg:sticky lg:top-0 lg:col-span-2">
           <ReviewEffectiveGrantsPreview
             v-if="request && formState"
             :request="request"
             :resource-type="resourceType"
             :approved-items-payload="formState.approvedItemsPayload"
             :access-type-map="accessTypeMap"
+          />
+
+          <!-- How far the approved access reaches, directly under what it will be. -->
+          <GrantScopeMessage
+            v-if="subjectType && resourceType"
+            class="mt-4"
+            :subject-type="subjectType"
+            :resource-type="resourceType"
           />
         </div>
       </div>
@@ -88,14 +92,35 @@
     <!-- Footer -->
     <template #footer>
       <div
-        class="w-full flex items-center justify-between gap-4 border-t border-solid border-gray-200 dark:border-gray-600 pt-4"
+        class="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-solid border-gray-200 pt-4 dark:border-gray-600"
       >
-        <p class="text-xs text-gray-400 dark:text-gray-500">
-          <strong>{{ formState?.approvedCount }}</strong> approved,
-          <strong>{{ formState?.rejectedCount }}</strong> rejected
-        </p>
+        <div class="min-w-0">
+          <p class="text-sm">
+            <span class="font-semibold text-emerald-700 dark:text-emerald-400">
+              {{ formState?.approvedCount ?? 0 }} approved
+            </span>
+            <span class="va-text-secondary"> · </span>
+            <span class="font-semibold text-red-700 dark:text-red-400">
+              {{ formState?.rejectedCount ?? 0 }} rejected
+            </span>
+            <template v-if="undecidedCount">
+              <span class="va-text-secondary"> · </span>
+              <span class="va-text-secondary">
+                {{ undecidedCount }} undecided
+              </span>
+            </template>
+          </p>
+          <!-- Beside the button it blocks, rather than in a banner further up the form. -->
+          <p
+            v-if="formState?.submitDisableReason"
+            class="mt-0.5 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400"
+          >
+            <i-mdi-alert-circle-outline class="shrink-0" />
+            {{ formState.submitDisableReason }}
+          </p>
+        </div>
 
-        <div class="flex items-center justify-end gap-3">
+        <div class="flex items-center gap-3">
           <VaButton preset="secondary" @click="hide">Cancel</VaButton>
           <VaButton
             :loading="submitting"
@@ -103,7 +128,7 @@
             @click="submit"
           >
             <i-mdi-check class="mr-1.5" />
-            Submit Review
+            Submit review
           </VaButton>
         </div>
       </div>
@@ -114,6 +139,8 @@
 <script setup>
 import ErrorState from "@/components/utils/ErrorState.vue";
 import ModernAlert from "@/components/utils/ModernAlert.vue";
+import Badge from "@/components/v2/Badge.vue";
+import GrantScopeMessage from "@/components/v2/grants/issue/GrantScopeMessage.vue";
 import * as datetime from "@/services/datetime";
 import accessRequestsService from "@/services/v2/access-requests";
 import grantsService from "@/services/v2/grants";
@@ -176,18 +203,41 @@ const accessTypeMap = computed(() => {
   return map;
 });
 
-// Computed: status color
-const statusColor = computed(() => {
-  switch (request.value?.status) {
-    case "APPROVED":
-      return "success";
-    case "REJECTED":
-      return "danger";
-    case "UNDER_REVIEW":
-      return "info";
-    default:
-      return "secondary";
-  }
+// The same map the request list and the detail page use, so one status is one colour
+// everywhere. An unmapped status falls to neutral rather than to a colour that means
+// something.
+const STATUS_TONE = {
+  DRAFT: "neutral",
+  UNDER_REVIEW: "primary",
+  APPROVED: "success",
+  PARTIALLY_APPROVED: "warning",
+  REJECTED: "danger",
+  WITHDRAWN: "neutral",
+  EXPIRED: "neutral",
+};
+
+const statusTone = computed(
+  () => STATUS_TONE[request.value?.status] ?? "neutral",
+);
+
+// "UNDER_REVIEW" is a database value. The header shows "UNDER REVIEW".
+const statusLabel = computed(() =>
+  (request.value?.status || "").replaceAll("_", " "),
+);
+
+const resourceName = computed(() => {
+  const resource = request.value?.resource;
+  return (
+    resource?.dataset?.name || resource?.collection?.name || "Access request"
+  );
+});
+
+const undecidedCount = computed(() => {
+  const total = request.value?.access_request_items?.length ?? 0;
+  const decided =
+    (formState.value?.approvedCount ?? 0) +
+    (formState.value?.rejectedCount ?? 0);
+  return Math.max(total - decided, 0);
 });
 
 // Computed: submitted time ago

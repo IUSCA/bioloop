@@ -9,7 +9,7 @@
  * virtual attribute is actually exercised — a virtual attribute is dead code on the route
  * path, because the middleware pre-fetches `req.user`.
  *
- * @see docs/design/groups/profiles.md — Authorization
+ * @see docs/design/groups/profiles.md — What each audience sees
  */
 
 const path = require('path');
@@ -161,7 +161,9 @@ describe('what a public group profile hands back', () => {
     const projected = filter({
       ...row,
       _count: { members: 2 },
-      admins: [{ id: admin.id, name: 'A', email: 'a@example.com', username: 'a' }],
+      admins: [{
+        id: admin.id, name: 'A', email: 'a@example.com', username: 'a',
+      }],
       ancestors: [{ id: 'x', name: 'Parent' }],
     });
 
@@ -177,9 +179,7 @@ describe('what a public group profile hands back', () => {
   });
 
   test('a member still gets the member view of the same action', async () => {
-    const { granted, filter } = await asUser(
-      'group', 'view_profile', group.id, member.subject_id,
-    );
+    const { granted, filter } = await asUser('group', 'view_profile', group.id, member.subject_id);
     expect(granted).toBe(true);
 
     const projected = filter({
@@ -239,8 +239,6 @@ describe('a collection profile follows the same rules', () => {
     await setCollectionVisibility('PUBLIC');
     expect((await asAnonymous('collection', 'list_datasets', collection.id)).granted)
       .toBe(false);
-    expect((await asUser(
-      'collection', 'list_datasets', collection.id, outsider.subject_id,
-    )).granted).toBe(false);
+    expect((await asUser('collection', 'list_datasets', collection.id, outsider.subject_id)).granted).toBe(false);
   });
 });

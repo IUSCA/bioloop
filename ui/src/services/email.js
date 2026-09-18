@@ -5,15 +5,17 @@
  * knows that Gmail ignores dots and everything after a plus, so `Dana.Smith+work@gmail.com`
  * and `danasmith@gmail.com` are one mailbox there and two here.
  *
- * That difference shows in exactly one place, and it is bounded. The signup page warns before
- * submitting when the account someone signed in with does not match the address an invitation
- * went to, and that comparison happens before they are authenticated, so no server-side answer
- * exists yet. A pair differing only by Gmail dots therefore sees the warning when the server
- * would have accepted them, and the dialog's "continue without joining" is the way out.
- * Pulling a full email-parsing library into the bundle to close a gap that costs one extra
- * click is not worth it.
+ * That difference shows in one place. The `/invite` page compares the signed-in account with
+ * the invited address before calling `/apply`, to skip a pointless round trip. A pair that
+ * differs only by Gmail dots therefore sees the wrong-account message when the server would
+ * have accepted them. Pulling a full email-parsing library into the bundle to close that gap
+ * is not worth it. The signup page makes no such comparison, because its mismatch warning is
+ * not built.
  *
  * The server is the authority. Nothing here decides anything on its own.
+ *
+ * @see docs/design/groups/invitations.md — Email normalization
+ * @see docs/design/groups/invitations.md — Not built
  */
 export function normalizeEmail(email) {
   return typeof email === "string" ? email.trim().toLowerCase() : "";

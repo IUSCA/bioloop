@@ -17,9 +17,9 @@
         <div>
           <h2 class="text-xl font-semibold">Create Collection</h2>
           <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Collections group datasets for scalable access management. One grant
-            on a collection extends to all its datasets and to all members of
-            the granted group.
+            Collections group datasets for scalable access management. Access
+            given on a collection extends to all its datasets and to all members
+            of the group it is given to.
           </p>
         </div>
       </div>
@@ -67,7 +67,14 @@
             </p>
 
             <div v-if="!formData.selectedOwnerGroup">
-              <AdminGroupSearchSelect
+              <!--
+                `collection.create` is `isCollectionAdmin`: admin of the group that will own it.
+                Member uploads widen who may create datasets, never collections.
+                @see docs/design/groups/access-model.md — What each search scope shows
+              -->
+              <GroupSelect
+                scope="can_administer"
+                placeholder="Search groups you administer…"
                 :disabled="loading"
                 @select="(group) => (formData.selectedOwnerGroup = group)"
               />
@@ -90,8 +97,8 @@
                 <span class="font-semibold italic">
                   {{ formData.selectedOwnerGroup?.name }}
                 </span>
-                can add or remove datasets, create grants, or modify this
-                collection. No group can grant access to data it does not own.
+                can add or remove datasets, give access, or modify this
+                collection. No group can give access to data it does not own.
                 All datasets added must also be owned by
                 <span class="font-semibold italic">
                   {{ formData.selectedOwnerGroup?.name }} </span
@@ -108,8 +115,8 @@
               <span class="font-semibold italic">
                 {{ formData.selectedOwnerGroup?.name }}
               </span>
-              can be added. Adding a dataset changes effective access for all
-              current grant holders on this collection.
+              can be added. Adding a dataset changes effective access for
+              everyone who has access to this collection.
             </ModernAlert>
 
             <DatasetSearchSelect
@@ -213,7 +220,7 @@ async function confirm() {
       owner_group_id: formData.value.selectedOwnerGroup.id,
     };
     if (formData.value.selectedDatasets.length) {
-      payload.dataset_ids = formData.value.selectedDatasets.map(
+      payload.dataset_resource_ids = formData.value.selectedDatasets.map(
         (d) => d.resource_id,
       );
     }

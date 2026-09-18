@@ -21,14 +21,19 @@ const { modelFieldMap } = require('./hydrators/schemaMap');
 // Authorization engine
 const { authorizeWithFilters } = require('./authorize');
 const {
-  evaluateCapabilitySet, CapabilityEvaluationError, deriveCallerRole, toCapabilitiesArray,
+  evaluateCapabilitySet, CapabilityEvaluationError, deriveStanding, toCapabilitiesArray,
 } = require('./capabilities');
 const { evaluateAttributeFilters, createFilterFunction } = require('./attributeFilters');
 
 // Middleware
-const { initializePolicyContext, createAuthorizationMiddlewareFunction } = require('./middlewares');
+const { initializePolicyContext, createAuthorizationMiddlewareFunction, refusalMessage } = require('./middlewares');
+const { createDecisionPipeline } = require('./pipeline');
+
+const { findUnhydratableRequirements, assertRegistriesValid } = require('./requiresCheck');
 
 module.exports = {
+  findUnhydratableRequirements,
+  assertRegistriesValid,
   // Policy classes
   Policy,
   PolicyContainer,
@@ -47,10 +52,12 @@ module.exports = {
   CapabilityEvaluationError,
   evaluateAttributeFilters,
   createFilterFunction,
-  deriveCallerRole,
+  deriveStanding,
 
   // Middleware
   initializePolicyContext,
   createAuthorizationMiddlewareFunction,
+  createDecisionPipeline,
+  refusalMessage,
   toCapabilitiesArray,
 };

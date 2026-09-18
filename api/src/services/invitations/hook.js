@@ -14,7 +14,7 @@ const { applyPendingInvitations } = require('./index');
  * the atomicity the design asks for: a user must never exist holding invitations that were
  * half applied.
  *
- * @see docs/design/groups/invitations.md — User provisioning
+ * @see docs/design/groups/invitations.md — Why it is shaped this way
  * @param {object} params
  * @param {object} params.user - the row just created
  * @param {import('@prisma/client').Prisma.TransactionClient} params.tx

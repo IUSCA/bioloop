@@ -149,23 +149,9 @@ describe('PrismaHydrator.hydrate() - input validation', () => {
     hydrator = new PrismaHydrator({ prismaClient: makePrismaClient(), modelName: 'User' });
   });
 
-  it('throws HydrationError when attributes is not an array', async () => {
-    await expect(hydrator.hydrate({ id: 1, attributes: 'name', cache: new Map() })).rejects.toThrow(
-      HydrationError,
-    );
-  });
-
-  it('throws HydrationError when an attribute name is not a string', async () => {
-    await expect(hydrator.hydrate({ id: 1, attributes: [123], cache: new Map() })).rejects.toThrow(
-      HydrationError,
-    );
-  });
-
-  it('throws HydrationError when cache is not a Map', async () => {
-    await expect(hydrator.hydrate({ id: 1, attributes: ['name'], cache: {} })).rejects.toThrow(
-      HydrationError,
-    );
-  });
+  // The shape of `attributes` and `cache` is not checked per call: a policy's `requires`
+  // was checked when the policy was built. Unknown names are still refused, because a service
+  // may call a hydrator directly.
 
   it('throws HydrationError for unknown attributes', async () => {
     await expect(
@@ -220,7 +206,7 @@ describe('PrismaHydrator.hydrate() - DB fetch', () => {
 
   it('does not call the DB for attributes already in the cache', async () => {
     const cache = new Map();
-    cache.set('1', { id: 1, name: 'Cached' });
+    cache.set('User:1', { id: 1, name: 'Cached' });
     await hydrator.hydrate({ id: 1, attributes: ['name'], cache });
     expect(prismaClient.User.findUniqueOrThrow).not.toHaveBeenCalled();
   });
@@ -257,14 +243,14 @@ describe('PrismaHydrator.hydrate() - preFetched', () => {
 
   it('does not overwrite cached values with preFetched values', async () => {
     const cache = new Map();
-    cache.set('1', { id: 1, name: 'CachedName' });
+    cache.set('User:1', { id: 1, name: 'CachedName' });
     await hydrator.hydrate({
       id: 1,
       attributes: ['name'],
       cache,
       preFetched: { name: 'PreFetchedName', id: 1 },
     });
-    expect(cache.get('1').name).toBe('CachedName');
+    expect(cache.get('User:1').name).toBe('CachedName');
   });
 });
 
@@ -306,7 +292,7 @@ describe('PrismaHydrator.hydrate() - virtual attributes', () => {
     hydrator.registerVirtualAttribute('alwaysTrue', async () => true);
     const cache = new Map();
     await hydrator.hydrate({ id: 99, attributes: ['alwaysTrue'], cache });
-    expect(cache.get('99').id).toBe(99);
+    expect(cache.get('User:99').id).toBe(99);
   });
 
   it('does not re-run virtual loaders for already-cached virtual attributes', async () => {

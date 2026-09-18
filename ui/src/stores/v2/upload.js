@@ -16,7 +16,7 @@ import { computed, ref } from "vue";
  * document, and resume fingerprints are not persisted because large sessions exceeded the
  * browser's storage quota. beforeunload warns instead.
  *
- * @see docs/design/groups/dataset-creation-plan.md — C3
+ * @see docs/design/groups/dataset-creation.md — The transfer does not live in the dialog
  */
 export const useUploadStore = defineStore("v2-upload", () => {
   // Keyed by dataset id. Each entry: { datasetId, datasetName, ownerGroupName, status,
