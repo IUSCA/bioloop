@@ -14,6 +14,12 @@ module.exports = {
   parserOptions: {
     ecmaVersion: "latest",
   },
+  // The three .d.ts files at the root of ui/ are generated: unplugin-auto-import writes
+  // auto-imports.d.ts, unplugin-vue-components writes components.d.ts, and the router plugin
+  // writes typed-router.d.ts. They are TypeScript declarations, and no TypeScript parser is
+  // configured here, so espree stops at `declare global` with a parsing error. Their own
+  // `/* eslint-disable */` header cannot help, because parsing fails before any rule runs.
+  ignorePatterns: ["/*.d.ts"],
   rules: {
     "vue/multi-word-component-names": "off",
     "vuejs-accessibility/label-has-for": "off",
