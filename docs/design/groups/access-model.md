@@ -445,7 +445,7 @@ decided request or Revoke on a revoked grant, is hidden instead of disabled.
 | `/v2/users/me` facts | `user_role` and the membership views | the dashboard, the groups list, and the subject selector | `tests/services/groups/governanceCounts.test.js` |
 | refusal status and the 409 body | `createDecisionPipeline`: 404 without standing, 403 with it | `ErrorState` and the request form | `tests/routes/groups.invitations.test.js`, `tests/routes/access_requests.create.test.js` |
 | the actions archiving forbids | each resource type's own state rules, through `GET /v2/states/:type/archived/forbidden-actions` | the archive dialogs, through `stateLabels.js` | `tests/model/stateLabels.test.js` |
-| a user directory search | `searchDirectory`: three characters, ten people, four fields | `UserSearchSelect` | `tests/routes/users_v2.directory.test.js` |
+| a user directory search | `searchDirectory`: four fields, any term, `isAdminOfAnyGroup` | `UserSearchSelect` | `tests/routes/users_v2.directory.test.js` |
 | eligible owner groups | `dataset.contribute` decided on each candidate the path statement names; `listOwnerGroupCandidates` leaves out archived groups, as a state fact | the dataset create dialog | `tests/services/datasets/dataset.eligible-owner-groups.test.js` |
 | a field present only for some paths | the attribute rules | `GroupOverviewTab` for `allow_user_contributions` | no test |
 

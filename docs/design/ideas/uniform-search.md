@@ -107,8 +107,9 @@ which builds its pattern by hand.
 The searches also disagree with each other:
 
 - **Parameter name.** Most take `search_term`. Datasets take `name`, and users take `search`.
-- **Minimum length.** Only search 9 enforces one, three characters, and only for a caller who is
-  not a platform admin.
+- **Minimum length.** None enforces one. Search 9 did, three characters for a caller who was not
+  a platform admin, and it was removed: the search bar could only render the refusal as "No
+  results found". @see docs/design/groups/user-directory.md
 - **Trimming.** Some routes trim and some do not. Several pages send the term untrimmed.
 - **Page size.** Users allow 10 per page, groups and collections 100, datasets 1000, and file
   search has no cap.

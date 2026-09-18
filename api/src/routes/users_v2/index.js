@@ -1,5 +1,4 @@
 const express = require('express');
-const createError = require('http-errors');
 const { query } = require('express-validator');
 
 // const logger = require('@/services/logger');
@@ -40,24 +39,21 @@ router.get(
       .isIn(['name', 'username', 'email', 'created_at', 'last_login', 'login_method', 'is_deleted']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
-  asyncHandler(async (req, res, next) => {
+  asyncHandler(async (req, res) => {
     // #swagger.tags = ['Users']
     const {
       search, sortBy, sort_order, skip, take,
     } = req.query;
 
-    // Only a platform admin reads the whole directory, with roles and last login. Everyone
-    // else searches it and gets names and addresses for a few matches.
-    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 15
+    // Only a platform admin reads the whole account record, with roles and last login.
+    // Everyone else the policy admits reads the directory: names and addresses, nothing about
+    // the account as an account.
+    // @see docs/design/groups/user-directory.md — Who may search, and what a search returns
     if (!(await callerIsPlatformAdmin(req))) {
-      const term = search.trim();
-      if (term.length < directory.SEARCH_LENGTH_BEFORE_DISCLOSURE) {
-        return next(createError.BadRequest(
-          `search must be at least ${directory.SEARCH_LENGTH_BEFORE_DISCLOSURE} characters`,
-        ));
-      }
-      const users = await directory.searchDirectory({ search: term, take });
-      return res.json({ metadata: { count: users.length }, users });
+      const { users, count } = await directory.searchDirectory({
+        search: search.trim(), skip, take,
+      });
+      return res.json({ metadata: { count }, users });
     }
 
     const { users, count } = await userService.findAll({

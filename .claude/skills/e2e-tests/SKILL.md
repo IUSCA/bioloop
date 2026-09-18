@@ -118,6 +118,15 @@ Every spec file a worker runs shares that worker's world.
 - **Never add Quinn to anything.** He is the zero-access sentinel, and `harness.spec.js` asserts
   he reaches nothing. Membership rises through the hierarchy, so one real add makes him a member
   of every ancestor.
+- **Quinn is a *fixed* account (`ajohnson`), shared by every worker, and worlds do not isolate
+  him.** `create-child.spec.js` makes him the admin of the subgroup it creates, so while it is
+  running, another worker's `harness.spec.js` reads `admin_group_count: 1` and fails on
+  "the zero-access user reaches none of this run's resources". This is a live cross-worker race,
+  not a flake to rerun past: it fails on a multi-worker run and passes with `--workers=1`, and
+  adding any spec file re-shards the suite and changes whether it lands. Confirmed on
+  2026-09-18 with and without an unrelated new spec, so do not attribute it to your change.
+  The fix, when somebody takes it, is for `create-child.spec.js` to name a borrowed persona
+  rather than Quinn — borrowed accounts are per-worker and fixed ones are not.
 - **`mutationsOn` in `restrictions/archive.spec.js` is safe only while refused.** It adds Quinn.
   Its `PATCH` carries `version: 1`, so an allowed assertion works once per group. Any later
   PATCH gets a 409 version conflict, which also satisfies `expectConflict` for the wrong reason.

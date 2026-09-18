@@ -33,14 +33,13 @@ const props = defineProps({
 const emit = defineEmits(["select"]);
 
 const RESULT_COUNT = 5;
-// The directory answers a caller who is not a platform admin only for a search of at least
-// three characters, and with at most ten rows.
-// @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 15
-const MIN_SEARCH_LENGTH = 3;
+// The directory answers any term, however short. It used to refuse anything under three
+// characters, which the search bar could only render as "No results found" — the same thing
+// it shows for a name nobody has.
+// @see docs/design/groups/user-directory.md — Who may search, and what a search returns
 const MAX_ROWS = 10;
 
 async function searchUsers(searchQuery) {
-  if ((searchQuery ?? "").trim().length < MIN_SEARCH_LENGTH) return [];
   try {
     const res = await UserService.getAll({
       search: searchQuery.trim(),

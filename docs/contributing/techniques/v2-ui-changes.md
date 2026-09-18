@@ -572,8 +572,10 @@ copy the open-state gate or the typeahead will look dead.
 
 ## Other facts worth knowing
 
-- `UserSearchSelect.vue` searches `GET /v2/users` only from three characters and asks for at most
-  ten rows. The API refuses anything else to a caller who is not a platform admin.
+- `UserSearchSelect.vue` searches `GET /v2/users` on any term and asks for at most ten rows, of
+  which it shows five. The route refuses the caller outright unless they administer a group, so
+  an empty dropdown for a member is a 403 rather than an empty directory.
+  @see docs/design/groups/user-directory.md
 - The access requests page may log a `Pagination total_results` prop warning.
   `components/utils/Pagination.vue` declares `total_results` as a required `Number`, so the
   warning would be a transient `undefined` during the first fetch. This has not been confirmed in

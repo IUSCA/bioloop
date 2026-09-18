@@ -3,52 +3,67 @@ const prisma = require('@/db');
 /**
  * The user directory as a caller who is not a platform admin may search it.
  *
- * The subject pickers need to find a person, and a directory that lists everyone with roles
- * and login times is enumeration. So the search returns names and addresses only, for a short
- * list of matches, and only once the term is long enough to be about somebody in particular.
+ * Every surface that opens this search is already held by somebody with governance authority:
+ * a group admin, or a platform admin. What it returns is the contact card a university
+ * directory already publishes — name, username, email — and nothing about the account as an
+ * account. Roles, last login, and login method stay with the platform-admin listing.
  *
- * @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 15
+ * @see docs/design/groups/user-directory.md — Who may search, and what a search returns
  */
 
 /**
- * The shortest search term the directory answers. A privacy rule, not a tuning knob: a shorter
- * term matches most of the directory, so lowering it lets a caller page through everyone.
+ * The most people one page returns. A legibility and payload bound, not a privacy rule: the
+ * pickers ask for ten and a caller may page for the rest.
  */
-const SEARCH_LENGTH_BEFORE_DISCLOSURE = 3;
+const MAX_PEOPLE_PER_PAGE = 100;
 
-/**
- * The most people one search returns. A privacy rule for the same reason: raising it far
- * enough turns a search into a listing.
- */
-const PEOPLE_DISCLOSED_PER_SEARCH = 10;
+/** What the pickers ask for when they say nothing. */
+const DEFAULT_PEOPLE_PER_PAGE = 10;
+
+/** Name, username, and email. Never a role, a login time, or a login method. */
+const DIRECTORY_FIELDS = Object.freeze({
+  subject_id: true, name: true, username: true, email: true,
+});
 
 /**
  * Accounts that are not deleted whose name, username, or email contains the term.
+ *
+ * An empty term matches everybody, because a picker that shows nothing until the right
+ * prefix is guessed is a picker that cannot be used by somebody who half-remembers a name.
+ *
  * @param {Object} params
- * @param {string} params.search - at least `SEARCH_LENGTH_BEFORE_DISCLOSURE` characters
- * @param {number} [params.take] - capped at `PEOPLE_DISCLOSED_PER_SEARCH`
- * @returns {Promise<Array<{subject_id: string, name: string, username: string, email: string}>>}
+ * @param {string} [params.search] - any length, including none
+ * @param {number} [params.skip]
+ * @param {number} [params.take] - capped at `MAX_PEOPLE_PER_PAGE`
+ * @returns {Promise<{users: Array<Object>, count: number}>} count is the total match, not the page
  */
-async function searchDirectory({ search, take = PEOPLE_DISCLOSED_PER_SEARCH }) {
-  if (typeof search !== 'string' || search.length < SEARCH_LENGTH_BEFORE_DISCLOSURE) {
-    throw new Error(`A directory search needs at least ${SEARCH_LENGTH_BEFORE_DISCLOSURE} characters`);
-  }
-  const contains = { contains: search, mode: 'insensitive' };
-  return prisma.user.findMany({
-    where: {
-      is_deleted: false,
-      OR: [{ name: contains }, { username: contains }, { email: contains }],
-    },
-    select: {
-      subject_id: true, name: true, username: true, email: true,
-    },
-    orderBy: { username: 'asc' },
-    take: Math.min(take, PEOPLE_DISCLOSED_PER_SEARCH),
-  });
+async function searchDirectory({ search = '', skip = 0, take = DEFAULT_PEOPLE_PER_PAGE } = {}) {
+  const term = (search ?? '').trim();
+  const contains = { contains: term, mode: 'insensitive' };
+  const where = {
+    is_deleted: false,
+    ...(term
+      ? { OR: [{ name: contains }, { username: contains }, { email: contains }] }
+      : {}),
+  };
+
+  const [users, count] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      select: DIRECTORY_FIELDS,
+      orderBy: { username: 'asc' },
+      skip,
+      take: Math.min(take, MAX_PEOPLE_PER_PAGE),
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  return { users, count };
 }
 
 module.exports = {
-  SEARCH_LENGTH_BEFORE_DISCLOSURE,
-  PEOPLE_DISCLOSED_PER_SEARCH,
+  MAX_PEOPLE_PER_PAGE,
+  DEFAULT_PEOPLE_PER_PAGE,
+  DIRECTORY_FIELDS,
   searchDirectory,
 };
