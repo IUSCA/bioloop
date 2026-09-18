@@ -57,8 +57,7 @@
         The requester sees this, whatever you decide.
       </p>
       <VaTextarea
-        :model-value="decisionReasonValue"
-        @update:model-value="updateDecisionReason"
+        v-model="formState.decisionReason"
         placeholder="Explain your decisions — especially any rejections…"
         class="w-full"
         aria-label="Decision reason"
@@ -123,23 +122,8 @@ const decidedCount = computed(
   () => props.formState.approvedCount + props.formState.rejectedCount,
 );
 
-const decisionReasonValue = ref(props.formState?.decisionReason || "");
-
-// The reason is what makes the review submittable, so it has to reach the composable. The
-// local copy was never written back, which left `isSubmitEnabled` false however much the
-// reviewer typed.
-const updateDecisionReason = (value) => {
-  decisionReasonValue.value = value;
-  props.formState.decisionReason = value;
-};
-
-// Watch for external changes to formState.decisionReason
-watch(
-  () => props.formState?.decisionReason,
-  (newValue) => {
-    if (newValue !== decisionReasonValue.value) {
-      decisionReasonValue.value = newValue || "";
-    }
-  },
-);
+// The reason writes straight through to the composable, the way `RequestAccessForm` writes
+// its own fields. A local copy plus a watcher kept the two in step here, and the copy was
+// once not written back at all, which left `isSubmitEnabled` false however much the reviewer
+// typed. There is no second value to fall out of step now.
 </script>

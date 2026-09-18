@@ -57,4 +57,24 @@ module.exports = {
     // Ignore unknown at-rules in CSS (e.g., @apply for Tailwind)
     "vue/no-unknown-css-at-rules": "off",
   },
+  overrides: [
+    {
+      // These two forms receive a composable-backed store through `formState`, rather than
+      // data the parent owns. The modal builds one `useRequestAccessForm` /
+      // `useReviewRequestForm` instance and passes it down, because two instances meant the
+      // Submit button read a state the form never filled in. The composable returns
+      // `reactive()`, so `v-model="formState.purpose"` is the intended way to write to it.
+      //
+      // `shallowOnly` keeps the half of the rule that still matters here: reassigning
+      // `formState` itself stays an error, because that would detach the child from the
+      // instance the modal submits.
+      files: [
+        "src/components/v2/access-requests/RequestAccessForm.vue",
+        "src/components/v2/access-requests/ReviewRequestForm.vue",
+      ],
+      rules: {
+        "vue/no-mutating-props": ["error", { shallowOnly: true }],
+      },
+    },
+  ],
 };
