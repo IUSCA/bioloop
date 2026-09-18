@@ -170,6 +170,15 @@ because a spec failed in a file that did nothing wrong.
   to assert a sub-group accepts mutations, Quinn became a real member. Membership rises
   through the hierarchy, so he became a transitive member of every ancestor.
   `harness.spec.js` then failed in the full run while passing alone.
+- **A fixed account carries the mutation across workers, not just across files.** Quinn is
+  `ajohnson` for every worker at once, so standing given to him in one worker's world is read
+  by all the others. `membership/create-child.spec.js` named him as the admin of the subgroup
+  it creates, and another worker's `harness.spec.js` read `admin_group_count: 1` and failed.
+  The shape is worth recognising: it passes under `--workers=1`, and adding any spec re-shards
+  the suite and moves whether it lands, so it reads as a flake belonging to whatever changed
+  last. The spec now names Dana. She already administers the centre above `requestLab`, so the
+  admin row she gains on a throwaway child adds no visibility the branch did not already give
+  her, and borrowed accounts are drawn per worker.
 - **A group's `PATCH` succeeds once.** `mutationsOn` sends `version: 1`, and
   `updateGroupMetadata` increments the version on success. A second PATCH with the same
   version answers 409 from the version check, which `expectConflict` cannot tell apart from a
