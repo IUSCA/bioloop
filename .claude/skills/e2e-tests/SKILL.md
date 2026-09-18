@@ -19,6 +19,11 @@ cd e2e && npx playwright test                      # everything
 npx playwright test src/specs/refusal --workers=1  # one area, serially
 ```
 
+**Never run this suite while the API Jest suite is running.** `api/tests/routes/` calls the
+running API, which reads the development database this suite rewrites. Measured 2026-09-17: run
+together, four specs failed, three as sign-in timeouts and one as a real-looking visibility
+assertion (`J2` saw the sibling branch). Run alone, all 55 passed.
+
 ## The world
 
 **The suite builds its own world and never reads the seeded flows cast.** Each worker builds
@@ -30,6 +35,14 @@ breaks whenever the seed changes.
 Teardown is SQL (`src/world/teardown.js`), because there is deliberately no `DELETE /groups/:id`.
 Never add a destructive endpoint for the suite. A new resource type needs a line in
 `teardown.js`.
+
+**`group.parent_id` is ON DELETE RESTRICT and the check is immediate**, so a parent and its
+children cannot go in one `DELETE`, whatever order the ids are in. Teardown deletes the run's
+groups one at a time, deepest first, ordering them by their greatest `group_closure` depth.
+Clearing `parent_id` across the set first looks like a shortcut and is not one: it makes every
+group a root, and two groups in one run may share a name, which the
+`(parent_id, name) NULLS NOT DISTINCT` index refuses. That failure arrives as a teardown error
+after every test in the file has passed.
 
 **A probe script that throws leaves its world behind**, and the row census will not notice.
 Find orphans and clear them by run id:

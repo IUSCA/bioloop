@@ -91,6 +91,11 @@ async function writeWorld(prisma, world) {
       await prisma.group.createMany({
         data: [{
           id,
+          // `group_closure` below is derived from this, and a whole-table invariant asserts the
+          // two agree. A world that wrote only the closure would leave its groups in the root
+          // name space and fail that test from another worker.
+          // @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+          parent_id: g.parent ? ids.get(g.parent) : null,
           name,
           slug: safe(name),
           archive_key: safe(name),
@@ -103,7 +108,8 @@ async function writeWorld(prisma, world) {
       created.groups.push(id);
       const rows = [{ ancestor_id: id, depth: 0 }];
       if (g.parent) {
-        (await closureOf(ids.get(g.parent))).forEach((r) => rows.push({ ancestor_id: r.ancestor_id, depth: r.depth + 1 }));
+        (await closureOf(ids.get(g.parent)))
+          .forEach((r) => rows.push({ ancestor_id: r.ancestor_id, depth: r.depth + 1 }));
       }
       closure.set(id, rows);
       await prisma.group_closure.createMany({ data: rows.map((r) => ({ ...r, descendant_id: id })) });
@@ -206,7 +212,13 @@ async function writeWorld(prisma, world) {
     await prisma.group_user.deleteMany({
       where: { OR: [{ group_id: { in: groupIds } }, { user_id: { in: userSubjects } }] },
     });
-    await prisma.group.deleteMany({ where: { id: { in: groupIds } } });
+    // `group.parent_id` is ON DELETE RESTRICT, and the check is immediate, so a parent cannot
+    // go in the same statement as its children. Groups arrive parents first, so reversing the
+    // creation order takes the leaves out ahead of what holds them.
+    for (const id of [...groupIds].reverse()) {
+      // eslint-disable-next-line no-await-in-loop
+      await prisma.group.deleteMany({ where: { id } });
+    }
     await prisma.user_role.deleteMany({ where: { user_id: { in: created.users.map((u) => u.id) } } });
     await prisma.user.deleteMany({ where: { id: { in: created.users.map((u) => u.id) } } });
     await prisma.subject.deleteMany({ where: { id: { in: subjects } } });

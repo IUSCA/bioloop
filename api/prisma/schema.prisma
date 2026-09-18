@@ -518,7 +518,7 @@ model subject {
 // @see docs/design/groups/decisions.md — 3. A public principal exists, and `Everyone` is renamed
 model group {
   id          String  @id @default(uuid())
-  name        String  @unique
+  name        String
   slug        String  @unique
   // Immutable directory name for this group's archives. Derived from the slug at creation
   // and never updated, because slug is regenerated whenever the group is renamed and an
@@ -550,9 +550,17 @@ model group {
   about_md           String?
   profile_visibility PROFILE_VISIBILITY @default(PRIVATE)
 
+  // The parent group, or null for a root. This column is the authority for parentage and
+  // group_closure is derived from it; createGroup writes both in one transaction. It is what
+  // the sibling-name uniqueness index is keyed on.
+  // @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+  parent_id String?
+
   // Relations
   membership_history group_user[]
   members            active_group_user[]
+  parent             group?                      @relation("group_parent", fields: [parent_id], references: [id], onDelete: Restrict)
+  children           group[]                     @relation("group_parent")
   ancestor_edges     group_closure[]             @relation("group_descendants")
   descendant_edges   group_closure[]             @relation("group_ancestors")
   owned_datasets     dataset[]
@@ -569,6 +577,16 @@ model group {
   import_sources      import_source[]
   groupInvitations    group_invitation[]
 
+  // Names are unique among siblings, not system-wide, so two centres may each hold a group
+  // called "Microscopy Core" without either being able to discover the other.
+  // Unique index `group_parent_id_name_key` on (parent_id, name) NULLS NOT DISTINCT, defined
+  // in migration 20260917050000_group_sibling_name_uniqueness. Prisma cannot express
+  // NULLS NOT DISTINCT, which is what constrains root groups: without it Postgres treats each
+  // null parent as distinct and two roots could share a name. The @@unique below declares the
+  // index so that `migrate dev` does not drop it as drift; the clause itself is not drift.
+  // @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+  @@unique([parent_id, name], map: "group_parent_id_name_key")
+  @@index([parent_id])
   @@index([profile_visibility])
 }
 

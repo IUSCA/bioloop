@@ -39,8 +39,17 @@ saying `-- This is an empty migration.` means no drift; delete it.
   `gen_random_uuid()::text` and `(gen_random_uuid())::text` as drift.
 - **A partial unique index must be named in `ON CONFLICT`**, predicate included:
   `ON CONFLICT (group_id, user_id) WHERE removed_at IS NULL DO NOTHING`.
-- **Partial unique indexes and `NULLS NOT DISTINCT` live only in the migration.** A stand-in
-  `@@unique` in the schema is permanent drift. Comment on the model where the indexes are.
+- **A partial unique index lives only in the migration.** Prisma cannot express a `WHERE`
+  clause, does not introspect such an index, and leaves it alone. A stand-in `@@unique` in the
+  schema is permanent drift. Comment on the model where the index is.
+- **`NULLS NOT DISTINCT` is the opposite case: you MUST declare the `@@unique`.** Prisma does
+  introspect a plain unique index, so an undeclared one is drift it closes by dropping the
+  index — `migrate dev` writes and applies a `DROP INDEX` of its own, silently removing the
+  constraint. Declare it with the migration's own index name,
+  `@@unique([parent_id, name], map: "group_parent_id_name_key")`. Prisma ignores the
+  nulls-not-distinct property itself, so the declaration is not drift; verified on Prisma
+  6.19 against `group_parent_id_name_key`, where `migrate dev --create-only` then reports an
+  empty migration.
 - **`has` filters only scalar lists** such as `grant_preset.resource_types`. On a relation it
   fails at runtime with a 500; use `{ some: { ... } }`.
 - **A CHECK lives only in the migration.** Name it in a comment on the column. A NULL passes
@@ -136,6 +145,38 @@ PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="<the user's exact consent text>" \
 The variable holds that message's exact words, with no newlines or quotes. Earlier messages do
 not count. A reset crashes the running API; restart it. Treat new test failures after a reset
 as real until shown otherwise.
+
+## Test a migration against a clone before it reaches a real database
+
+Never reason about whether a migration set will apply to a populated database. Restore a dump
+into a throwaway container on that database's own major version and run the real
+`prisma migrate deploy` against it.
+
+```bash
+pg_dump -h "$HOST" -U "$USER" -d "$DB" --no-owner --no-privileges --schema=public -f /tmp/d.sql
+grep -v '^CREATE SCHEMA public;$' /tmp/d.sql > /tmp/restore.sql   # else the restore aborts
+docker run -d --name replica -e POSTGRES_PASSWORD=pw -e POSTGRES_USER=bioloop \
+  -e POSTGRES_DB=bioloop-dev -p 55432:5432 postgres:14.5
+psql -h localhost -p 55432 -U bioloop -d bioloop-dev -f /tmp/restore.sql
+cd api && DATABASE_URL='postgresql://bioloop:pw@localhost:55432/bioloop-dev?schema=public' \
+  npx prisma migrate deploy
+```
+
+Three things this catches that reading the SQL does not.
+
+A schema-only dump is not enough. Migrations that add a NOT NULL column or tighten a unique
+index only fail when rows are present, so dump the data too.
+
+Two lineages that each renamed the same thing collide. Compare `_prisma_migrations` against
+the migrations directory in both directions: a migration applied in the database but absent
+from the branch means the two histories forked, and the branch's replacement for it will fail
+on objects that are already gone. `docs/operations/cdmd-v2-cutover.md` works one of these
+through.
+
+Finish the rehearsal past `migrate deploy`. Run `npm run seed:prod` and boot the API, because
+`validateGrantAccessTypes` refuses to start on a migrated but unseeded database. Then run
+`prisma migrate diff --from-url <replica> --to-schema-datamodel prisma/schema.prisma`; anything
+but `-- This is an empty migration.` means the migrations and the schema file disagree.
 
 ## Keeping this current
 

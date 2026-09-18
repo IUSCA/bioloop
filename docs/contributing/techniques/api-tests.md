@@ -162,7 +162,27 @@ Check the cheap signals in this order.
 
 ### Order-dependent suites
 
-A single failure in a full run is usually cross-suite interference. The suites share
+Interference between suites was measured on 2026-09-17 and not found. Five consecutive full
+runs, 116 suites each, gave the identical result every time: 1281 tests passed, the same three
+tests failed, and no other test failed once. Those three then failed three times out of three
+with their file run alone, which is a defect rather than interference. The suspects listed
+below all passed in all five runs. The measurement is one machine, one day, and one file
+order, so it shows the standing flakes are not reproducing rather than proving isolation
+cannot break.
+
+Three more runs followed on the same day, after the invitation defect those three failures
+came from was fixed. Two of them passed completely: 118 suites, 1294 tests, no failures. The
+third stopped at 93 suites with no failures and no summary, because the Node process
+segfaulted inside V8's garbage collector. Check the exit code and the `Test Suites:` line
+before reading a run as finished; a crashed run writes neither a summary nor an `--outputFile`
+JSON, and 139 is the exit code to recognise.
+
+The runs before it tell a different story, and the difference is worth knowing. They predate
+2026-09-15, when `tests/testDatabase.js` moved the suites off the development database they
+had shared with the running API and the e2e worlds. The paragraph below records what that
+looked like.
+
+A single failure in a full run was usually cross-suite interference. The suites share
 `app_test` with each other, so a row one suite leaves behind can change another suite's
 premise. `tests/routes/health.test.js`, `tests/services/grants/coverage.test.js`,
 `tests/services/invitations/invitation.hook.test.js`, and

@@ -202,6 +202,18 @@ async function main() {
     })),
   );
 
+  // Parentage is applied after every group row exists, because the upserts above run
+  // concurrently and a child could otherwise be written before the parent its foreign key
+  // names. group_parents is derived from group_closure, so the two cannot disagree.
+  // @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+  const { group_parents } = groupData;
+  await Promise.all(
+    group_parents.map(({ id, parent_id }) => prisma.group.update({
+      where: { id },
+      data: { parent_id },
+    })),
+  );
+
   const { group_closure } = groupData;
   await Promise.all(
     group_closure.map((gc) => prisma.group_closure.upsert({

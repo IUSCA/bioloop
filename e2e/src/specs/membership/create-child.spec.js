@@ -113,16 +113,18 @@ test('losing the last other admin puts the creator back in', async ({ world, as 
 
 test('a taken name is refused on the name field, and the form keeps what was typed', async ({ world, as }) => {
   const alice = await as('alice');
-  const modal = await openCreateSubgroupForm(alice.page, world.groups.requestLab.id);
+  // Names are unique among siblings, so the collision has to come from a group under the same
+  // parent. `subLab` is the run's only child of `lab`, which makes it the one name a second
+  // child of `lab` cannot have.
+  const modal = await openCreateSubgroupForm(alice.page, world.groups.lab.id);
 
-  // Group names are unique across the whole system, so the run's own centre holds this one.
-  const taken = world.groups.center.name;
+  const taken = world.groups.subLab.name;
   const nameInput = modal.getByPlaceholder(/Computational Genomics Lab/i);
   const submit = modal.getByRole('button', { name: /^Create Subgroup$/i });
 
   await nameInput.fill(taken);
   const refused = alice.page.waitForResponse(
-    (res) => res.url().endsWith(`/groups/${world.groups.requestLab.id}/children`)
+    (res) => res.url().endsWith(`/groups/${world.groups.lab.id}/children`)
       && res.request().method() === 'POST',
   );
   await submit.click();
@@ -139,4 +141,33 @@ test('a taken name is refused on the name field, and the form keeps what was typ
   await nameInput.fill(`${world.prefix}-ui-renamed-${Math.random().toString(36).slice(2, 8)}`);
   await expect(modal.getByText(/already taken/i)).toBeHidden();
   await expect(submit).toBeEnabled();
+});
+
+test('the same name is accepted under a different parent', async ({ world, as }) => {
+  // The other half of sibling scoping. `subLab` is a child of `lab`, so its name is free for a
+  // child of `requestLab`, which is a different branch of the same centre. Alice administers
+  // both, so the refusal above and the acceptance here differ only in where the group goes.
+  const alice = await as('alice');
+  const modal = await openCreateSubgroupForm(alice.page, world.groups.requestLab.id);
+
+  const reused = world.groups.subLab.name;
+  await modal.getByPlaceholder(/Computational Genomics Lab/i).fill(reused);
+
+  const created = alice.page.waitForResponse(
+    (res) => res.url().endsWith(`/groups/${world.groups.requestLab.id}/children`)
+      && res.request().method() === 'POST',
+  );
+  await modal.getByRole('button', { name: /^Create Subgroup$/i }).click();
+  expect((await created).status()).toBeLessThan(300);
+  await expect(modal).toBeHidden();
+
+  // Two groups now carry the name, distinguished by parent and by slug.
+  const found = await alice.api.get(
+    `/groups/${world.groups.requestLab.id}/descendants?max_depth=1`
+    + `&search_term=${encodeURIComponent(reused)}`,
+  );
+  const children = found.data || found.groups || found;
+  const child = children.find((g) => g.name === reused);
+  expect(child, `the subgroup ${reused} was not created`).toBeTruthy();
+  expect(child.slug).not.toBe(world.groups.subLab.slug);
 });

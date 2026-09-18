@@ -78,7 +78,28 @@ async function teardownWorld(runId) {
 
       // The group cascades its memberships and its closure rows. Its subject row holds a
       // RESTRICT reference the other way, so it follows.
-      await client.query('DELETE FROM "group" WHERE id = ANY($1::text[])', [groupIds]);
+      //
+      // `group.parent_id` is ON DELETE RESTRICT and the check is immediate, so a parent and its
+      // children cannot go in one statement however the ids are ordered. They go one at a time,
+      // deepest first, with the depth read from the run's own closure rows.
+      //
+      // Clearing `parent_id` across the set first would be shorter, and it is wrong: it makes
+      // every group a root, and two groups in one run may share a name. The
+      // `(parent_id, name) NULLS NOT DISTINCT` index then refuses the update.
+      const { rows: ordered } = await client.query(
+        `SELECT g.id
+           FROM "group" g
+           LEFT JOIN (
+             SELECT descendant_id, max(depth) AS depth FROM group_closure GROUP BY descendant_id
+           ) d ON d.descendant_id = g.id
+          WHERE g.id = ANY($1::text[])
+          ORDER BY COALESCE(d.depth, 0) DESC`,
+        [groupIds],
+      );
+      for (const row of ordered) {
+        // eslint-disable-next-line no-await-in-loop
+        await client.query('DELETE FROM "group" WHERE id = $1', [row.id]);
+      }
       await client.query('DELETE FROM subject WHERE id = ANY($1::text[])', [groupIds]);
 
       await client.query('COMMIT');

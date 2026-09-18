@@ -20,10 +20,11 @@ const assert = require('assert');
 const PRISMA_GROUP_INCLUDES = {};
 
 /**
- * Whether a write failed because another group already holds the name.
+ * Whether a write failed because a sibling already holds the name.
  *
- * `group.name` is unique across every group, archived ones and ones the caller cannot see
- * included, so the refusal names no other group.
+ * The unique index is on (parent_id, name), so the only groups that can collide are the
+ * caller's own siblings under the same parent, or the other roots when the parent is null.
+ * @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
  */
 function isGroupNameTaken(e) {
   return e instanceof Prisma.PrismaClientKnownRequestError
@@ -31,9 +32,17 @@ function isGroupNameTaken(e) {
     && Array.isArray(e.meta?.target) && e.meta.target.includes('name');
 }
 
-/** The 409 for a taken group name. `field` tells a form which input to mark. */
-function groupNameTakenError() {
-  return createError(409, 'This name is already taken. Group names must be unique across the whole system.', {
+/**
+ * The 409 for a taken group name. `field` tells a form which input to mark.
+ *
+ * The message says where the name is taken, because a sibling is a group the caller can see.
+ * The old system-wide rule could not say that: the holder might have been invisible to them.
+ */
+function groupNameTakenError(hasParent) {
+  const scope = hasParent
+    ? 'Another group under the same parent already has this name.'
+    : 'Another top-level group already has this name.';
+  return createError(409, `This name is already taken. ${scope}`, {
     field: 'name',
   });
 }
@@ -249,6 +258,10 @@ async function createGroup({
         id,
         name: data.name,
         slug,
+        // The authority for parentage. group_closure below is derived from it, and the
+        // sibling-name unique index is keyed on it.
+        // @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+        parent_id,
         // Frozen at creation. updateGroup regenerates slug on rename and must never touch
         // this, or a rename would fragment the group's archive directory.
         // @see docs/design/groups/dataset-storage.md — Archival
@@ -259,7 +272,7 @@ async function createGroup({
       },
       include: PRISMA_GROUP_INCLUDES,
     }).catch((e) => {
-      throw isGroupNameTaken(e) ? groupNameTakenError() : e;
+      throw isGroupNameTaken(e) ? groupNameTakenError(parent_id != null) : e;
     });
 
     // create closure entry for group being its own ancestor
@@ -428,7 +441,7 @@ async function updateGroupMetadata(group_id, { data, expected_version, actor_id 
         && (e.code === 'P2025' || e.code === 'P2015')) {
         throw createError.Conflict(CONFLICT_ERROR_MESSAGE);
       }
-      if (isGroupNameTaken(e)) throw groupNameTakenError();
+      if (isGroupNameTaken(e)) throw groupNameTakenError(currentGroup.parent_id != null);
       throw e;
     }
 

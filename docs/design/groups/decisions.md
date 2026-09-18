@@ -556,6 +556,66 @@ reaches only the GET routes of `api/src/routes/public.js`, and `public_router.te
 that shape. It holds only what was granted to Public, as
 [Access model — Base relations](./access-model.md#base-relations) states.
 
+## 20. Group names are unique among siblings, not system-wide
+
+**Decision.** `group.name` loses its system-wide `@unique`. A `parent_id` column carries the
+parent, and a unique index over `(parent_id, name)` with `NULLS NOT DISTINCT` replaces it. Two
+groups may share a name under different parents, and no two siblings may share one. Root groups
+have a null parent, and the `NULLS NOT DISTINCT` clause is what constrains them; a plain unique
+index treats each null as distinct and lets two roots share a name. That clause needs
+PostgreSQL 15 or newer.
+
+`group.slug` and `group.archive_key` keep their system-wide uniqueness. Neither derives from the
+name at read time: `generate_slug` appends a suffix until the slug is free, and `archive_key` is
+taken from the slug once and frozen.
+
+**Why the name never needed it.** Nothing resolves a group by name. Grants, subjects, closure
+edges, and the public profile route all key off the identifier, and that route validates a UUID
+and answers 404 rather than 403, so the public surface exposes no name-based handle at all. The
+slug answers `/groups/slug/:slug`, and the archive key names the tape directory. Both are already
+collision-proof without help from the name.
+
+A system-wide unique name is an existence oracle. Any caller learns whether a name is taken
+anywhere, including in archived groups and groups they may not see, and any group denies a name
+to every other group by taking it first. That is the argument that moved dataset names to
+`(owner_group_id, name, type, is_deleted)` in `20260910010000_group_scoped_dataset_names`, and it
+applies to groups unchanged. Sibling scope reduces the oracle to groups the caller can already
+see. Roots are the residue: creating one still reveals whether a root of that name exists.
+
+Deployments hold more than one institution, and organisational unit names repeat by construction.
+`Administrative Core`, `Microscopy Core`, and `Core Services` each belong to every centre that has
+one. Under the old rule the second centre to be modelled cannot name its own.
+
+**Rejected: dropping uniqueness altogether.** Collections already work this way, and the same slug
+generator serves them, so the machinery exists. It fails on the case it is meant to serve. Two
+siblings could both be `Imaging`, and the ancestor path would then not tell them apart either. A
+picker would fall back to the slug or the identifier, which is what showing the path was meant to
+avoid. Sibling scope is what makes the full path a unique, readable identifier.
+
+**Rejected: keeping the system-wide rule and living with it.** The refusal is legible, and it names
+no other group, so nothing leaks beyond the fact of the collision. It still refuses a name the
+caller is entitled to use, for a reason they cannot inspect, and it gets worse as more institutions
+are modelled.
+
+**Enforced in the index, not in a service.** A unique index is revalidated by every statement that
+writes the table, and it holds under concurrency. An equivalent check in `createGroup` and
+`updateGroup` protects only the call sites that exist when it is written.
+
+**Consequences to accept.** A name no longer identifies a group on its own, so every place that
+offers one for selection has to say which group it means: the grant and access-request subject
+pickers, and group search. They show the slug, which is unique system-wide and already present on
+every row the search returns.
+
+The ancestor path reads better than a slug, and it is not available to these pickers. The group
+policy's public attribute list omits `ancestors[*]`, on the ground that the hierarchy is internal
+structure, and a picker may offer a group whose ancestors the caller is not entitled to see. A
+path would therefore have to be filtered row by row against what that caller may read. When that
+is settled, the path is derived from `group_closure` on read, as `getGroupAncestors` already does,
+and is never stored on the group.
+
+An archived sibling keeps its name reserved. Freeing it would let a new group take the name and
+make unarchiving fail, so the reservation is deliberate.
+
 ## Raised and deferred
 
 Two findings of the 2026-09-03 review were deliberately not acted on. Both dispositions were
@@ -577,6 +637,16 @@ rejected as decision 4. Oversight stays structural, and it stays outside the gra
 enum-bearing row rather than a grant, so each of these stays its own piece of work rather than
 collapsing into the access-request machinery. **Ownership transfer** was in that list and is
 now settled as decision 15: deferred, with its table kept and nothing wired to it.
+
+One constraint on reparenting is recorded here so that the eventual design starts from it.
+**Moving a group is an authorization change, and it needs the consent of both parents' admins.**
+Membership flows upward, so the members of a moved group become effective members of its new
+ancestors, and every grant issued to those ancestors then reaches them. A move that only the
+moving group's admin approved would therefore let that admin help themselves to whatever the new
+parent holds, which is an escalation rather than a reorganisation. The new parent's admin has to
+accept the subtree. The old parent's admin has to release it, because they lose the oversight that
+their ancestry conferred and their own grants stop reaching the group's members. None of this is
+designed yet, and nothing is built.
 
 **Bounded model checkers such as Alloy or TLA+** are deferred. They earn their cost when the
 hierarchy changes during its lifetime, so reparenting or delegated authority is the trigger.

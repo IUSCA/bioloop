@@ -43,10 +43,13 @@ const COLLECTION_ID = 'f1005000-0000-4000-8000-000000000101';
  *   ├── Patel Lab
  *   └── Midwest Imaging Core
  *
- * **The imaging group is "Midwest Imaging Core", not "Imaging Core".** `group.name`, `slug`,
- * and `archive_key` are each unique, and the sample world already holds a group called
- * Imaging Core. Nothing in the flows depends on that group's exact name — it exists to own a
- * dataset in a sibling branch — so this world takes a name it can have to itself.
+ * **The imaging group is "Midwest Imaging Core", not "Imaging Core".** `slug` and
+ * `archive_key` are unique across every group, and the sample world already holds a group
+ * called Imaging Core whose slug is `imaging-core`. Names are only unique among siblings, so
+ * the name alone would now be free; the slug is what this avoids colliding with. Nothing in
+ * the flows depends on that group's exact name — it exists to own a dataset in a sibling
+ * branch.
+ * @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
  */
 const GROUPS = Object.freeze([
   {
@@ -301,6 +304,13 @@ async function seedFlowsWorld(prisma, { SUBJECT_TYPE, RESOURCE_TYPE, systemAdmin
       // written here rather than left to a service that this path does not call.
       create: { ...row, archive_key: g.slug },
     });
+  }
+
+  // Parentage is applied once every group row exists, so it does not depend on GROUPS being
+  // ordered parent before child. It is the same fact buildClosure() walks below.
+  // @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+  for (const g of GROUPS.filter((x) => x.parent_id != null)) {
+    await prisma.group.update({ where: { id: g.id }, data: { parent_id: g.parent_id } });
   }
 
   for (const row of buildClosure()) {

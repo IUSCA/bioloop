@@ -35,6 +35,11 @@ The reasoning and worked examples behind every rule here are in
   Before starting, check `ps -eo pid,etime,args | grep "[j]est --runInBand"` and stop finished runs.
 - **Revert experiments go in a script file run with `bash file.sh`.** The Bash tool's zsh
   profile aliases `cp` and `rm` to `-i`, and does not word-split `$VAR`.
+- **Never run this suite and the Playwright suite at the same time.** `tests/routes/` calls the
+  running API, which reads the development database, and the e2e suite rewrites it. Measured
+  2026-09-17: run together, eight grant tests failed on grants that should have been effective
+  and four e2e tests failed, three of them as sign-in timeouts. Run alone, both were green at
+  119 suites and 55 tests. Nothing was wrong with either change.
 
 ## The test database
 
@@ -49,6 +54,10 @@ The reasoning and worked examples behind every rule here are in
   port 3030, which reads the development database.
 - A standalone script requiring `@/db` hits the development database unless it requires
   `tests/testDatabase.js` first.
+- **`logs/api.log` fills with dataset 404s while the suites run, and they are not yours.** A
+  suite that starts a workflow enqueues a real Celery task, and the worker then asks the
+  running API for a dataset that only ever existed in `app_test`. Each 404 logs a full Prisma
+  stack at `[ERROR]`. See `.todo/local/L6-verification-and-e2e-gaps.md` T16.
 
 ## Never use `git stash` to get a baseline
 
@@ -80,13 +89,21 @@ Check in this order before editing code:
    Known stale shapes: `Hydrate` -> `Hydrator`, `authorize()` -> `authorizeWithFilters()`
    (needs `attributeRules: []`), `user.id` -> `user.subject_id`, and
    `listPresets({ resource_type })` taking an object. The production code is usually right.
-3. **Rerun the file alone three or four times and report the counts.** A single failure in a
-   full run is usually cross-suite interference in `app_test`. Several suites are known to be
-   order-dependent; see `.todo/local/misc-carryover.md`. A failure that reproduces in every
-   full run and never alone is real shared state.
-4. Whether the API is up, for `tests/routes/`. Bare `AggregateError` is a refused connection.
+3. **Rerun the file alone three or four times and report the counts.** A failure that
+   reproduces every time, in the full run and alone, is a real defect. Start there: measured
+   2026-09-17 over eight full runs, nothing failed intermittently. Five runs before a fix gave
+   the identical result each time, and two runs after it were completely green at 118 suites
+   and 1294 tests. The old order-dependent suspects in `.todo/local/misc-carryover.md` date
+   from before the suites moved off the development database on 2026-09-15, and none of them
+   reproduced. Cross-suite interference in `app_test` is still possible and still worth the
+   targeted rerun, but it is no longer the first explanation to reach for.
+4. **Whether the run finished at all.** Exit 139 is SIGSEGV. One run in eight stopped at 93 of
+   116 suites with no failures, no `Test Suites:` line, and no `--outputFile` JSON, faulting
+   inside V8's garbage collector rather than in any test. Read the exit code and the summary
+   line before reading a run as a result.
+5. Whether the API is up, for `tests/routes/`. Bare `AggregateError` is a refused connection.
    `bin/devserver.sh status` shows nodemon alive after the app crashed; read `logs/api.log`.
-5. **Whether the duration is round.** 5 s or a multiple of 10 s is a timeout, usually an
+6. **Whether the duration is round.** 5 s or a multiple of 10 s is a timeout, usually an
    external service not answering. Rerun with `--testTimeout=60000` before hunting a bug.
 
 ## Concurrency suites
@@ -134,8 +151,18 @@ Check in this order before editing code:
   check either moved or must now assert zero with a comment.
 - **Pin a reversal with a test** asserting the new freedom; do not only delete the old suite.
 - **`uiScan` allowlist entries that match nothing fail the scan.** Delete them with their line.
+- **A fixture that builds a hierarchy must write `group.parent_id`, not only the closure.**
+  The column is authoritative and the closure is derived from it, and
+  `groups.sibling-name-uniqueness.test.js` asserts over the whole table that the two agree. A
+  world that writes closure rows alone leaves its groups in the root name space and fails that
+  suite from another worker.
+- **`group.parent_id` is ON DELETE RESTRICT, and the check is immediate.** A parent cannot go
+  in the same statement as its children, however the ids are ordered. `deleteGroup` in
+  `tests/services/helpers.js` collects the subtree and deletes deepest first; a suite doing its
+  own cleanup deletes in reverse creation order.
 - **Operation sequences:** keep `size: 'max'` on `fc.commands`. Replay with
-  `MODEL_SEQUENCE_SEED`. A group's parent is the `group_closure` row at depth 1.
+  `MODEL_SEQUENCE_SEED`. A group's parent is `group.parent_id`, mirrored by the
+  `group_closure` row at depth 1.
 
 ## Keeping this current
 

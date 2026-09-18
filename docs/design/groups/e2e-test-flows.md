@@ -150,9 +150,9 @@ model. Teardown deletes the run's own rows by run identifier, and touches nothin
 | `PAT-1101` | Patel Lab | Frank's own data, used to prove refusals run both ways |
 | Aim 2 Release | Wong Lab | The collection holding `PCM230203` and `PCM230204` |
 
-The imaging group is **Midwest Imaging Core**. `group.name` is unique and the seed's sample
-world already holds a group called Imaging Core. No flow depends on that group's name — it
-exists to own a dataset in a branch neither Wong Lab nor Patel Lab reaches.
+The imaging group is **Midwest Imaging Core**, which keeps it distinct from the Imaging Core
+the seed's sample world already holds. No flow depends on that group's name — it exists to own
+a dataset in a branch neither Wong Lab nor Patel Lab reaches.
 
 ### What the world must not contain
 
@@ -182,9 +182,9 @@ list with the admin role. Dana's own oversight list gains Wong Lab.
 checked and disabled, because a group needs an admin and on an empty form Dana is the only
 candidate. Naming Alice makes it a real choice, and Dana clears it. Dana never appears in the
 admin search: the checkbox is how she would put herself in.
-**And** a name another group already holds is refused on the name field, and the form stays
-open with what Dana typed. The message names no other group, because group names are unique
-across the whole system and the holder may be one Dana cannot see.
+**And** a name a sibling under the Center already holds is refused on the name field, and the
+form stays open with what Dana typed. A name held only in another branch is accepted, because
+[decision 20](./decisions.md) scopes group names to siblings.
 **And never** does Dana gain the ability to issue or revoke a grant on anything Wong Lab
 owns. Creating a child confers oversight, not authority.
 

@@ -187,6 +187,15 @@ group_closure.push({
   depth: 1,
 });
 
+// group.parent_id is the authority for parentage, and group_closure is derived from it. This
+// reads the parentage back off the depth-1 edges built above rather than stating the same fact
+// twice, so the column and the closure cannot disagree. Roots are absent, which leaves their
+// parent_id null.
+// @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+const group_parents = group_closure
+  .filter((e) => e.depth === 1)
+  .map((e) => ({ id: e.descendant_id, parent_id: e.ancestor_id }));
+
 // Simple hash function for deterministic randomness
 const simpleHash = (str) => {
   let hash = 0;
@@ -307,6 +316,7 @@ function generateCollections(n, datasets) {
 module.exports = {
   groups,
   group_closure,
+  group_parents,
   generateGroupUserMemberships,
   ownerGroupIdForDataset,
   generateCollections,

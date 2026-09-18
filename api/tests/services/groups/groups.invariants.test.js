@@ -278,7 +278,9 @@ describe('groups - invariants', () => {
       });
       groupsToDelete.push(g1.id);
 
-      // Second group must fail because `name` has a @unique constraint in the schema
+      // Both groups are roots, and no two roots may share a name: the unique index over
+      // (parent_id, name) carries NULLS NOT DISTINCT, so the two null parents collide.
+      // @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
       await expect(
         groupsService.createGroup({
           data: { name: sameName, description: 'second' },

@@ -185,6 +185,41 @@ This mostly bites in `prisma/seed.js`, and it surfaces only at the end of a rese
 
 ## Columns and constraints
 
+### Indexes Prisma cannot express, and the two opposite answers
+
+Two index features this repository uses cannot be written in `schema.prisma`, and they need
+opposite handling. Getting it backwards silently removes a constraint.
+
+**A partial unique index stays out of the schema.** Prisma cannot express a `WHERE` clause, and
+it does not introspect an index that has one, so the index is invisible to drift detection and
+survives untouched. `dataset_live_name_key`, from
+`20260917030000_dataset_live_name_unique`, is one. Write it in the migration, and put a comment
+on the model saying where it lives. Adding a stand-in `@@unique` describes an index that does
+not exist and becomes permanent drift.
+
+**A `NULLS NOT DISTINCT` index must be declared.** The clause is the only part Prisma cannot
+express; the index itself is an ordinary unique index over two columns, and Prisma does
+introspect those. An undeclared one is therefore drift, and the way Prisma closes that drift is
+to drop it. Running `migrate dev` after adding `group_parent_id_name_key` by hand produced a
+second migration containing one statement, `DROP INDEX "group_parent_id_name_key"`, and applied
+it. The constraint was gone and nothing said so.
+
+The fix is to declare it with the migration's own index name:
+
+```prisma
+@@unique([parent_id, name], map: "group_parent_id_name_key")
+```
+
+Prisma then sees an index it expects and leaves the nulls-not-distinct property alone.
+Verified on Prisma 6.19: after declaring it, `migrate dev --create-only` writes
+`-- This is an empty migration.`
+
+The property is load-bearing rather than cosmetic. `group.parent_id` is NULL for a root group,
+and a plain unique index treats every NULL as distinct, so two roots could share a name. Tested
+on PostgreSQL 18.6: the plain index admitted a second root named `CDMD`, and the
+nulls-not-distinct index refused it while still allowing the same name under two different
+parents. `NULLS NOT DISTINCT` needs PostgreSQL 15 or newer.
+
 ### A NOT NULL column both halves can write
 
 A constraint that only v2 code needs normally lives in the service, because v1 routes write the
