@@ -98,9 +98,8 @@
           </VaCard>
 
           <!--
-            A tree rather than a breadcrumb, because group names are long enough that a
-            horizontal path of three of them does not fit on one row. A root group gets no
-            card at all; there is no lineage to report.
+            A root group gets no card at all; there is no lineage to report. The tree itself is
+            GroupLineageTree, shared with the hover card in the group pickers.
           -->
           <VaCard v-if="sortedAncestors.length">
             <VaCardContent>
@@ -116,33 +115,10 @@
                   />
                 </span>
               </div>
-              <div class="flex flex-col text-sm">
-                <div
-                  v-for="item in treeItems"
-                  :key="item.isCurrent ? 'current' : item.id"
-                  class="flex items-start leading-6"
-                  :style="{
-                    paddingLeft:
-                      item.level === 0 ? '0' : `${(item.level - 1) * 1.25}rem`,
-                  }"
-                >
-                  <span
-                    v-if="item.level > 0"
-                    class="mr-1 select-none font-mono shrink-0"
-                    style="color: var(--va-secondary)"
-                    >└──</span
-                  >
-                  <RouterLink
-                    v-if="!item.isCurrent"
-                    :to="`/v2/groups/${item.id}`"
-                    class="hover:underline"
-                    style="color: var(--va-primary)"
-                  >
-                    {{ item.name }}
-                  </RouterLink>
-                  <span v-else class="font-semibold">{{ item.name }}</span>
-                </div>
-              </div>
+              <GroupLineageTree
+                :group="props.group"
+                :ancestors="props.ancestors"
+              />
             </VaCardContent>
           </VaCard>
         </div>
@@ -151,6 +127,20 @@
       <!-- Thin panel: what the caller can do, and how to refer to this group -->
       <div class="flex flex-col gap-4">
         <OverviewActions :actions="quickActions" />
+
+        <!--
+          The slug, because a name identifies a group only among its siblings and this is the
+          handle that does not. It addresses the public profile at /groups/slug/:slug, and it
+          is what somebody pastes into a group picker to reach a group that publishes nothing.
+          @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+        -->
+        <VaCard v-if="props.group.slug">
+          <VaCardContent>
+            <h2 class="v2-card-title mb-2">Identifier</h2>
+            <CopyText :text="props.group.slug" />
+          </VaCardContent>
+        </VaCard>
+
         <ProfileLinks :links="props.group.metadata?.links" />
         <ProfileCitation :citation="props.group.citation" kind="group" />
       </div>
@@ -182,6 +172,8 @@
 </template>
 
 <script setup>
+import CopyText from "@/components/utils/CopyText.vue";
+import GroupLineageTree from "@/components/v2/groups/GroupLineageTree.vue";
 import EditProfileModal from "@/components/v2/profiles/EditProfileModal.vue";
 import ProfileAbout from "@/components/v2/profiles/ProfileAbout.vue";
 import ProfileCitation from "@/components/v2/profiles/ProfileCitation.vue";
@@ -248,21 +240,6 @@ const showsMemberUploads = computed(
 const sortedAncestors = computed(() =>
   [...props.ancestors].sort((a, b) => b.depth - a.depth),
 );
-
-// flat list for tree rendering: each ancestor + current group as the leaf
-const treeItems = computed(() => [
-  ...sortedAncestors.value.map((ancestor, i) => ({
-    ...ancestor,
-    level: i,
-    isCurrent: false,
-  })),
-  {
-    id: null,
-    name: props.group.name,
-    level: sortedAncestors.value.length,
-    isCurrent: true,
-  },
-]);
 
 /**
  * Whether anything an admin wrote is present. The citation is excluded, because the API

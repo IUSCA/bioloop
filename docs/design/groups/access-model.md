@@ -129,6 +129,51 @@ filters project the row afterwards. Terms that name no resource, such as `isRequ
 hydrated policies. A list adds the restriction check as `restrictionPredicate` in
 `accessibleIdsQuery`.
 
+## What each search scope shows
+
+`POST /groups/search` takes a `scope`, and every group picker in the UI is one. The scopes split
+into two families, and the split is what makes the platform-admin column predictable.
+
+The first family asks what standing the caller holds. These read the caller's own membership
+rows, and the rule is the same for everybody.
+
+| Scope | Ordinary user | Platform admin |
+| --- | --- | --- |
+| `member_of` | groups where they hold a membership row | the same — their own rows, often none |
+| `administered` | groups where they hold an **admin** row | the same — their own admin rows, often none |
+| `overseen` | groups strictly below one they administer | the same — usually empty |
+
+The second family asks what the caller may reach. The platform-admin short-circuit applies, so all
+three become every group.
+
+| Scope | Ordinary user | Platform admin |
+| --- | --- | --- |
+| `visible` | any access path: an admin row, oversight, effective membership including ancestors, or a grant on a dataset the group owns | **every group** |
+| `can_administer` | the same list as `administered` | **every group** |
+| `discoverable` | `visible`, plus groups with a published profile, plus an exact id or slug | **every group** |
+
+The system principals are excluded from every scope. They are grant subjects rather than groups
+anybody joins, and the grant form offers them as their own controls.
+
+`searchAllGroups` serves a platform admin and `searchGroupsForUser` serves everybody else, which
+is why the second family adds no clause at all in the first function.
+
+**Where each scope is used.**
+
+| Surface | Scope | Why |
+| --- | --- | --- |
+| Groups listing tabs | `member_of`, `administered`, `overseen`, `visible` | the four tabs, in order |
+| Access-request subject picker | `can_administer` | requesting for a group is representing it |
+| Collection create, owning group | `can_administer` | `collection.create` is admin of the owning group |
+| Group create, parent | `visible` | only a platform admin reaches that form, so: every group |
+| Grant Access, group | `discoverable` | any group may hold a grant, so this is not about the grantor |
+
+**`discoverable` is the only scope that widens what a caller can enumerate.** A group whose
+profile is `PUBLIC` or `AUTHENTICATED` has opted into being found, and that is what makes it
+offerable to somebody who wants to share with it. A group that publishes nothing is reached only
+by its exact id or slug — matched exactly rather than as a pattern, so the lookup answers about
+the one identifier the caller already holds and cannot be walked a character at a time.
+
 ## The decision rule
 
 ```text
@@ -396,7 +441,7 @@ decided request or Revoke on a revoked grant, is hidden instead of disabled.
 | `_meta.standing` on a group search row | `standingOfRows`, the path rows from one statement for the page | the group cards and the dashboard badges | `tests/authorization/listFilter.test.js` |
 | `is_active` on a grant row | `isGrantActive`, the predicate of `valid_grants` | the grant panels | `tests/services/grants/isActive.test.js` |
 | the revoke preview | `previewRevoke`, from coverage over every path | `RevokeGrantModal` | `tests/services/grants/revokePreview.test.js` |
-| list `scope` | `RESOURCE_SCOPES` and the group scopes | the scope filters | `tests/model/listsArm.test.js`, for the `all` scope |
+| list `scope` | `RESOURCE_SCOPES` and `SEARCH_SCOPES` | the scope filters | `tests/model/listsArm.test.js`, for the `visible` scope; `tests/services/groups/groups.search-scopes.test.js` for the other five |
 | `/v2/users/me` facts | `user_role` and the membership views | the dashboard, the groups list, and the subject selector | `tests/services/groups/governanceCounts.test.js` |
 | refusal status and the 409 body | `createDecisionPipeline`: 404 without standing, 403 with it | `ErrorState` and the request form | `tests/routes/groups.invitations.test.js`, `tests/routes/access_requests.create.test.js` |
 | the actions archiving forbids | each resource type's own state rules, through `GET /v2/states/:type/archived/forbidden-actions` | the archive dialogs, through `stateLabels.js` | `tests/model/stateLabels.test.js` |

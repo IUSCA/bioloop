@@ -93,7 +93,7 @@ test('J2 — oversight stops at the branch', async ({ world, as }) => {
 
   // The sibling branch is absent from what she can enumerate, not merely refused on request.
   // `limit` is capped at 100 by the route's validator.
-  const groups = await alice.api.post('/groups/search', { scope: 'all', limit: 100 });
+  const groups = await alice.api.post('/groups/search', { scope: 'visible', limit: 100 });
   const names = groups.data.map((g) => g.name);
   expect(names).toContain(world.groups.subLab.name);
   expect(names).not.toContain(world.groups.siblingLab.name);

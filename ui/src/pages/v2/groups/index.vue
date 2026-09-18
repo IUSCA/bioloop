@@ -128,13 +128,17 @@ async function fetchGroups() {
       limit: itemsPerPage.value,
       offset: (currentPage.value - 1) * itemsPerPage.value,
     };
-    if (activeScope.value === "mine") {
-      params.scope = "direct";
-    } else if (activeScope.value === "admin") {
-      params.scope = "admin";
-    } else if (activeScope.value === "oversight") {
-      params.scope = "oversight";
-    }
+    // The tabs are the API's scopes under the words a person would use. "All Groups" is
+    // `visible`, which for a platform admin is every group and for everybody else is every
+    // group they have a path to.
+    // @see docs/design/groups/access-model.md — What each search scope shows
+    const SCOPE_OF_TAB = {
+      mine: "member_of",
+      admin: "administered",
+      oversight: "overseen",
+      all: "visible",
+    };
+    params.scope = SCOPE_OF_TAB[activeScope.value];
     const {
       data: { metadata, data: items },
     } = await GroupService.search(params);

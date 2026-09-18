@@ -69,7 +69,7 @@ const listed = {
     user_id: userId, sort_by: 'name', sort_order: 'asc', limit: EVERYTHING, offset: 0,
   })).data.map((c) => c.id),
   group: async (userId) => (await searchGroupsForUser({
-    user_id: userId, sort_by: 'name', sort_order: 'asc', limit: EVERYTHING, offset: 0, scope: 'all',
+    user_id: userId, sort_by: 'name', sort_order: 'asc', limit: EVERYTHING, offset: 0, scope: 'visible',
   })).data.map((g) => g.id),
 };
 

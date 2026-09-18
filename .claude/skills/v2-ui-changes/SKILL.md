@@ -51,6 +51,18 @@ A class string is intent, not what renders. Carry a claim with `evaluate_script`
   `el.closest('button')`.
 - **Stale JWT after `prisma migrate reset`** fails as a 409 constraint violation
   (`grant_granted_by_fkey`), not a 401. Visit `/dev-login` before debugging the write path.
+- **A dropdown that pages on scroll is checked by scripting the scroll,** because `take_snapshot`
+  only reports the rows already rendered. Set `el.scrollTop = el.scrollHeight` on the list
+  container in one `evaluate_script`, then count `[role="button"]` rows in the next; the count
+  should rise by a page. `PagedSearchSelect` renders its list as `div.absolute.overflow-y-auto`.
+- **A hover card that Vue opens on `@mouseenter` responds to a dispatched event.** The MCP
+  `hover` tool needs a uid from a snapshot, which is large for a long list; dispatching
+  `new MouseEvent('mouseenter')` on the row's inner element works instead, and
+  `event.currentTarget.getBoundingClientRect()` still resolves because the listener's own
+  element receives it.
+- **Check a group picker as `alice`, never `test_user`.** A platform admin short-circuits every
+  scope, so all four pickers show every group and no scope logic runs. `test_user` is the right
+  account only for the group-create parent picker, which is platform-admin-only by policy.
 
 ## Composable state
 

@@ -17,9 +17,9 @@
         <div>
           <h2 class="text-xl font-semibold">Create Collection</h2>
           <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Collections group datasets for scalable access management. Access given
-            on a collection extends to all its datasets and to all members of
-            the group it is given to.
+            Collections group datasets for scalable access management. Access
+            given on a collection extends to all its datasets and to all members
+            of the group it is given to.
           </p>
         </div>
       </div>
@@ -67,7 +67,14 @@
             </p>
 
             <div v-if="!formData.selectedOwnerGroup">
-              <AdminGroupSearchSelect
+              <!--
+                `collection.create` is `isCollectionAdmin`: admin of the group that will own it.
+                Member uploads widen who may create datasets, never collections.
+                @see docs/design/groups/access-model.md — What each search scope shows
+              -->
+              <GroupSelect
+                scope="can_administer"
+                placeholder="Search groups you administer…"
                 :disabled="loading"
                 @select="(group) => (formData.selectedOwnerGroup = group)"
               />
@@ -108,8 +115,8 @@
               <span class="font-semibold italic">
                 {{ formData.selectedOwnerGroup?.name }}
               </span>
-              can be added. Adding a dataset changes effective access for everyone
-              who has access to this collection.
+              can be added. Adding a dataset changes effective access for
+              everyone who has access to this collection.
             </ModernAlert>
 
             <DatasetSearchSelect

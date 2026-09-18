@@ -50,9 +50,15 @@
 
     <!-- Group mode: Show search and selection -->
     <div v-if="selectedMode === 'group'" class="flex flex-col gap-3">
-      <AdminGroupSearchSelect
-        v-model="selectedGroup"
-        @update:modelValue="handleGroupSelect"
+      <!--
+        Requesting access on behalf of a group is representing it, which is an admin act, so
+        the picker offers the groups this caller may govern.
+        @see docs/design/groups/access-model.md — What each search scope shows
+      -->
+      <GroupSelect
+        scope="can_administer"
+        placeholder="Search groups you administer…"
+        @select="onGroupSelected"
       />
 
       <!-- Show selected group -->
@@ -107,16 +113,19 @@ function selectMyself() {
 }
 
 /**
- * Handle group selection
+ * Record the chosen group, and tell the form.
+ *
+ * The picker emits `select`. It was wired to `v-model` and `@update:modelValue`, which it has
+ * never emitted, so choosing a group did nothing at all.
  */
-function handleGroupSelect(group) {
-  if (group?.id) {
-    emit("update:modelValue", {
-      id: group.id,
-      type: "GROUP",
-      group: group,
-    });
-  }
+function onGroupSelected(group) {
+  if (!group?.id) return;
+  selectedGroup.value = group;
+  emit("update:modelValue", {
+    id: group.id,
+    type: "GROUP",
+    group,
+  });
 }
 
 // Initialize with current user on mount

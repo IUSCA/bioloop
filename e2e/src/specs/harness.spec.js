@@ -78,7 +78,7 @@ test('membership rises through the hierarchy, and authority does not', async ({ 
   const [carol, alice] = await Promise.all([as('carol'), as('alice')]);
 
   // Carol is a direct member of the sub-lab only, and a transitive member above it.
-  const carolGroups = await carol.api.post('/groups/search', { scope: 'all', limit: 100 });
+  const carolGroups = await carol.api.post('/groups/search', { scope: 'visible', limit: 100 });
   const carolNames = carolGroups.data.map((g) => g.name);
   expect(carolNames).toEqual(expect.arrayContaining([
     world.groups.subLab.name, world.groups.lab.name, world.groups.center.name,

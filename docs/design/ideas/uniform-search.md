@@ -154,8 +154,10 @@ lists drifted.
   repeat this by hand today.
 - **`V2SearchInput`** gives every search box the same placeholder, clear control, `/` shortcut
   through `useSearchKeyShortcut`, and a hint below the minimum length.
-- **`V2SearchSelect`** is one base picker on the same composable. `GroupSearchSelect`,
-  `AdminGroupSearchSelect`, `DatasetSearchSelect`, and `UserSearchSelect` become thin wrappers.
+- **`V2SearchSelect`** is one base picker on the same composable. `PagedSearchSelect`,
+  `GroupSelect`, `DatasetSearchSelect`, and `UserSearchSelect` become thin wrappers.
+  `PagedSearchSelect` already owns the paging half of this, so it is the closest thing to the
+  base picker the plan describes.
 - **`Searchbar.vue` and `AutoCompleteSearch.vue` stay unchanged.** v1 pages use them, so the v2
   pieces are new files.
 

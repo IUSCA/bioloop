@@ -602,16 +602,19 @@ writes the table, and it holds under concurrency. An equivalent check in `create
 `updateGroup` protects only the call sites that exist when it is written.
 
 **Consequences to accept.** A name no longer identifies a group on its own, so every place that
-offers one for selection has to say which group it means: the grant and access-request subject
-pickers, and group search. They show the slug, which is unique system-wide and already present on
-every row the search returns.
+offers one for selection shows its ancestor path. `POST /groups/search` returns each row's
+ancestors, root first, built from `group_closure` at read time and never stored — which is what
+keeps a future re-parent a change to one table. A picker row shows the top of the tree, an
+ellipsis, and the parent, because three names do not fit on one line, and the whole tree on hover.
 
-The ancestor path reads better than a slug, and it is not available to these pickers. The group
-policy's public attribute list omits `ancestors[*]`, on the ground that the hierarchy is internal
-structure, and a picker may offer a group whose ancestors the caller is not entitled to see. A
-path would therefore have to be filtered row by row against what that caller may read. When that
-is settled, the path is derived from `group_closure` on read, as `getGroupAncestors` already does,
-and is never stored on the group.
+The ancestors are in the `list` attribute filter rather than behind a per-caller one. In a
+research portal the name of the centre a lab sits under is not the secret; what the lab owns is,
+and that stays behind its own policies. The anonymous profile audience still sees no ancestors,
+because a profile is published to the world and a picker is not.
+
+The slug remains the handle that never collides, so the group's Overview shows it with a copy
+button. It is what somebody pastes into the grant subject picker to reach a group that publishes
+no profile.
 
 An archived sibling keeps its name reserved. Freeing it would let a new group take the name and
 make unarchiving fail, so the reservation is deliberate.

@@ -160,6 +160,13 @@ Check in this order before editing code:
   in the same statement as its children, however the ids are ordered. `deleteGroup` in
   `tests/services/helpers.js` collects the subtree and deletes deepest first; a suite doing its
   own cleanup deletes in reverse creation order.
+- **A filter clause built by matching names fails open when no name matches.** The group search
+  builds its SQL by comparing `scope` against the known values; an unrecognised value matched no
+  branch and left the clause empty, which SQL reads as no restriction rather than no rows, so
+  every group came back. Renaming the scopes is what exposed it, and only
+  `tests/model/listsArm.test.js` caught it. Any function that turns a string into a clause needs
+  an explicit refusal for an unknown value — `assertKnownScope` answers 400 — plus a test that
+  feeds it the retired names.
 - **Operation sequences:** keep `size: 'max'` on `fc.commands`. Replay with
   `MODEL_SEQUENCE_SEED`. A group's parent is `group.parent_id`, mirrored by the
   `group_closure` row at depth 1.

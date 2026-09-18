@@ -50,8 +50,15 @@
           </button>
         </div>
 
-        <GroupSearchSelect
-          placeholder="Search groups by name"
+        <!--
+          Any group may hold a grant, so this is not about the grantor's standing. It offers
+          the groups they can already see, the groups that published a profile, and anything
+          resolved by an exact identifier somebody passed them.
+          @see docs/design/groups/access-model.md — What each search scope shows
+        -->
+        <GroupSelect
+          scope="discoverable"
+          placeholder="Search groups by name, or paste a slug"
           @select="onSelectGroup"
         />
       </div>

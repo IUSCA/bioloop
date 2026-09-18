@@ -36,7 +36,7 @@ router.post(
     body('sort_by').default('depth').isIn(['name', 'created_at', 'updated_at', 'depth']),
     body('sort_order').default('asc').isIn(['asc', 'desc']),
     body('is_archived').optional().isBoolean(),
-    body('scope').default('all').isIn(['all', 'direct', 'oversight', 'admin']),
+    body('scope').default('visible').isIn(groupService.SEARCH_SCOPES),
   ]),
   authorize('group', 'list'),
   asyncHandler(async (req, res) => {
@@ -48,7 +48,8 @@ router.post(
       'is_archived', 'scope',
     ])(req.body);
 
-    // check if search term is a valid UUID, if so, search by id instead of by text
+    // A pasted identifier is a lookup, not a text search. The slug stays in `search_term`,
+    // where the `discoverable` scope matches it exactly.
     if (params.search_term && isUUID(params.search_term)) {
       params.group_id = params.search_term;
       delete params.search_term;

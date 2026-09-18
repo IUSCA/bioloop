@@ -20,6 +20,47 @@ const assert = require('assert');
 const PRISMA_GROUP_INCLUDES = {};
 
 /**
+ * The system principals are grant subjects, not groups anybody joins or manages, so they never
+ * appear in a group listing. Excluded by id rather than slug, because a rename would silently
+ * put them back.
+ * @see docs/design/groups/decisions.md — 3. A public principal exists, and `Everyone` is renamed
+ */
+const EXCLUDE_SYSTEM_PRINCIPALS = Prisma.sql`g.id NOT IN (${Prisma.join(SYSTEM_PRINCIPAL_GROUP_IDS)})`;
+
+/**
+ * Each row's ancestors, root first, as a JSON array of { id, name, slug, depth }.
+ *
+ * A name identifies a group only among its siblings, so anything that offers a group for
+ * selection shows where it sits. The array is built from `group_closure` at read time and is
+ * never stored, which is what keeps a future re-parent a change to one table.
+ * @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+ */
+const ANCESTORS_JSON = Prisma.sql`(
+      SELECT COALESCE(
+        json_agg(
+          json_build_object('id', a.id, 'name', a.name, 'slug', a.slug, 'depth', ac.depth)
+          ORDER BY ac.depth DESC
+        ), '[]'::json)
+      FROM group_closure ac
+      JOIN "group" a ON a.id = ac.ancestor_id
+      WHERE ac.descendant_id = g.id AND ac.depth > 0
+    ) AS ancestors`;
+
+/**
+ * The scopes `POST /groups/search` accepts, and what each one means.
+ *
+ * Three of them are facts about the caller's own membership rows and mean the same thing for
+ * everybody. Three ask what the caller may reach, so the platform-admin short-circuit applies
+ * and all three become every group — which is why a platform admin is served by
+ * `searchAllGroups` and everyone else by `searchGroupsForUser`.
+ *
+ * @see docs/design/groups/access-model.md — What each search scope shows
+ */
+const SEARCH_SCOPES = Object.freeze([
+  'member_of', 'administered', 'overseen', 'visible', 'can_administer', 'discoverable',
+]);
+
+/**
  * Whether a write failed because a sibling already holds the name.
  *
  * The unique index is on (parent_id, name), so the only groups that can collide are the
@@ -885,6 +926,20 @@ async function demoteAdminToMember(group_id, {
 }
 
 /**
+ * Refuses a scope this file does not know.
+ *
+ * Both queries build the visibility clause from a chain of comparisons, so an unrecognised name
+ * matched nothing and left the clause empty — which is not "no rows" but "no restriction", and
+ * the search answered with every group in the database. Renaming the scopes is what surfaced it.
+ * @see docs/design/groups/access-model.md — What each search scope shows
+ */
+function assertKnownScope(scope) {
+  if (!SEARCH_SCOPES.includes(scope)) {
+    throw createError.BadRequest(`Unknown group search scope: ${scope}`);
+  }
+}
+
+/**
  * Search all groups with optional filters and pagination
  * @param {string} [group_id] - Optional group ID to filter by
  * @param {string} [search_term] - Optional search term to filter groups by name, tagline, description, or slug
@@ -893,7 +948,7 @@ async function demoteAdminToMember(group_id, {
  * @param {number} limit - Number of results to return
  * @param {number} offset - Pagination offset
  * @param {boolean|null} is_archived - Optional filter to include only archived (true), only non-archived (false), or all (null) groups
- * @param {string} scope - Scope of the search ('all', 'direct', 'oversight', 'admin')
+ * @param {string} scope - one of SEARCH_SCOPES; see its comment for what each shows
  * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching groups
  */
 async function searchGroupsForUser({
@@ -905,8 +960,10 @@ async function searchGroupsForUser({
   limit,
   offset,
   is_archived = null,
-  scope = 'all',
+  scope = 'visible',
 }) {
+  assertKnownScope(scope);
+
   let searchClause = Prisma.empty;
   if (search_term) {
     searchClause = Prisma.sql`(
@@ -926,30 +983,54 @@ async function searchGroupsForUser({
     archivedClause = Prisma.sql`g.is_archived = ${is_archived}`;
   }
 
-  // Visibility is any path to the group, including a grant on a resource it owns, which the
-  // group page admits too. `admin` and `direct` filter on the caller's own membership row.
+  // An exact identifier is how somebody reaches a group that is not discoverable: its admin
+  // sends them the slug, and this resolves it. Matched exactly rather than as a pattern, so it
+  // answers about the one name the caller already holds and cannot be used to enumerate.
+  let exactIdentifierClause = Prisma.empty;
+  if (scope === 'discoverable') {
+    const exact = [];
+    if (group_id) exact.push(Prisma.sql`g.id = ${group_id}`);
+    if (search_term) exact.push(Prisma.sql`g.slug = ${search_term}`);
+    if (exact.length > 0) exactIdentifierClause = Prisma.sql` OR ${Prisma.join(exact, ' OR ')}`;
+  }
+
+  // `p` is the access-path CTE: one row per way this caller reaches the group, including a
+  // grant on a dataset it owns. `member_of` and `administered` read the caller's own
+  // membership row instead and never consult it.
   // @see src/authorization/builtin/paths
+  // @see docs/design/groups/access-model.md — What each search scope shows
   let membershipClause = Prisma.empty;
-  if (scope === 'admin') {
+  if (scope === 'administered' || scope === 'can_administer') {
+    // For this caller the two are the same list. They differ only for a platform admin, and
+    // that caller is served by searchAllGroups.
     membershipClause = Prisma.sql`
         gu.role = ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
       `;
-  } else if (scope === 'direct') {
+  } else if (scope === 'member_of') {
     membershipClause = Prisma.sql`
         gu.role IS NOT NULL
       `;
-  } else if (scope === 'oversight') {
+  } else if (scope === 'overseen') {
     membershipClause = Prisma.sql`
       p.oversight
     `;
-  } else if (scope === 'all') {
+  } else if (scope === 'discoverable') {
+    // A group that published its profile has opted into being found, so it is offered
+    // alongside the ones this caller already reaches.
+    membershipClause = Prisma.sql`(
+      p.id IS NOT NULL
+      OR g.profile_visibility IN (
+        ${sqlUtils.enumToSql('AUTHENTICATED')}, ${sqlUtils.enumToSql('PUBLIC')}
+      )${exactIdentifierClause}
+    )`;
+  } else if (scope === 'visible') {
     membershipClause = Prisma.sql`
     p.id IS NOT NULL
   `;
   }
 
   const finalWhereClause = sqlUtils.buildWhereClause(
-    [searchClause, idFilterClause, archivedClause, membershipClause],
+    [searchClause, idFilterClause, archivedClause, membershipClause, EXCLUDE_SYSTEM_PRINCIPALS],
     ' AND ',
   );
 
@@ -963,7 +1044,8 @@ async function searchGroupsForUser({
     SELECT 
       g.*, 
       ( select count(*) from active_group_user where group_id = g.id ) as size,
-      ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth -- for sorting
+      ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth, -- for sorting
+      ${ANCESTORS_JSON}
     FROM "group" g
     -- 1-on-1 join because of unique constraint on (group_id, user_id)
     LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
@@ -1017,7 +1099,7 @@ async function searchGroupsForUser({
  * @param {number} limit - Number of results to return
  * @param {number} offset - Pagination offset
  * @param {boolean|null} is_archived - Optional filter to include only archived (true), only non-archived (false), or all (null) groups
- * @param {string} scope - direct | oversight | admin | all
+ * @param {string} scope - one of SEARCH_SCOPES; see its comment for what each shows
  * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching groups
  */
 async function searchAllGroups({
@@ -1029,8 +1111,10 @@ async function searchAllGroups({
   limit,
   offset,
   is_archived = null,
-  scope = 'all',
+  scope = 'visible',
 }) {
+  assertKnownScope(scope);
+
   let searchClause = Prisma.empty;
   if (search_term) {
     searchClause = Prisma.sql`(
@@ -1050,30 +1134,29 @@ async function searchAllGroups({
     archivedClause = Prisma.sql`g.is_archived = ${is_archived}`;
   }
 
+  // Only the three membership scopes narrow anything here. `visible`, `can_administer`, and
+  // `discoverable` ask what this caller may reach, and a platform admin reaches every group,
+  // so they add no clause at all.
+  // @see docs/design/groups/access-model.md — What each search scope shows
   let membershipClause = Prisma.empty;
-  if (scope === 'admin') {
+  if (scope === 'administered') {
     membershipClause = Prisma.sql`
         gu.role = ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
       `;
-  } else if (scope === 'direct') {
+  } else if (scope === 'member_of') {
     membershipClause = Prisma.sql`
         gu.role IS NOT NULL
       `;
-  } else if (scope === 'oversight') {
-    // only show groups user administers
+  } else if (scope === 'overseen') {
+    // strictly below a group this platform admin holds an admin row in, which is their own
+    // standing rather than their platform authority
     membershipClause = Prisma.sql`
       og.id IS NOT NULL
     `;
   }
 
-  // The system principals are grant subjects, not groups anybody joins or manages, so they
-  // never appear in a group listing. Excluded by id rather than slug, because a rename
-  // would silently put them back.
-  // @see docs/design/groups/decisions.md — 3. A public principal exists, and `Everyone` is renamed
-  const excludeSystemPrincipalsClause = Prisma.sql`g.id NOT IN (${Prisma.join(SYSTEM_PRINCIPAL_GROUP_IDS)})`;
-
   const finalWhereClause = sqlUtils.buildWhereClause(
-    [searchClause, idFilterClause, archivedClause, membershipClause, excludeSystemPrincipalsClause],
+    [searchClause, idFilterClause, archivedClause, membershipClause, EXCLUDE_SYSTEM_PRINCIPALS],
     ' AND ',
   );
 
@@ -1089,7 +1172,8 @@ async function searchAllGroups({
       SELECT 
         g.*,
         ( select count(*) from active_group_user where group_id = g.id ) as size,
-        ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth -- for sorting
+        ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth, -- for sorting
+        ${ANCESTORS_JSON}
       FROM "group" g
       LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
       LEFT JOIN oversight_groups og ON og.id = g.id
@@ -1355,6 +1439,7 @@ async function governanceCounts(user_id) {
 }
 
 module.exports = {
+  SEARCH_SCOPES,
   governanceCounts,
   createGroup,
   getGroupById,

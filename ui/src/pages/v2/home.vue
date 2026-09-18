@@ -556,7 +556,7 @@ async function load() {
     }),
     attempt("Your groups", async () => {
       const response = await GroupService.search({
-        scope: "all",
+        scope: "visible",
         limit: PANEL_ROWS,
         sort_by: "depth",
         sort_order: "asc",
@@ -612,12 +612,12 @@ async function load() {
       attempt("Groups you administer", async () => {
         const [admin, oversight] = await Promise.all([
           GroupService.search({
-            scope: "admin",
+            scope: "administered",
             limit: PANEL_ROWS,
             sort_by: "depth",
             sort_order: "asc",
           }),
-          GroupService.search({ scope: "oversight", limit: PANEL_ROWS }),
+          GroupService.search({ scope: "overseen", limit: PANEL_ROWS }),
         ]);
         administeredGroups.value = totalOf(admin);
         oversightGroups.value = totalOf(oversight);

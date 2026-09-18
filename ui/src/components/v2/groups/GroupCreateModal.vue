@@ -147,8 +147,16 @@
               </label>
 
               <div v-if="!formData.selectedParentGroup">
-                <AdminGroupSearchSelect
-                  :disabled="false"
+                <!--
+                  Creating a root group is platform-admin only, and this branch is only
+                  reachable from that button, so the parent may be any group in the system. A
+                  group admin creates a subgroup from inside the group instead, where the
+                  parent is fixed and there is no picker.
+                  @see docs/design/groups/access-model.md — What each search scope shows
+                -->
+                <GroupSelect
+                  scope="visible"
+                  placeholder="Search all groups…"
                   @select="(group) => (formData.selectedParentGroup = group)"
                 />
               </div>

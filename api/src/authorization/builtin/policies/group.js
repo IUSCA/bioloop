@@ -256,7 +256,17 @@ groupPolicies
       {
         policy: Policy.always,
         // `depth` is the row's place in a search or a lineage, not a field of the group.
-        attribute_filters: PUBLIC_ATTRIBUTES.concat(['depth']),
+        //
+        // The ancestors come with the row because a name identifies a group only among its
+        // siblings, so a picker that offers two groups called Imaging Core has to say which
+        // centre each belongs to. In a research portal the name of the centre a lab sits
+        // under is not the secret; what the lab owns is, and that stays behind its own
+        // policies. The anonymous profile audience still sees no ancestors.
+        // @see docs/design/groups/decisions.md — 20. Group names are unique among siblings
+        attribute_filters: PUBLIC_ATTRIBUTES.concat([
+          'depth',
+          'ancestors[*].id', 'ancestors[*].name', 'ancestors[*].slug', 'ancestors[*].depth',
+        ]),
       },
     ],
   })
