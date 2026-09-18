@@ -522,7 +522,8 @@ model group {
   slug        String  @unique
   // Immutable directory name for this group's archives. Derived from the slug at creation
   // and never updated, because slug is regenerated whenever the group is renamed and an
-  // archive layout built on it would fragment on the first rename.
+  // archive layout built on it would fragment on the first rename. The trigger
+  // `group_archive_key_immutable` refuses any UPDATE that changes it.
   // @see docs/design/groups/dataset-storage.md — Archival
   archive_key String  @unique
   description String?

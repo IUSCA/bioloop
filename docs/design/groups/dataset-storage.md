@@ -62,7 +62,9 @@ what the path means.
 
 **The group key is not the slug.** `group.slug` is regenerated whenever a group is renamed,
 so an archive layout built on it would fragment the first time somebody renames a group.
-`group.archive_key` is derived from the slug at creation and never updated.
+`group.archive_key` is derived from the slug at creation and never updated. The trigger
+`group_archive_key_immutable` refuses any statement that changes it, because a service that
+writes an explicit column list protects only the call sites it knows about.
 
 **Nothing is added to the bundle.** End users download it, so any metadata inside it is
 published to everyone who can read the dataset. See
