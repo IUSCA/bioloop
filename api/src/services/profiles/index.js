@@ -23,8 +23,13 @@ const CONFLICT_ERROR_MESSAGE = 'This profile was changed by somebody else. Reloa
 
 const VISIBILITIES = Object.values(PROFILE_VISIBILITY);
 
-/** The three JSON keys a profile owns. Everything else under `metadata` is left alone. */
-const PROFILE_METADATA_KEYS = ['links', 'citation', 'publications'];
+/**
+ * The JSON keys a profile owns. Everything else under `metadata` is left alone.
+ *
+ * `type` is a group's short word under its name and is written only on a group; a collection
+ * renders nothing from it, so the collection route cannot set it.
+ */
+const PROFILE_METADATA_KEYS = ['links', 'citation', 'publications', 'type'];
 
 /**
  * The citation rendered when an admin has set none.
@@ -72,8 +77,12 @@ function resolveCitation(row, kind) {
  *
  * Absent keys are left alone; an explicit null clears the field. Returns `null` for a body
  * that asks for no change at all, so a caller can refuse it rather than burning a version.
+ *
+ * @param {Object} body - the request body
+ * @param {Object} currentMetadata - the row's `metadata` as it stands
+ * @param {'group'|'collection'} model - which type is being written; `type` is a group's field
  */
-function buildProfileUpdate(body, currentMetadata) {
+function buildProfileUpdate(body, currentMetadata, model = 'group') {
   const columns = {};
   const metadata = {};
 
@@ -86,6 +95,12 @@ function buildProfileUpdate(body, currentMetadata) {
       );
     }
     columns.profile_visibility = body.profile_visibility;
+  }
+
+  // Only a group carries a type. A collection sending one is ignored rather than refused,
+  // the same way every other unknown key in the body is.
+  if (model === 'group' && 'type' in body) {
+    metadata.type = validate.validateGroupType(body.type);
   }
 
   if ('links' in body) metadata.links = validate.validateLinks(body.links);
@@ -127,7 +142,7 @@ async function updateProfile({
   return prisma.$transaction(async (tx) => {
     const current = await lockedForEdit(tx, model, id);
 
-    const update = buildProfileUpdate(body, current.metadata);
+    const update = buildProfileUpdate(body, current.metadata, model);
     if (!update) throw createError.BadRequest('No profile fields were supplied.');
 
     let updated;

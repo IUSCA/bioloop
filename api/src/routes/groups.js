@@ -298,6 +298,7 @@ router.patch(
     body('tagline').optional({ nullable: true }),
     body('about_md').optional({ nullable: true }),
     body('profile_visibility').optional().isString(),
+    body('type').optional({ nullable: true }),
     body('links').optional({ nullable: true }).isArray(),
     body('citation').optional({ nullable: true }),
     body('publications').optional({ nullable: true }).isArray(),

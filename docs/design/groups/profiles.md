@@ -38,8 +38,8 @@ and a grant to `Public`. The UI names them differently and says which one moves 
 ## The columns
 
 `tagline`, `about_md`, and `profile_visibility` are typed columns on both models. Links,
-citation, and publications are keys under `metadata`. The API validates them on write in
-`api/src/services/profiles/validate.js`.
+citation, publications, and a group's `type` are keys under `metadata`. The API validates them
+on write in `api/src/services/profiles/validate.js`.
 
 - **A profile carries no picture.** Text is what a profile is for, and an uploaded image costs
   a byte store, a public byte route, and a size limit that fails at the worst moment. A group
@@ -52,6 +52,16 @@ citation, and publications are keys under `metadata`. The API validates them on 
 - **A publication is a DOI with optional decoration.** The title, container, and year are what
   an admin typed. Nothing resolves the DOI, and the link always goes through `doi.org`.
 - **`profile_visibility` defaults to `PRIVATE`.** Going public is always a deliberate act.
+- **`metadata.type` is a group's own word for what it is**, such as `lab` or `core`. It is
+  stored lower case and rendered under the name on every card, and `GroupIcon` reads it to pick
+  an icon and a colour. A collection has none; nothing renders one, so `buildProfileUpdate`
+  reads the key only for a group.
+- **`type` is not an enum.** `GROUP_TYPES` lists the four the icon map knows — `lab`, `project`,
+  `center`, `core` — and the edit form offers those as a click beside a free text box. A word
+  that is not on the list is stored as typed and wears the default icon. An institute is not a
+  lab, and refusing its own name to keep a closed list would be the wrong trade. What is
+  enforced is shape: letters, digits, spaces, and hyphens, at most 32 characters, because the
+  value is rendered on a public profile and belongs to a label rather than to markup.
 
 Profile editing reuses `edit_metadata`. A separate `edit_profile` action would carry the same
 policy and give a reader two things to keep in step.

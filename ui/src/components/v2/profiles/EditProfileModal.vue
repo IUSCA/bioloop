@@ -22,20 +22,17 @@
           Visibility sits above the tabs rather than inside one, because it decides who
           everything below it is written for. A tab would hide that decision behind a click.
         -->
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+        <div class="flex flex-col gap-2">
           <label class="text-xs font-semibold uppercase tracking-wide">
             Who can see this profile
           </label>
-          <VaButtonToggle
+          <RadioCardGroup
             v-model="form.profile_visibility"
-            size="small"
-            preset="secondary"
+            name="profile-visibility"
+            label="Who can see this profile"
             :options="VISIBILITY_OPTIONS"
-            value-by="value"
+            :columns="3"
           />
-          <p class="text-xs basis-full" style="color: var(--va-secondary)">
-            {{ visibilityHint }}
-          </p>
         </div>
 
         <VaTabs
@@ -70,6 +67,59 @@
         <div class="min-h-[380px]">
           <!-- Profile: the one line under the name, and the body. -->
           <div v-if="activeTab === 'profile'" class="flex flex-col gap-5">
+            <!--
+              Type: the word under the name on every card, and what picks the group's icon.
+              A collection has none — nothing renders it — so the block is group-only.
+            -->
+            <div v-if="props.kind === 'group'" class="flex flex-col gap-2">
+              <label class="text-xs font-semibold uppercase tracking-wide">
+                Type
+              </label>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="choice in TYPE_CHOICES"
+                  :key="choice.value"
+                  type="button"
+                  class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-solid text-sm transition cursor-pointer"
+                  :class="
+                    isTypeChoiceSelected(choice)
+                      ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-gray-900 dark:text-gray-100'
+                      : 'border-gray-300 dark:border-gray-600 bg-transparent text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500'
+                  "
+                  :aria-pressed="isTypeChoiceSelected(choice)"
+                  @click="selectTypeChoice(choice)"
+                >
+                  <!--
+                    The real icon and colour the group will wear, so the choice shows its
+                    own result rather than describing it.
+                  -->
+                  <GroupIcon
+                    v-if="choice.value"
+                    :group="{ metadata: { type: choice.value } }"
+                    size="xs"
+                  />
+                  <Icon v-else :icon="choice.icon" class="text-base" />
+                  {{ choice.label }}
+                </button>
+              </div>
+
+              <VaInput
+                v-if="typeIsCustom"
+                v-model="form.type"
+                outline
+                class="max-w-xs"
+                placeholder="e.g. institute, facility, consortium"
+                :max-length="TYPE_MAX"
+                counter
+                :rules="typeRules"
+              />
+
+              <p class="text-xs" style="color: var(--va-secondary)">
+                Shown under the name on cards and search results. A type of its
+                own gets its own icon; anything else gets the general one.
+              </p>
+            </div>
+
             <!-- Tagline -->
             <div class="flex flex-col gap-1.5">
               <VaInput
@@ -290,6 +340,8 @@
 </template>
 
 <script setup>
+import RadioCardGroup from "@/components/utils/RadioCardGroup.vue";
+import GroupIcon from "@/components/v2/groups/GroupIcon.vue";
 import ProfileAboutBody from "@/components/v2/profiles/ProfileAboutBody.vue";
 import toast from "@/services/toast";
 import ProfileService from "@/services/v2/profiles";
@@ -331,10 +383,53 @@ const LINKS_MAX = 10;
 const PUBLICATIONS_MAX = 20;
 const DOI_PATTERN = /^10\.\d{4,9}\/\S+$/;
 
+/** Mirrors GROUP_TYPE_MAX_CHARS and GROUP_TYPE_PATTERN in api/src/services/profiles/validate.js. */
+const TYPE_MAX = 32;
+const TYPE_PATTERN = /^[\p{L}\p{N} -]+$/u;
+
+/**
+ * The four types `GroupIcon` draws an icon for, plus an escape hatch either way.
+ *
+ * The list is not the set of legal values — the API takes any short word. These are the ones
+ * that look like something, so they are worth offering as a click.
+ */
+const TYPE_CHOICES = [
+  { value: "lab", label: "Lab" },
+  { value: "project", label: "Project" },
+  { value: "center", label: "Center" },
+  { value: "core", label: "Core" },
+  { value: "custom", label: "Other…", icon: "mdi-pencil-outline" },
+  { value: "", label: "No type", icon: "mdi-minus-circle-outline" },
+];
+
+const PRESET_TYPES = TYPE_CHOICES.map((c) => c.value).filter(
+  (v) => v && v !== "custom",
+);
+
+/**
+ * The description on each card is the whole point of the card: visibility is the one field
+ * in this form whose wrong value is disclosure, and "Signed-in users" does not say on its own
+ * that it means every Bioloop account rather than every member.
+ */
 const VISIBILITY_OPTIONS = [
-  { value: "PRIVATE", label: "Members only" },
-  { value: "AUTHENTICATED", label: "Signed-in users" },
-  { value: "PUBLIC", label: "Anyone on the web" },
+  {
+    value: "PRIVATE",
+    label: "Members only",
+    icon: "mdi-lock-outline",
+    description: "Only members and admins can open this profile.",
+  },
+  {
+    value: "AUTHENTICATED",
+    label: "Signed-in users",
+    icon: "mdi-account-multiple-outline",
+    description: "Any signed-in Bioloop user can open this profile.",
+  },
+  {
+    value: "PUBLIC",
+    label: "Anyone on the web",
+    icon: "mdi-earth",
+    description: "Anyone with the link can open it without signing in.",
+  },
 ];
 
 const LINK_TYPE_OPTIONS = [
@@ -344,12 +439,6 @@ const LINK_TYPE_OPTIONS = [
   { value: "contact_email", label: "Contact email" },
   { value: "other", label: "Other" },
 ];
-
-const VISIBILITY_HINTS = {
-  PRIVATE: "Only members and admins can open this profile.",
-  AUTHENTICATED: "Any signed-in Bioloop user can open this profile.",
-  PUBLIC: "Anyone with the link can open this profile without signing in.",
-};
 
 const visible = ref(false);
 const saving = ref(false);
@@ -368,13 +457,42 @@ const doiRules = [
   (v) => !v || DOI_PATTERN.test(v.trim()) || "Not a DOI (starts with 10.)",
 ];
 
-const visibilityHint = computed(
-  () => VISIBILITY_HINTS[form.value.profile_visibility] ?? "",
-);
+const typeRules = [
+  (v) => !v || v.length <= TYPE_MAX || `At most ${TYPE_MAX} characters`,
+  (v) =>
+    !v ||
+    TYPE_PATTERN.test(v.trim()) ||
+    "Letters, digits, spaces, and hyphens only",
+];
+
+/**
+ * Whether the type is being typed rather than picked. Kept outside `form` so toggling it
+ * does not read as an unsaved change; `form.type` is the only value that is saved.
+ */
+const typeIsCustom = ref(false);
+
+function isTypeChoiceSelected(choice) {
+  if (choice.value === "custom") return typeIsCustom.value;
+  if (choice.value === "") return !typeIsCustom.value && !form.value.type;
+  return !typeIsCustom.value && form.value.type === choice.value;
+}
+
+function selectTypeChoice(choice) {
+  if (choice.value === "custom") {
+    // A preset in the box would be confusing to edit into something else; a custom value
+    // already there is the one the person came back to.
+    if (PRESET_TYPES.includes(form.value.type)) form.value.type = "";
+    typeIsCustom.value = true;
+    return;
+  }
+  typeIsCustom.value = false;
+  form.value.type = choice.value;
+}
 
 function blankForm() {
   return {
     profile_visibility: "PRIVATE",
+    type: "",
     tagline: "",
     about_md: "",
     citation: "",
@@ -390,6 +508,7 @@ const hasChanges = computed(
 function show() {
   form.value = {
     profile_visibility: props.profileVisibility ?? "PRIVATE",
+    type: props.metadata?.type ?? "",
     tagline: props.tagline ?? "",
     about_md: props.aboutMd ?? "",
     citation: props.metadata?.citation ?? "",
@@ -406,6 +525,10 @@ function show() {
     })),
   };
   baseline.value = JSON.stringify(form.value);
+  // A stored word the chips do not offer opens the text box, so the value is visible and
+  // editable rather than silently unrepresented by any selected chip.
+  typeIsCustom.value =
+    !!form.value.type && !PRESET_TYPES.includes(form.value.type);
   activeTab.value = "profile";
   aboutTab.value = "write";
   visible.value = true;
@@ -447,6 +570,11 @@ function buildPayload() {
 
   if (now.profile_visibility !== before.profile_visibility) {
     payload.profile_visibility = now.profile_visibility;
+  }
+  // A collection has no type, and sending one would be ignored anyway; leaving it out keeps
+  // the payload honest about what the form asked for.
+  if (props.kind === "group" && now.type !== before.type) {
+    payload.type = orNull(now.type);
   }
   if (now.tagline !== before.tagline) payload.tagline = orNull(now.tagline);
   if (now.about_md !== before.about_md) payload.about_md = orNull(now.about_md);
