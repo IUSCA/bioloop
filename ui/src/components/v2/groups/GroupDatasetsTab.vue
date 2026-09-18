@@ -221,7 +221,7 @@ function stateAdmits(action) {
 /** The words a disabled control shows for why the state withholds it. */
 const DISABLED_REASON = "This group is archived.";
 
-// const emit = defineEmits(["count-changed"]);
+const emit = defineEmits(["count-changed"]);
 
 const addDatasetModal = ref(null);
 const datasets = ref([]);
@@ -319,6 +319,7 @@ function onDatasetCreated() {
   // An import lands immediately; an upload has only been registered at this point, and its
   // transfer is reported by the tray. Refetching covers both.
   fetchDatasets();
+  emit("count-changed");
 }
 
 function resetFilters() {
