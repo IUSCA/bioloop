@@ -26,6 +26,10 @@ The reasoning and worked examples behind every rule here are in
   with `Test Suites: 1 failed` and `Tests: 0 total`, under a wall of
   `WARNING: NODE_ENV value of 'test' did not match any deployment config file names`. Nothing
   says the path was wrong.
+- **`npx jest` is not a substitute for the local binary.** It resolves a copy outside the
+  project, so `module-alias/register` never rewrites `@/`, and every suite that imports
+  `@/authorization` dies with `Cannot find module '@/authorization'`. That reads as a broken
+  import in the test rather than a wrong runner. `npm test --` from `api/` also works.
 - **Read the first line of the output before the summary.** A shell error means no results.
 - **A file argument that matches nothing is skipped silently** when another argument matches.
   Run `ls` on the arguments, or check the suite count in the summary against what you meant.

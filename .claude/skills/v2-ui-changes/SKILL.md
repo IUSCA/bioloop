@@ -45,6 +45,12 @@ A class string is intent, not what renders. Carry a claim with `evaluate_script`
   walk `__vueParentComponent` up to the named component, then assign
   `c.setupState.form.sourceId = 2` (plain value, never `.value`, which throws). Playwright's
   real input drives `va-select` normally, so e2e tests need no workaround.
+- **`VaTextarea` and `VaInput` ignore a plain `el.value = "…"`.** Vue listens for a real
+  `input` event and React-style value assignment does not raise one. Call the native setter,
+  then dispatch: `Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")`
+  `.set.call(el, text); el.dispatchEvent(new Event("input", { bubbles: true }))`. Without the
+  event the box shows the text and the model stays empty, so a required-field button stays
+  disabled and the form looks broken rather than undriven.
 - **`va-checkbox`:** click the enclosing `button` uid from the snapshot, not the `checkbox` uid.
   A `disabled` checked box in the access-type selector is implied, not chosen.
 - **Finding a button by text returns the outermost wrapper.** Take the last match and click
@@ -91,6 +97,12 @@ A class string is intent, not what renders. Carry a claim with `evaluate_script`
 
 ## Page structure traps
 
+- **A `VaModal` body already scrolls.** `.va-modal__inner` is the scroll container, so a
+  `max-h-* overflow-y-auto` on a list inside it makes a second one: the inner list clips its
+  last row mid-sentence with nothing to say more exists, and the wheel fights over which
+  region moves. Let the modal body do the scrolling. Find every nested pair with one sweep:
+  `[...document.querySelectorAll('*')].filter(el => el.scrollHeight > el.clientHeight + 20`
+  `&& el.clientHeight > 100)` and read the class names it returns.
 - **A `ref` into a sibling tab is `null`.** Only one tab renders (`v-if`), so
   `otherTabRef?.method?.()` silently does nothing. Lift the shared modal or refetch to the page.
 - **`ErrorState` needs `:error="err"`, the object.** A flattened string loses the status, so the

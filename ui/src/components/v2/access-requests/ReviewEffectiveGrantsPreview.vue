@@ -1,52 +1,60 @@
 <template>
-  <div class="flex flex-col h-full">
-    <!-- Preview content -->
-    <div class="flex-1 overflow-auto">
-      <!-- No approved items yet -->
-      <div
-        v-if="!props.approvedItemsPayload?.length"
-        class="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-6 text-center"
-      >
-        <i-mdi-information-outline
-          class="text-3xl text-gray-300 dark:text-gray-600 mx-auto mb-2"
-        />
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          Approve at least one item to preview the access that will be given.
-        </p>
-      </div>
-
-      <!-- Loading state -->
-      <div v-else-if="loading" class="space-y-1">
-        <div class="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-        <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-        <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-      </div>
-
-      <!-- Error state -->
-      <div
-        v-else-if="error"
-        class="rounded-lg border border-solid border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3"
-      >
-        <div class="text-xs text-red-700 dark:text-red-300">
-          {{ error }}
-        </div>
-        <button
-          @click="retry"
-          class="mt-2 text-xs font-medium text-red-600 dark:text-red-400 hover:underline"
-        >
-          Retry
-        </button>
-      </div>
-
-      <!-- Grants preview -->
-      <EffectiveGrantsPreview
-        v-else
-        :rows="responseRows"
-        :loading="loading"
-        :error="error"
-        description="What will actually be given based on your decisions"
-      />
+  <div>
+    <!-- EffectiveGrantsPreview draws this heading itself once it has rows. The other three
+         states repeat it, so the panel does not gain and lose a title as decisions change. -->
+    <div v-if="!hasRows" class="mb-2">
+      <p class="text-sm font-medium uppercase tracking-wide">Access preview</p>
+      <p class="mt-1 text-xs va-text-secondary">
+        What will actually be given based on your decisions
+      </p>
     </div>
+
+    <!-- Nothing approved yet -->
+    <div
+      v-if="!props.approvedItemsPayload?.length"
+      class="rounded-lg border border-dashed border-gray-300 p-6 text-center dark:border-gray-600"
+    >
+      <i-mdi-information-outline
+        class="mx-auto mb-2 text-3xl text-gray-400 dark:text-gray-600"
+      />
+      <p class="text-sm va-text-secondary">
+        Approve an item to see the access it gives.
+      </p>
+    </div>
+
+    <!-- Loading state -->
+    <div
+      v-else-if="loading"
+      class="space-y-2 rounded-lg border border-solid border-gray-200 p-3 dark:border-gray-700"
+    >
+      <div class="h-6 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
+      <div class="h-6 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
+      <div class="h-6 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
+    </div>
+
+    <!-- Error state -->
+    <div
+      v-else-if="error"
+      class="rounded-lg border border-solid border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20"
+    >
+      <p class="text-xs text-red-700 dark:text-red-300">{{ error }}</p>
+      <button
+        type="button"
+        class="focus-ring mt-2 text-xs font-medium text-red-600 hover:underline dark:text-red-400"
+        @click="retry"
+      >
+        Try again
+      </button>
+    </div>
+
+    <!-- Grants preview -->
+    <EffectiveGrantsPreview
+      v-else
+      :rows="responseRows"
+      :loading="loading"
+      :error="error"
+      description="What will actually be given based on your decisions"
+    />
   </div>
 </template>
 
@@ -54,7 +62,7 @@
 import EffectiveGrantsPreview from "@/components/v2/grants/issue/EffectiveGrantsPreview.vue";
 import grantsService from "@/services/v2/grants";
 import { debounce } from "lodash-es";
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 
 const props = defineProps({
   request: {
@@ -79,6 +87,11 @@ const props = defineProps({
 const loading = ref(false);
 const error = ref(null);
 const responseRows = ref([]);
+
+// True only in the state where EffectiveGrantsPreview draws its own heading.
+const hasRows = computed(
+  () => !!props.approvedItemsPayload?.length && !loading.value && !error.value,
+);
 
 // Convert ISO date string to appropriate format for API
 const formatExpiryForApi = (expiry) => {

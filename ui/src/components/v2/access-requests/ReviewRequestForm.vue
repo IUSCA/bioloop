@@ -1,46 +1,43 @@
 <template>
-  <form @submit.prevent="emit('submit')" class="flex flex-col h-full space-y-4">
-    <!-- Request Context Header -->
-    <ModernCard>
+  <form @submit.prevent="emit('submit')" class="flex flex-col gap-6">
+    <ModernCard title="Request">
       <RequestContextHeader :request="props.request" />
     </ModernCard>
 
-    <!-- Bulk Action Shortcuts -->
-    <div
-      v-if="props.request?.access_request_items?.length"
-      class="flex items-center gap-2"
-    >
-      <button
-        type="button"
-        @click="formState.approveAll()"
-        class="text-xs font-medium px-3 py-1.5 rounded transition-colors duration-200 bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50"
-      >
-        <i-mdi-check-all class="inline mr-1" />
-        Approve All
-      </button>
-      <button
-        type="button"
-        @click="formState.rejectAll()"
-        class="text-xs font-medium px-3 py-1.5 rounded transition-colors duration-200 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
-      >
-        <i-mdi-close-circle-multiple-outline class="inline mr-1" />
-        Reject All
-      </button>
-    </div>
+    <section v-if="items.length" class="flex flex-col gap-3">
+      <header class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-baseline gap-2">
+          <h3 class="v2-card-title">Your decisions</h3>
+          <span class="text-xs va-text-secondary">
+            {{ decidedCount }} of {{ items.length }} decided
+          </span>
+        </div>
 
-    <!-- Items Section -->
-    <div
-      v-if="props.request?.access_request_items?.length"
-      class="space-y-2 max-h-80 overflow-y-auto"
-    >
-      <p
-        class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 px-1"
-      >
-        Request Items
-      </p>
-      <TransitionGroup name="list" tag="div" class="space-y-2">
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            :class="BULK_ACTION"
+            @click="formState.approveAll()"
+          >
+            <i-mdi-check-all class="text-sm" />
+            Approve all
+          </button>
+          <button
+            type="button"
+            :class="BULK_ACTION"
+            @click="formState.rejectAll()"
+          >
+            <i-mdi-close-circle-multiple-outline class="text-sm" />
+            Reject all
+          </button>
+        </div>
+      </header>
+
+      <!-- No inner scroll. The modal body is already a scrolling region, and a second one
+           clipped the last row mid-sentence with nothing to say it had more. -->
+      <TransitionGroup name="list" tag="div" class="flex flex-col gap-2">
         <ReviewItemRow
-          v-for="item in props.request.access_request_items"
+          v-for="item in items"
           :key="item.id"
           :item="item"
           :decision="formState.decisions.get(item.id)"
@@ -49,64 +46,42 @@
           @update:approved-expiry="(e) => formState.setExpiry(item.id, e)"
         />
       </TransitionGroup>
-    </div>
+    </section>
 
-    <!-- Decision Reason -->
-    <div class="space-y-2">
-      <p
-        class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
-      >
-        <span>Decision Reason</span>
-        <span class="text-red-500">*</span>
+    <section class="flex flex-col gap-2">
+      <h3 class="v2-card-title">
+        Decision reason
+        <span class="text-red-600 dark:text-red-400" aria-hidden="true">*</span>
+      </h3>
+      <p class="text-xs va-text-secondary">
+        The requester sees this, whatever you decide.
       </p>
       <VaTextarea
         :model-value="decisionReasonValue"
         @update:model-value="updateDecisionReason"
-        placeholder="Explain your decisions — especially any rejections..."
+        placeholder="Explain your decisions — especially any rejections…"
         class="w-full"
+        aria-label="Decision reason"
         :min-rows="3"
-        :max-rows="4"
+        :max-rows="6"
       />
-      <p v-if="reasonError" class="text-xs text-red-600 dark:text-red-400">
-        {{ reasonError }}
-      </p>
-    </div>
-
-    <!-- Grant Scope Message -->
-    <GrantScopeMessage
-      v-if="props.subjectType && props.resourceType"
-      :subject-type="props.subjectType"
-      :resource-type="props.resourceType"
-    />
-
-    <!-- Footer with submit state info -->
-    <div
-      v-if="formState.submitDisableReason"
-      class="rounded-lg border border-solid border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3"
-    >
-      <p
-        class="text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2"
-      >
-        <i-mdi-alert-circle-outline class="flex-shrink-0 mt-0.5" />
-        {{ formState.submitDisableReason }}
-      </p>
-    </div>
-
-    <!-- Stats footer -->
-    <div
-      class="text-xs text-gray-500 dark:text-gray-400 space-y-1 pt-2 border-t border-solid border-gray-200 dark:border-gray-700"
-    >
-      <p>
-        <strong>{{ formState.approvedCount }}</strong> approved,
-        <strong>{{ formState.rejectedCount }}</strong> rejected
-      </p>
-    </div>
+    </section>
   </form>
 </template>
 
 <script setup>
+/**
+ * The reviewer's side of the access request modal: the context, one row per requested item,
+ * and the reason that goes back to the requester.
+ *
+ * The running tally and the reason the Submit button is disabled both live in the modal
+ * footer rather than here. They were printed in both places, seventy pixels apart, and a
+ * blocker belongs beside the button it blocks. The scope note sits under the access preview,
+ * because it qualifies what that preview promises.
+ *
+ * @see docs/contributing/v2-design-system.md — Typography
+ */
 import ModernCard from "@/components/utils/ModernCard.vue";
-import GrantScopeMessage from "@/components/v2/grants/issue/GrantScopeMessage.vue";
 import RequestContextHeader from "./RequestContextHeader.vue";
 import ReviewItemRow from "./ReviewItemRow.vue";
 
@@ -133,14 +108,22 @@ const props = defineProps({
 
 const emit = defineEmits(["submit", "cancel"]);
 
-const reasonError = ref("");
-const decisionReasonValue = ref(props.formState?.decisionReason || "");
+// Both bulk shortcuts read the same, because neither is the recommended one. The earlier
+// pair were tinted emerald and red, which gave "Reject all" the weight of a decision that
+// had already been taken.
+const BULK_ACTION =
+  "focus-ring inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 " +
+  "text-xs font-medium border border-solid " +
+  "border-gray-300 dark:border-gray-600 va-text-secondary " +
+  "hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200";
 
-const validateReason = () => {
-  if (decisionReasonValue.value.trim()) {
-    reasonError.value = "";
-  }
-};
+const items = computed(() => props.request?.access_request_items ?? []);
+
+const decidedCount = computed(
+  () => props.formState.approvedCount + props.formState.rejectedCount,
+);
+
+const decisionReasonValue = ref(props.formState?.decisionReason || "");
 
 // The reason is what makes the review submittable, so it has to reach the composable. The
 // local copy was never written back, which left `isSubmitEnabled` false however much the
@@ -148,7 +131,6 @@ const validateReason = () => {
 const updateDecisionReason = (value) => {
   decisionReasonValue.value = value;
   props.formState.decisionReason = value;
-  validateReason();
 };
 
 // Watch for external changes to formState.decisionReason
