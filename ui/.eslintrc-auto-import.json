@@ -315,6 +315,7 @@
     "useFontSize": true,
     "useCapabilities": true,
     "admits": true,
-    "holds": true
+    "holds": true,
+    "useTablePageStyle": true
   }
 }

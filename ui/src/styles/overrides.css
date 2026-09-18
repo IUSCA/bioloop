@@ -89,6 +89,39 @@ div.va-dropdown__content.va-dropdown__content-wrapper {
   max-width: 0;
 }
 
+/* A paginated table holds the height of one full page, so the pagination control does not
+ * leap up the screen on a short last page. Measured on the datasets list before this rule:
+ * moving from a 20-row page to the 7-row last page raised the control by 587px, out from
+ * under the pointer that had just clicked it.
+ *
+ * The height is reserved on the table rather than on the container, so the pagination's own
+ * height never has to be guessed: the control simply sits under a table area that is the
+ * same height on every page. Reserving on the container instead left the last page 69px
+ * short, because the reservation had to cover the header and the control as well.
+ *
+ * The reserved height is the page's own page size, in rows, so it follows the Results per
+ * page setting rather than assuming the default. A row measures 2.5rem and the header 2rem
+ * at a 16px root, and rem keeps both in step with the user's text-size setting.
+ *
+ * A page sets `--v2-table-page-rows` only when the results run past one page. With a single
+ * page there is no jump to prevent, the variable stays unset, and the default 0 reduces the
+ * floor to the header's own 2rem, which every table clears anyway.
+ * @see docs/contributing/v2-design-system.md - Tables
+ */
+.v2-table-page .va-data-table {
+  min-height: calc(var(--v2-table-page-rows, 0) * 2.5rem + 2rem);
+}
+
+/* The pagination is the last child; this pins it to the bottom of the container. */
+.v2-table-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.v2-table-page > :last-child {
+  margin-top: auto;
+}
+
 .card.header {
   --va-card-padding: 0.8rem;
 }

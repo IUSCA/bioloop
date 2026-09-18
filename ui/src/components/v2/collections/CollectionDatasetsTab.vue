@@ -65,7 +65,11 @@
               />
             </div>
 
-            <div v-else-if="datasets.length > 0">
+            <div
+              v-else-if="datasets.length > 0"
+              class="v2-table-page"
+              :style="tablePageStyle"
+            >
               <!-- A grant to browse a collection does not open every dataset in it. Offer the
                    next step rather than links that end in a refusal. -->
               <ModernAlert
@@ -304,6 +308,10 @@ const searchTerm = ref("");
 const total = ref(0);
 const currentPage = ref(1);
 const itemsPerPage = ref(20);
+
+// Reserves one page of rows on the table container, so the pagination keeps its
+// place when the last page is short.
+const tablePageStyle = useTablePageStyle(total, itemsPerPage);
 const sortBy = ref("created_at");
 const sortOrder = ref("desc");
 const ITEMS_PER_PAGE_OPTIONS = [20, 50, 100];
