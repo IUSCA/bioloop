@@ -1,5 +1,5 @@
 <template>
-  <VaCard>
+  <VaCard class="w-full max-w-xs mx-auto">
     <VaCardContent>
       <div class="flex items-center gap-3">
         <div class="p-2 rounded-lg" :class="iconBg">
@@ -38,6 +38,21 @@
 </template>
 
 <script setup>
+/**
+ * One labelled number: a count of datasets, groups, files, or open requests.
+ *
+ * The card is capped at `max-w-xs` and centred in whatever cell it is given. Uncapped it
+ * stretched to its column, and because the icon sits at the left while the label and value
+ * are centred in the space left over, the gap between them grew with the card. Measured on
+ * the dashboard at a 900px window: each card was 394px wide with the icon marooned from its
+ * own number.
+ *
+ * 20rem is not a new size. At the page shell's 1440px cap a four-up row already makes these
+ * cards 324px, so the cap keeps a two-up medium layout showing that same card rather than a
+ * wider one.
+ *
+ * @see docs/contributing/v2-design-system.md — Typography
+ */
 import { useColors } from "vuestic-ui";
 
 const props = defineProps({

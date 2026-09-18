@@ -3,7 +3,7 @@
     :disabled="disabled"
     @click="$emit('click')"
     :class="{
-      'group relative flex flex-col gap-3 rounded-lg border border-solid border-gray-300 dark:border-gray-700 bg-gradient-to-br from-white via-gray-50 to-gray-50 dark:from-gray-900 dark:to-gray-800 p-4 transition-all duration-200 shadow-sm shadow-gray-200/50 dark:shadow-black/20': true,
+      'group relative flex flex-col gap-3 w-full max-w-xs mx-auto rounded-lg border border-solid border-gray-300 dark:border-gray-700 bg-gradient-to-br from-white via-gray-50 to-gray-50 dark:from-gray-900 dark:to-gray-800 p-4 transition-all duration-200 shadow-sm shadow-gray-200/50 dark:shadow-black/20': true,
       'hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md hover:shadow-blue-400/20 dark:hover:shadow-blue-500/10 hover:-translate-y-0.5':
         config.hoverBorderColor === 'blue' && !disabled,
       'hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-md hover:shadow-emerald-400/20 dark:hover:shadow-emerald-500/10 hover:-translate-y-0.5':
@@ -31,6 +31,16 @@
 </template>
 
 <script setup>
+/**
+ * A quick action: an icon, a title, and a line saying what the action does.
+ *
+ * Capped at `max-w-xs` and centred in its cell, for the reason `MetricCard` carries the same
+ * cap: uncapped these stretch to their column, and a two-up grid on a medium screen turned
+ * them into wide, mostly empty panels. 20rem matches the width a four-up row already gives a
+ * card at the page shell's 1440px cap.
+ *
+ * @see docs/contributing/v2-design-system.md — Radius and elevation
+ */
 const props = defineProps({
   /**
    * Icon name (without 'i-' prefix)
