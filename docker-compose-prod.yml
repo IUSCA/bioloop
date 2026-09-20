@@ -14,7 +14,8 @@ services:
     volumes:
       - ${UI_TLS_CERT_DIR:-./ui/.cert}:/etc/nginx/certs:ro
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     networks:
       - network
   
@@ -96,6 +97,12 @@ services:
       - -c
       - npm ci && npx prisma generate && exec node_modules/.bin/nodemon --ignore 'tests/**/*.js' src/index.js
     # entrypoint: [ "tail", "-f", "/dev/null" ]
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3030/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 180s
     depends_on:
       - postgres
     networks:
