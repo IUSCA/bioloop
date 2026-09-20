@@ -1,5 +1,5 @@
-import fs from 'fs/promises';
-import path from 'path';
+const fs = require('fs/promises');
+const path = require('path');
 
 class AttachmentManager {
   constructor(directory) {
@@ -16,6 +16,14 @@ class AttachmentManager {
 
   async teardown() {
     await fs.rm(this.testAttachmentsDir, { recursive: true, force: true });
+
+    const attachmentsRoot = path.dirname(this.testAttachmentsDir);
+    try {
+      await fs.rmdir(attachmentsRoot);
+    } catch (error) {
+      // Other tests may still be using the shared attachments directory.
+      if (!['ENOENT', 'ENOTEMPTY'].includes(error.code)) throw error;
+    }
   }
 
   async createFile(fileName, content) {

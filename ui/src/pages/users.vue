@@ -19,7 +19,8 @@
 
     <!-- reset button -->
     <div class="flex-none" v-if="isResetVisible">
-      <va-button icon="restart_alt" @click="resetSortParams" preset="primary">
+      <va-button @click="resetSortParams" preset="primary">
+        <Icon icon="material-symbols:restart-alt" class="mr-2 text-xl" />
         Reset Sort
       </va-button>
     </div>
@@ -28,11 +29,11 @@
     <div class="flex-none">
       <va-button
         data-testid="create-user-button"
-        icon="add"
         class="px-3"
         color="success"
         @click="openModalToCreateUser"
       >
+        <Icon icon="material-symbols:add" class="mr-2 text-xl" />
         Create User
       </va-button>
     </div>
@@ -100,7 +101,7 @@
             @click="openModalToEditItem(rowData)"
             :disabled="!canEdit(rowData)"
           >
-            <i-mdi-pencil class="text-lg" />
+            <Icon icon="mdi:pencil" class="text-lg" />
           </va-button>
         </div>
 
@@ -113,7 +114,7 @@
               color="info"
               @click="openModalToLogInAsUser(rowData)"
             >
-              <i-mdi-account-convert-outline class="" />
+              <Icon icon="mdi:account-convert-outline" class="text-lg" />
             </va-button>
           </va-popover>
         </div>
@@ -216,7 +217,7 @@
                 size="small"
                 @click="confirmDeleteUser"
               >
-                <i-mdi-delete class="text-2xl" />
+                <Icon icon="material-symbols:delete" class="text-xl" />
               </va-button>
             </div>
           </div>

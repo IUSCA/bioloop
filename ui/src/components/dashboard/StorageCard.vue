@@ -60,13 +60,13 @@ function getProgressBarColor(usage_percent) {
 
 function getIcon(name) {
   if (name.includes("files")) {
-    return "mdi-file-multiple";
+    return "mdi:file-multiple";
   }
   const icon_map = {
-    SDA: "mdi-tape-drive",
-    "/N/SCRATCH": "mdi-nas",
+    SDA: "mdi:tape-drive",
+    "/N/SCRATCH": "mdi:nas",
   };
-  const default_icon = "mdi-harddisk";
+  const default_icon = "mdi:harddisk";
   return icon_map[name.toUpperCase()] || default_icon;
 }
 </script>

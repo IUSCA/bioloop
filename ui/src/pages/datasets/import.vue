@@ -3,8 +3,11 @@
     <va-card class="flex-auto max-w-5xl md:h-[calc(85vh)]">
       <va-card-content class="h-full">
         <ImportStepper v-if="auth.isFeatureEnabled('import')" />
-        <va-alert color="warning" icon="warning" v-else
-          >This feature is currently disabled
+        <va-alert color="warning" v-else>
+          <template #icon>
+            <Icon icon="mdi:alert" class="text-xl" />
+          </template>
+          This feature is currently disabled
         </va-alert>
       </va-card-content>
     </va-card>
