@@ -51,7 +51,7 @@ describe('POST /auth/signup', () => {
 
   it('should create user', async () => {
     const email = `${prefix}_user_${Date.now()}@example.com`;
-    const username = `${prefix}-new-user${Date.now()}`;
+    const username = `${prefix}-user${Date.now()}`;
     const token = issueSignupToken({
       email,
       nonce: await nonceService.createNonce(),
@@ -104,7 +104,7 @@ describe('POST /auth/signup', () => {
 
   it('should prevent replay attacks', async () => {
     const email = `${prefix}_user_${Date.now()}@example.com`;
-    const username = `${prefix}-new-user${Date.now()}`;
+    const username = `${prefix}-user${Date.now()}`;
     const token = issueSignupToken({
       email,
       nonce: await nonceService.createNonce(),
@@ -138,7 +138,7 @@ describe('POST /auth/signup', () => {
   it('should create a unique username', async () => {
     // create a user
     const email = `${prefix}_user_${Date.now()}@example.com`;
-    const username = `${prefix}-new-user${Date.now()}`;
+    const username = `${prefix}-user${Date.now()}`;
     const token = issueSignupToken({
       email,
       nonce: await nonceService.createNonce(),
@@ -272,7 +272,7 @@ describe('POST /auth/signup', () => {
 
   it('should handle concurrent signup requests gracefully', async () => {
     const email = `${prefix}_user_${Date.now()}@example.com`;
-    const username = `${prefix}-new-user${Date.now()}`;
+    const username = `${prefix}-user${Date.now()}`;
     const token = issueSignupToken({
       email,
       nonce: await nonceService.createNonce(),
