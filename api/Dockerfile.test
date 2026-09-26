@@ -1,0 +1,11 @@
+FROM node:22-bookworm
+
+WORKDIR /opt/sca/app
+
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci --no-audit --no-fund
+
+COPY . .
+RUN npx prisma generate
+
+ENTRYPOINT ["sh", "tests/run-integration.sh"]
