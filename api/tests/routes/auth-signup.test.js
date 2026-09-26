@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
-const { request, getAuthRequest } = require('../../request');
-const { issueToken, issueSignupToken } = require('../../../src/services/auth');
-const nonceService = require('../../../src/services/nonce');
+const { request, getAuthRequest } = require('../request');
+const { issueToken, issueSignupToken } = require('../../src/services/auth');
+const nonceService = require('../../src/services/nonce');
 
 let authRequest;
 const prefix = 'test';

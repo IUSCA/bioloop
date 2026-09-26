@@ -49,4 +49,18 @@ describe('accessControl for reading users', () => {
     expect(next).toHaveBeenCalledTimes(1);
     expect(next).toHaveBeenCalledWith();
   });
+
+  it('allows an operator to read another account', async () => {
+    const req = {
+      user: { username: 'operator-user', roles: ['operator'] },
+      params: { username: 'other-user' },
+    };
+    const next = jest.fn();
+
+    await canReadUser(req, {}, next);
+
+    expect(req.permission.granted).toBe(true);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(next).toHaveBeenCalledWith();
+  });
 });
