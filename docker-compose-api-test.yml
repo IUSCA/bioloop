@@ -1,0 +1,68 @@
+name: bioloop-api-test
+
+services:
+  postgres:
+    image: postgres:14.5
+    environment:
+      POSTGRES_USER: api_test
+      POSTGRES_PASSWORD: api_test
+      POSTGRES_DB: api_test
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U api_test -d api_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  api-test:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.test
+    environment:
+      NODE_ENV: test
+      E2E_ADMIN: e2eAdmin
+      E2E_OPERATOR: e2eOperator
+      E2E_USER: e2eUser
+      POSTGRES_HOST: postgres
+      DATABASE_URL: postgresql://api_test:api_test@postgres:5432/api_test?schema=public
+      API_TEST_DATABASE_URL: postgresql://api_test:api_test@postgres:5432/api_test?schema=public
+      WORKFLOW_SERVER_BASE_URL: http://localhost:5001
+      WORKFLOW_AUTH_TOKEN: test
+      OAUTH_BASE_URL: http://localhost:5050
+      OAUTH_DOWNLOAD_CLIENT_ID: test
+      OAUTH_DOWNLOAD_CLIENT_SECRET: test
+      GOOGLE_OAUTH_CLIENT_ID: test
+      GOOGLE_OAUTH_CLIENT_SECRET: test
+      CILOGON_OAUTH_CLIENT_ID: test
+      CILOGON_OAUTH_CLIENT_SECRET: test
+      MICROSOFT_OAUTH_CLIENT_ID: test
+      MICROSOFT_OAUTH_CLIENT_SECRET: test
+      DOWNLOAD_SERVER_BASE_URL: http://localhost:3060
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api-image:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://api_test:api_test@postgres:5432/api_test?schema=public
+    volumes:
+      # Test-only configuration; no developer secrets enter the image.
+      - ./api/.env.default:/opt/sca/app/.env:ro
+      - api_image_keys:/opt/sca/app/keys
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3030/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  postgres_data:
+  api_image_keys:

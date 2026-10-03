@@ -10,11 +10,37 @@ This project uses ESLint for code quality and consistency, extending rules from 
   npm run lint
   ```
   Lints all JavaScript files and automatically fixes issues where possible.
+- **Check without changing files (as in CI):**
+  ```bash
+  npm run lint:check
+  ```
 - **Run on a specific file:**  
   ```bash
-  npm run lint:fix <file_path>
+  npm run lint:file -- <file_path>
   ```
   Lints and fixes a specific file.
+
+## API integration tests
+
+Run the Jest suite from the repository root:
+
+```bash
+bash bin/test_api_jest.sh
+```
+
+Run one test file:
+
+```bash
+bash bin/test_api_jest.sh --runTestsByPath tests/services/nonce.test.js
+```
+
+The script builds the API test image, starts a fresh PostgreSQL container with
+an isolated Docker Compose project and volume, applies migrations, seeds only
+the roles and service account needed by the tests, and removes that project and
+volume on exit (including when tests fail). The tests call the Express app
+directly through Supertest, so no development API server or host database port
+is needed. Do not run `npm run check` directly against a development database;
+the Jest setup rejects runs without the isolated test database configuration.
 
 ## Module Aliasing
 

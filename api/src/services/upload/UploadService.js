@@ -224,7 +224,6 @@ class UploadService {
         const datasetId = parseInt(upload.metadata?.dataset_id, 10);
         const selection_mode = upload.metadata?.selection_mode;
         const relative_path = upload.metadata?.relative_path;
-        const directory_name = upload.metadata?.directory_name;
         const process_id = upload.id;
 
         const uploadLog = await prisma.dataset_upload_log.findUnique({
@@ -242,7 +241,7 @@ class UploadService {
         const tusInfoPath = `${tusFilePath}.json`;
 
         const { originalFilename } = readTusFileInfo({ tusInfoPath, datasetId, process_id });
-        
+
         // Mirror this sidecar metadata file into a dataset-specific folder
         // for cleanup organization while keeping the source sidecar in place.
         // - Canonical path where metadata file is stored by TUS:
@@ -266,11 +265,8 @@ class UploadService {
           tusFilePath,
           dataset: { ...uploadLog.dataset, origin_path: writableOriginPath },
           selection_mode,
-          directory_name,
           relative_path,
           originalFilename,
-          datasetId,
-          process_id,
         });
 
         return res;

@@ -1,0 +1,16 @@
+node_modules
+.env
+.env.*
+!.env.default
+.db_seeded
+keys/*.key
+keys/*.pub
+keys/jwks.json
+config/auth*
+admins.json
+operators.json
+users.json
+import_sources.json
+coverage
+reports
+*.log

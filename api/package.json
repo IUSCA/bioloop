@@ -10,6 +10,7 @@
     "dev": "nodemon --ignore 'tests/**/*.js' src/index.js",
     "swagger": "node src/scripts/swagger.js",
     "lint": "eslint . --ext .js --fix --ignore-path .gitignore",
+    "lint:check": "eslint . --ext .js --ignore-path .gitignore --max-warnings=0",
     "lint:file": "eslint --fix --ignore-path .gitignore",
     "test": "jest --watch --verbose false",
     "check": "jest"
@@ -73,6 +74,12 @@
     "seed": "node prisma/seed.js"
   },
   "jest": {
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    },
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/jest.setup.js"
+    ],
     "collectCoverageFrom": [
       "tests/**/*.js",
       "!src/_test.js"
