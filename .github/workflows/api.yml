@@ -5,14 +5,18 @@ on:
     paths:
       - "api/**"
       - "bin/test_api_jest.sh"
+      - "bin/test_api_image.sh"
       - "docker-compose-api-test.yml"
+      - "docker-compose-prod.yml"
       - ".github/workflows/api.yml"
   push:
     branches: [main]
     paths:
       - "api/**"
       - "bin/test_api_jest.sh"
+      - "bin/test_api_image.sh"
       - "docker-compose-api-test.yml"
+      - "docker-compose-prod.yml"
       - ".github/workflows/api.yml"
   workflow_dispatch:
 
@@ -55,3 +59,15 @@ jobs:
 
       - name: Run Jest against a disposable database
         run: bash bin/test_api_jest.sh
+
+  image:
+    name: Build and smoke-test production API image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build and start production API image
+        run: bash bin/test_api_image.sh

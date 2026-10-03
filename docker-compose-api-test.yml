@@ -43,5 +43,26 @@ services:
       postgres:
         condition: service_healthy
 
+  api-image:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://api_test:api_test@postgres:5432/api_test?schema=public
+    volumes:
+      # Test-only configuration; no developer secrets enter the image.
+      - ./api/.env.default:/opt/sca/app/.env:ro
+      - api_image_keys:/opt/sca/app/keys
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3030/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
 volumes:
   postgres_data:
+  api_image_keys:
