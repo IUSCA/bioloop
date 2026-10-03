@@ -10,10 +10,7 @@ const prisma = require('../../src/db');
 const { issueJWT, get_user_profile } = require('../../src/services/auth');
 const userService = require('../../src/services/user');
 
-// Temporarily excluded at the user's request pending manager confirmation of
-// project update permissions. The known authorization gap is not fixed.
-// Restore describe after policy confirmation; do not weaken the assertions.
-describe.skip('PATCH /projects/:id', () => {
+describe('PATCH /projects/:id', () => {
   let users;
   let tokens;
   let project;
