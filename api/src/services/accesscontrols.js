@@ -130,6 +130,10 @@ const grantsObject = {
     fs: {
       'read:any': ['*'],
     },
+    // Import routes also require the instance's role-specific feature setting.
+    import_sources: {
+      'read:any': ['*'],
+    },
     alerts: {
       'read:any': ['*'],
     },
