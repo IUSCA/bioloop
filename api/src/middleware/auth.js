@@ -7,7 +7,7 @@ const ac = require('../services/accesscontrols');
 const nonceService = require('../services/nonce');
 const logger = require('../services/logger');
 const constants = require('../constants');
-const { isFeatureEnabled } = require('../services/features');
+const { isFeatureEnabled, isFeatureEnabledForRole } = require('../services/features');
 
 const asyncHandler = require('./asyncHandler');
 
@@ -29,6 +29,18 @@ function authenticate(req, res, next) {
 
   req.user = auth.profile;
   next();
+}
+
+// Feature configuration restricts access in addition to resource permissions.
+function requireFeature(key) {
+  return (req, res, next) => {
+    const roles = [...setIntersection(ac.getRoles(), req?.user?.roles || [])];
+    const enabled = roles.some((roleName) => isFeatureEnabledForRole({ key, roleName }));
+    if (!enabled) {
+      return next(createError.Forbidden('Feature is not enabled for your roles'));
+    }
+    return next();
+  };
 }
 
 // function checkRole(role) {
@@ -177,6 +189,7 @@ const loginHandler = asyncHandler(async (req, res, next) => {
 
 module.exports = {
   authenticate,
+  requireFeature,
   accessControl,
   getPermission,
   loginHandler,
