@@ -1,0 +1,67 @@
+# cspell:ignore REALLMS reallms rescloud pipefail isinstance
+# Connectivity only: no repository checkout, code review, or inference request.
+name: REALLMS Connection Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/reallms-connection.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  models:
+    name: Check REALLMS and list models
+    # Fork PRs cannot access the repository's API key.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+
+    steps:
+      - name: List available models
+        shell: bash
+        env:
+          REALLMS_API_KEY: ${{ secrets.REALLMS_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${REALLMS_API_KEY:-}" ]]; then
+            echo '::error::Add the REALLMS_API_KEY repository secret before running this check.'
+            exit 1
+          fi
+
+          # Keep TLS verification enabled and do not follow redirects or print headers.
+          curl \
+            --fail --silent --show-error \
+            --connect-timeout 15 --max-time 45 \
+            --header "Authorization: Bearer ${REALLMS_API_KEY}" \
+            --header 'Accept: application/json' \
+            'https://reallms.rescloud.iu.edu/direct/v1/models' |
+            python3 -c '
+          import json
+          import sys
+
+          try:
+              payload = json.load(sys.stdin)
+          except (ValueError, UnicodeError):
+              sys.exit("::error::REALLMS returned invalid JSON.")
+
+          data = payload.get("data") if isinstance(payload, dict) else None
+          if not isinstance(data, list):
+              sys.exit("::error::REALLMS did not return the expected model list.")
+
+          models = sorted({
+              item["id"]
+              for item in data
+              if isinstance(item, dict)
+              and isinstance(item.get("id"), str)
+              and item["id"].strip()
+          })
+          if not models:
+              sys.exit("::error::No accessible models were returned for this API key.")
+
+          print(f"REALLMS connection succeeded. Available models: {len(models)}")
+          print(json.dumps(models, indent=2, ensure_ascii=True))
+          '
