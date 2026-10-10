@@ -2,12 +2,17 @@
  * Integration tests for the import-source, dataset registration and history
  * APIs. Use the real app and isolated test DB; import paths are allowlisted
  * database values, so no external filesystem or workflow service is needed.
+ * Override only the instance's Import setting; authentication, permissions
+ * and persistence are real. Configuration cases require the Import policy fix.
  */
 const path = require('path');
+const config = require('config');
 const { request } = require('../request');
 const prisma = require('../../src/db');
 const { issueJWT, get_user_profile } = require('../../src/services/auth');
 const userService = require('../../src/services/user');
+
+const getConfig = config.get.bind(config);
 
 describe('Dataset import API', () => {
   let fixtureNumber = 0;
@@ -16,6 +21,19 @@ describe('Dataset import API', () => {
   let tokens;
   let projects;
   let sources;
+  let importFeature;
+
+  async function createAccount(label, roles) {
+    const username = `${label}-${namePrefix}`;
+    const user = await userService.createUser({
+      username,
+      email: `${username}@example.com`,
+      name: 'API Import Test User',
+      roles: Array.isArray(roles) ? roles : [roles],
+    });
+    users[label] = user;
+    tokens[label] = issueJWT({ userProfile: get_user_profile(user) });
+  }
 
   function importPayload(label = 'new', actor = 'owner') {
     return {
@@ -34,24 +52,21 @@ describe('Dataset import API', () => {
   }
 
   beforeEach(async () => {
+    // Existing import/history cases explicitly enable all supported roles.
+    // Policy cases replace this value without mocking authorization itself.
+    importFeature = { enabledForRoles: ['admin', 'operator', 'user'] };
+    jest.spyOn(config, 'get').mockImplementation((key) => {
+      if (key === 'enabled_features.import') return importFeature;
+      const value = getConfig(key);
+      return key === 'enabled_features' ? { ...value, import: importFeature } : value;
+    });
+
     fixtureNumber += 1;
     namePrefix = `import-api-${Date.now()}-${process.pid}-${fixtureNumber}`;
     users = {};
     tokens = {};
     projects = {};
     sources = {};
-
-    async function createAccount(label, role) {
-      const username = `${label}-${namePrefix}`;
-      const user = await userService.createUser({
-        username,
-        email: `${username}@example.com`,
-        name: 'API Import Test User',
-        roles: [role],
-      });
-      users[label] = user;
-      tokens[label] = issueJWT({ userProfile: get_user_profile(user) });
-    }
 
     await createAccount('owner', 'user');
     await createAccount('other', 'user');
@@ -86,6 +101,155 @@ describe('Dataset import API', () => {
     });
   });
 
+  describe('instance Import configuration', () => {
+    // A role's configured access must agree for source discovery and creation.
+    // Denial must leave the database unchanged, not just hide a UI control.
+    it.each([
+      ['user enabled', 'owner', { enabledForRoles: ['admin', 'operator', 'user'] }, 200],
+      ['user disabled', 'owner', { enabledForRoles: ['admin', 'operator'] }, 403],
+      ['operator enabled', 'operator', { enabledForRoles: ['admin', 'operator'] }, 200],
+      ['operator disabled', 'operator', { enabledForRoles: ['admin', 'user'] }, 403],
+      ['admin enabled', 'admin', { enabledForRoles: ['admin'] }, 200],
+      ['admin disabled', 'admin', { enabledForRoles: ['operator', 'user'] }, 403],
+      ['enabled for everyone', 'owner', true, 200],
+      ['disabled for everyone', 'owner', false, 403],
+      ['admin globally disabled', 'admin', false, 403],
+      ['no roles enabled', 'owner', { enabledForRoles: [] }, 403],
+    ])('%s controls source reads and import registration', async (_label, actor, setting, status) => {
+      importFeature = setting;
+      if (status === 403) jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      const sourceResponse = await request.get('/datasets/imports/sources')
+        .set('Authorization', `Bearer ${tokens[actor]}`);
+      expect(sourceResponse.status).toBe(status);
+      if (status === 200) {
+        expect(sourceResponse.body.map(({ id }) => id)).toEqual([
+          sources.primary.id, sources.secondary.id,
+        ]);
+      }
+
+      const response = await createImport('policy', actor);
+      expect(response.status).toBe(status);
+      const stored = await prisma.dataset.findMany({
+        where: { name: importPayload('policy', actor).name },
+        include: { import_logs: true, audit_logs: true },
+      });
+      if (status === 200) {
+        expect(stored).toHaveLength(1);
+        expect(stored[0].id).toBe(response.body.id);
+        expect(stored[0].import_logs).toHaveLength(1);
+        expect(stored[0].audit_logs).toEqual(expect.arrayContaining([
+          expect.objectContaining({ action: 'create', user_id: users[actor].id }),
+        ]));
+      } else {
+        expect(stored).toEqual([]);
+        expect(await prisma.dataset_import_log.count({
+          where: { dataset: { name: { startsWith: namePrefix } } },
+        })).toBe(0);
+      }
+    });
+
+    // A real account with multiple roles may import when any role is enabled.
+    it('allows an account when one of its multiple roles is enabled', async () => {
+      await createAccount('multiple', ['user', 'operator']);
+      importFeature = { enabledForRoles: ['operator'] };
+
+      const sourcesResponse = await request.get('/datasets/imports/sources')
+        .set('Authorization', `Bearer ${tokens.multiple}`);
+      expect(sourcesResponse.status).toBe(200);
+
+      const response = await createImport('multiple-role', 'multiple');
+      expect(response.status).toBe(200);
+      expect(await prisma.dataset_import_log.count({ where: { dataset_id: response.body.id } })).toBe(1);
+    });
+
+    // Feature configuration cannot replace authentication, even when enabled.
+    it.each([true, false])('requires authentication when Import is %s', async (setting) => {
+      importFeature = setting;
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      expect((await request.get('/datasets/imports/sources')).status).toBe(401);
+      expect((await request.post('/datasets').send(importPayload('anonymous'))).status).toBe(401);
+      expect(await prisma.dataset.count({ where: { name: { startsWith: namePrefix } } })).toBe(0);
+    });
+
+    // The UI's public policy endpoint must expose the same effective roles.
+    // Boolean settings and invalid/empty role settings must be handled safely.
+    it.each([
+      ['admin only', { enabledForRoles: ['admin'] }, ['admin']],
+      ['user enabled', { enabledForRoles: ['admin', 'user'] }, ['admin', 'user']],
+      ['enabled for everyone', true, ['admin', 'operator', 'user']],
+      ['disabled for everyone', false, []],
+      ['no roles enabled', { enabledForRoles: [] }, []],
+      ['missing role list', {}, []],
+    ])('publishes the effective Import roles for %s', async (_label, setting, roles) => {
+      importFeature = setting;
+      const response = await request.get('/env/features');
+
+      expect(response.status).toBe(200);
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.body).toEqual({ import: { enabledForRoles: expect.any(Array) } });
+      expect(response.body.import.enabledForRoles.slice().sort()).toEqual([...roles].sort());
+    });
+
+    // Bulk registration must use the same policy as single-dataset creation.
+    it('allows bulk imports when the user role is enabled', async () => {
+      importFeature = { enabledForRoles: ['user'] };
+      const payloads = [importPayload('bulk-first'), importPayload('bulk-second')];
+      const response = await request.post('/datasets/bulk')
+        .set('Authorization', `Bearer ${tokens.owner}`)
+        .send({ datasets: payloads });
+
+      expect(response.status).toBe(200);
+      expect(response.body.created.map(({ name }) => name).sort())
+        .toEqual(payloads.map(({ name }) => name).sort());
+      expect(response.body.conflicted).toEqual([]);
+      expect(response.body.errored).toEqual([]);
+      expect(await prisma.dataset_import_log.count({
+        where: { dataset: { name: { startsWith: namePrefix } } },
+      })).toBe(2);
+    });
+
+    // A denied mixed batch must not persist its earlier non-Import item either.
+    it.each(['owner', 'admin'])('rejects a mixed bulk request from %s before any writes', async (actor) => {
+      importFeature = false;
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      const response = await request.post('/datasets/bulk')
+        .set('Authorization', `Bearer ${tokens[actor]}`)
+        .send({
+          datasets: [
+            { ...importPayload('bulk-scan', actor), create_method: 'SCAN' },
+            importPayload('bulk-import', actor),
+          ],
+        });
+
+      expect(response.status).toBe(403);
+      expect(await prisma.dataset.count({ where: { name: { startsWith: namePrefix } } })).toBe(0);
+      expect(await prisma.dataset_import_log.count({
+        where: { dataset: { name: { startsWith: namePrefix } } },
+      })).toBe(0);
+    });
+
+    // Disabling Import must not disable unrelated dataset creation methods.
+    it('still allows single and bulk SCAN registration when Import is disabled', async () => {
+      importFeature = false;
+      const single = await createImport('scan-single', 'owner', { create_method: 'SCAN' });
+      expect(single.status).toBe(200);
+
+      const payload = { ...importPayload('scan-bulk'), create_method: 'SCAN' };
+      const bulk = await request.post('/datasets/bulk')
+        .set('Authorization', `Bearer ${tokens.owner}`)
+        .send({ datasets: [payload] });
+      expect(bulk.status).toBe(200);
+      expect(bulk.body.created.map(({ name }) => name)).toEqual([payload.name]);
+      expect(bulk.body.conflicted).toEqual([]);
+      expect(bulk.body.errored).toEqual([]);
+      expect(await prisma.dataset_import_log.count({
+        where: { dataset: { name: { startsWith: namePrefix } } },
+      })).toBe(0);
+    });
+  });
+
   afterEach(async () => {
     jest.restoreAllMocks();
     // Delete only this test's projects, imports, notifications, sources and
@@ -113,18 +277,8 @@ describe('Dataset import API', () => {
     expect(response.status).toBe(401);
   });
 
-  // The current access-control grants import_sources:read:any only to admin
-  // and operator. Regular users can register imports but cannot list sources;
-  // whether that mismatch is intended needs a separate policy decision.
-  it('denies a regular user access to the import-source list', async () => {
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-    const response = await request.get('/datasets/imports/sources')
-      .set('Authorization', `Bearer ${tokens.owner}`);
-
-    expect(response.status).toBe(403);
-  });
-
-  it.each(['operator', 'admin'])('lists import sources for %s', async (actor) => {
+  // Source discovery works for each role enabled by this suite's setup.
+  it.each(['owner', 'operator', 'admin'])('lists import sources for %s', async (actor) => {
     const response = await request.get('/datasets/imports/sources')
       .set('Authorization', `Bearer ${tokens[actor]}`);
 
