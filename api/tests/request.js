@@ -1,12 +1,9 @@
-const path = require('path');
-
-global.__basedir = path.join(__dirname, '..');
-
 // eslint-disable-next-line import/no-extraneous-dependencies
-const request = require('supertest');
+const supertest = require('supertest');
+const app = require('../src/app');
 const issueToken = require('../src/scripts/issue_token');
 
-const server = 'http://localhost:3030';
+const request = supertest(app);
 let token = null;
 
 async function getAuthRequest() {
@@ -14,14 +11,14 @@ async function getAuthRequest() {
     token = await issueToken('svc_tasks', { forever: true });
   }
 
-  // Return a function that delegates to `request(server).<verb>().set(...)`
+  // Attach the service-account token to requests against the in-process app.
   return {
-    get: (url) => request(server).get(url).set('Authorization', `Bearer ${token}`),
-    post: (url) => request(server).post(url).set('Authorization', `Bearer ${token}`),
-    put: (url) => request(server).put(url).set('Authorization', `Bearer ${token}`),
-    delete: (url) => request(server).delete(url).set('Authorization', `Bearer ${token}`),
-    patch: (url) => request(server).patch(url).set('Authorization', `Bearer ${token}`),
+    get: (url) => request.get(url).set('Authorization', `Bearer ${token}`),
+    post: (url) => request.post(url).set('Authorization', `Bearer ${token}`),
+    put: (url) => request.put(url).set('Authorization', `Bearer ${token}`),
+    delete: (url) => request.delete(url).set('Authorization', `Bearer ${token}`),
+    patch: (url) => request.patch(url).set('Authorization', `Bearer ${token}`),
   };
 }
 
-module.exports = { request: request(server), getAuthRequest };
+module.exports = { request, getAuthRequest };

@@ -16,6 +16,7 @@ services:
 
   api:
     restart: unless-stopped
+    image: ${API_IMAGE:-bioloop-api:local}
     build:
       context: ./api
       args:
@@ -23,9 +24,15 @@ services:
         APP_GID: ${APP_GID} # read from .env file
     environment:
       - UPLOAD_HOST_DIR=${UPLOAD_HOST_DIR}
+      - API_INSTANCE_DIR=/opt/sca/instance
     volumes:
-      - ./api/:/opt/sca/app
-      - api_modules:/opt/sca/app/node_modules
+      # Keep instance configuration and JWT keys outside the image.
+      - ./api/.env:/opt/sca/app/.env:ro
+      - ./api/keys:/opt/sca/app/keys:ro
+      - ./api/config:/opt/sca/app/config:ro
+      # Legacy user/import-source seed JSON files remain readable without
+      # replacing the application code packaged in the image.
+      - ./api:/opt/sca/instance:ro
       # ----------------------------------------------------------------------------
       # This section describes the volumes needed to make certain features work in
       #  Production.
@@ -86,11 +93,12 @@ services:
       # ----------------------------------------------------------------------------
     expose:
       - 3030
-    entrypoint:
-      - sh
-      - -c
-      - npm ci && npx prisma generate && exec node_modules/.bin/nodemon --ignore 'tests/**/*.js' src/index.js
-    # entrypoint: [ "tail", "-f", "/dev/null" ]
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3030/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 180s
     depends_on:
       - postgres
     networks:
@@ -180,9 +188,6 @@ services:
 
 volumes:
   ui_modules:
-    external: false
-
-  api_modules:
     external: false
 
   grafana_data:
