@@ -1,0 +1,70 @@
+# cspell:ignore REALLMS reallms rescloud Qwen pipefail alibaba
+# Advisory review: project code is sent to IU REALLMS for analysis.
+name: AI PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Review PR with REALLMS
+    # Only same-repository, non-draft PRs; forks and Dependabot cannot use this secret.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !github.event.pull_request.draft &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Check REALLMS secret
+        shell: bash
+        env:
+          REALLMS_API_KEY: ${{ secrets.REALLMS_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${REALLMS_API_KEY:-}" ]]; then
+            echo '::error::Add the REALLMS_API_KEY repository secret before running this review.'
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+
+      # The action checks out the repository and installs its own CLI on the runner.
+      - name: Review and post PR comments
+        uses: alibaba/open-code-review@fabbdb296b0d97e2140ada8d54ca7d6d6d1d7ad4 # v1.12.13
+        with:
+          ocr_version: '1.12.13'
+          github_token: ${{ github.token }}
+          llm_url: https://reallms.rescloud.iu.edu/direct/v1/chat/completions
+          llm_auth_token: ${{ secrets.REALLMS_API_KEY }}
+          llm_model: Qwen3-Coder-Next
+          llm_use_anthropic: 'false'
+          llm_protocol: openai
+          llm_extra_body: '{}'
+          language: English
+          llm_timeout: '120'
+          review_task_timeout: '10'
+          review_concurrency: '1'
+          effort: medium
+          # Soft limit: a final round can exceed it, and partial reviews can still succeed.
+          max_tokens_budget: '100000'
+          stream_progress: 'true'
+          sticky_summary: 'true'
+          incremental: 'true'
+          upload_artifacts: 'false'
