@@ -3,7 +3,8 @@ import {
   selectDropdownOption,
 } from '../../../../actions';
 import {
-  selectFiles,
+  openNewUpload,
+  selectFilesAndGoToGeneralInfo,
 } from '../../../../actions/datasetUpload';
 import {
   navigateToNextStep,
@@ -15,33 +16,31 @@ const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}`
 
 test.use({ attachments });
 
+function getUploadStatusChip(page, status) {
+  return page.getByTestId('status-row').getByTestId(`chip-${status}`);
+}
+
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance
-
-  let uploadedDatasetName;
-  let selectedDatasetType;
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
-    // Visit the dataset uploads page
-    await page.goto('/datasets/uploads/new');
+    await openNewUpload({ page });
   });
 
   test.describe('Upload-initiation step', () => {
     // Fill all form fields
     test.beforeAll(async ({ attachmentManager }) => {
-      // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-      await selectFiles({ page, filePaths });
-
-      // Click the "Next" button to proceed to the Upload-Details step
-      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
+      await selectFilesAndGoToGeneralInfo({ page, filePaths });
 
       const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
       await expect(datasetTypeSelect).toBeVisible();
       // Get the selected value from the component without clicking
-      selectedDatasetType = await datasetTypeSelect.locator('.va-select-content__option').textContent();
+      let selectedDatasetType = await datasetTypeSelect
+        .locator('.va-select-content__option')
+        .textContent();
       // Remove any leading/trailing whitespace
       selectedDatasetType = selectedDatasetType.trim();
 
@@ -73,8 +72,8 @@ test.describe.serial('Dataset Upload Process', () => {
       await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
       // Set the name of the dataset being uploaded
-      const token = await page.evaluate(() => localStorage.getItem('token'));
-      uploadedDatasetName = await generateUniqueDatasetName({
+      const token = await page.evaluate(() => globalThis.localStorage.getItem('token'));
+      const uploadedDatasetName = await generateUniqueDatasetName({
         requestContext: page.request,
         token,
         type: selectedDatasetType,
@@ -87,35 +86,18 @@ test.describe.serial('Dataset Upload Process', () => {
       await page.getByTestId('upload-next-button').click();
     });
 
-    // Assert that "Processing" status is shown when Upload button is clicked
-    // (to indicate that manifest-hash computation is in progress)
-    test('Should show `Processing` status when Upload button is clicked', async () => {
-      const statusRow = page.getByTestId('status-row');
-      await expect(statusRow).toBeVisible();
-      const processingChip = statusRow.getByTestId('chip-processing');
-      const uploadingChip = statusRow.getByTestId('chip-uploading');
+    test('should show `Processing` or `Uploading` after submission starts', async () => {
+      const processingChip = getUploadStatusChip(page, 'processing');
+      const uploadingChip = getUploadStatusChip(page, 'uploading');
+
       await expect(processingChip.or(uploadingChip)).toBeVisible();
     });
 
-    // Assert that after manifest-hash computation is complete, "Uploading" status
-    // is shown
-    test('Should show `Uploading` status after manifest-hash computation is complete', async () => {
-      const statusRow = page.getByTestId('status-row');
-      await expect(statusRow).toBeVisible();
-      const statusChip = statusRow.getByTestId('chip-uploading');
+    test('should show `Uploading` after manifest-hash computation completes', async () => {
+      const statusChip = getUploadStatusChip(page, 'uploading');
+
       await expect(statusChip).toBeVisible();
       await expect(statusChip).toHaveText('Uploading');
-    });
-
-    test('should show upload status after submission starts', async () => {
-      const processingChip = page.getByTestId('chip-processing');
-      const uploadingChip = page.getByTestId('chip-uploading');
-      const uploadedChip = page.getByTestId('chip-uploaded');
-      const failedChip = page.getByTestId('chip-upload-failed');
-
-      await expect(
-        processingChip.or(uploadingChip).or(uploadedChip).or(failedChip),
-      ).toBeVisible();
     });
   });
 });

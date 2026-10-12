@@ -11,11 +11,9 @@ import {
   setCheckboxState,
 } from '../../../../actions';
 import {
-  selectFiles,
+  openNewUpload,
+  selectFilesAndGoToGeneralInfo,
 } from '../../../../actions/datasetUpload';
-import {
-  navigateToNextStep,
-} from '../../../../actions/stepper';
 import { expect, test } from '../../../../fixtures';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
@@ -30,20 +28,17 @@ test.describe.serial('Dataset Upload Process', () => {
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
-    // Visit the dataset uploads page
-    await page.goto('/datasets/uploads/new');
+    await openNewUpload({ page });
   });
 
   test.describe('General Info step', async () => {
     test.beforeAll(async ({ attachmentManager }) => {
-      // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-      await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
-    });
-
-    test.beforeAll(async () => {
-      // Click the "Next" button to proceed to the General-Info step
-      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
+      await selectFilesAndGoToGeneralInfo({
+        page,
+        filePaths,
+        fileSelectTestId: 'upload-file-select',
+      });
     });
 
     test('should display General-Info form fields in their default states, with their default values', async () => {

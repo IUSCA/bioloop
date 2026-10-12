@@ -4,10 +4,10 @@
     :class="getAlertClasses(props.alert.type)"
   >
     <!-- Alert Icon -->
-    <va-icon
-      :name="alertService.getAlertIcon(props.alert.type)"
-      :color="alertService.getIconColor(props.alert.type)"
-      size="1.25rem"
+    <Icon
+      :icon="alertService.getAlertIcon(props.alert.type)"
+      class="text-xl flex-none"
+      :style="{ color: alertService.getIconColor(props.alert.type) }"
     />
 
     <!-- Alert Message -->
@@ -23,10 +23,12 @@
       v-if="props.dismissable"
       preset="plain"
       size="small"
-      icon="close"
+      aria-label="Dismiss"
       @click="handleClose"
       class="flex-shrink-0"
-    />
+    >
+      <Icon icon="material-symbols:close" class="text-xl" />
+    </va-button>
   </div>
 </template>
 
