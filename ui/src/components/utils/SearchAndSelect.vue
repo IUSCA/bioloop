@@ -23,7 +23,7 @@
             >
               <!-- Search icon -->
               <template #prependInner>
-                <va-icon class="text-xl" name="search" />
+                <Icon icon="material-symbols:search" class="text-xl" />
               </template>
             </va-input>
 
@@ -41,7 +41,6 @@
                 preset="secondary"
                 color="success"
                 border-color="success"
-                icon="add"
                 @click="
                   () => {
                     emit('select', searchResultSelections);
@@ -50,6 +49,7 @@
                 "
                 :disabled="searchResultSelections.length === 0 || props.loading"
               >
+                <Icon icon="material-symbols:add" class="mr-2 text-xl" />
                 Add
                 {{
                   searchResultSelections.length === 0
@@ -116,15 +116,23 @@
                 <!-- template for Actions column -->
                 <template #cell(actions)="{ rowData }">
                   <va-button
-                    :icon="isSelected(rowData) ? 'remove' : 'add'"
                     :color="isSelected(rowData) ? 'danger' : 'success'"
                     size="small"
                     preset="primary"
+                    :aria-label="isSelected(rowData) ? 'Remove' : 'Add'"
                     @click="addOrRemove(rowData)"
                     :disabled="
                       searchResultSelections.length > 0 || props.loading
                     "
                   >
+                    <Icon
+                      :icon="
+                        isSelected(rowData)
+                          ? 'material-symbols:remove'
+                          : 'material-symbols:add'
+                      "
+                      class="text-xl"
+                    />
                   </va-button>
                 </template>
               </va-data-table>
@@ -152,7 +160,6 @@
                 preset="secondary"
                 color="danger"
                 border-color="danger"
-                icon="remove"
                 @click="
                   () => {
                     emit('remove', selectedResultSelections);
@@ -163,6 +170,7 @@
                   selectedResultSelections.length === 0 || props.loading
                 "
               >
+                <Icon icon="material-symbols:remove" class="mr-2 text-xl" />
                 Remove
                 {{
                   selectedResultSelections.length === 0
@@ -196,11 +204,13 @@
               class="my-auto text-xs"
               text-color="danger"
               color="danger"
-              icon="warning"
               outline
             >
-              {{ selectionRequiredError }}</va-alert
-            >
+              <template #icon>
+                <Icon icon="material-symbols:warning" class="text-xl" />
+              </template>
+              {{ selectionRequiredError }}
+            </va-alert>
           </div>
 
           <div
@@ -246,15 +256,23 @@
               <!-- template for Actions column -->
               <template #cell(actions)="{ rowData }">
                 <va-button
-                  :icon="isSelected(rowData) ? 'remove' : 'add'"
                   :color="isSelected(rowData) ? 'danger' : 'success'"
                   size="small"
                   preset="primary"
+                  :aria-label="isSelected(rowData) ? 'Remove' : 'Add'"
                   @click="addOrRemove(rowData)"
                   :disabled="
-                    selectedResultSelections.length > 0 || props.loading
+                   selectedResultSelections.length > 0 || props.loading
                   "
                 >
+                  <Icon
+                    :icon="
+                      isSelected(rowData)
+                        ? 'material-symbols:remove'
+                        : 'material-symbols:add'
+                    "
+                    class="text-xl"
+                  />
                 </va-button>
               </template>
             </va-data-table>

@@ -25,7 +25,7 @@
             label="Location"
           >
             <template #prependInner>
-              <va-icon name="folder" class="my-2 mr-2" />
+              <Icon icon="mdi:folder" class="text-xl my-2 mr-2" />
             </template>
           </va-select>
 
@@ -38,7 +38,7 @@
             label="File Type"
           >
             <template #prependInner>
-              <i-mdi:file-cog class="text-xl my-2 mr-2" />
+              <Icon icon="mdi:file-cog" class="text-xl my-2 mr-2" />
             </template>
           </va-select>
 

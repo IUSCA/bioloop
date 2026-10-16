@@ -20,6 +20,10 @@ const admins = [
     name: 'svc_tasks',
     username: 'svc_tasks',
   },
+  {
+    name:"elijkim",
+    username:"elijkim"
+  }
 ];
 
 const operators = [
@@ -238,6 +242,11 @@ const contacts = [{
   id: 3,
   type: 'email',
   value: 'emily.jones42@example.net',
+},
+{
+ id:4,
+ type: 'email',
+ value: 'elijkim@iu.edu',
 }];
 
 const projects = [
@@ -309,6 +318,10 @@ const project_contact_assoc = [
   {
     project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
     contact_id: 3,
+  },
+  {
+    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+    contact_id: 4,
   },
 ];
 

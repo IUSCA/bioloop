@@ -21,7 +21,7 @@
           @click="isValid({ validate: true }) && setStep(i)"
         >
           <div class="flex flex-col items-center">
-            <va-icon :name="step.icon" />
+            <Icon :icon="step.icon" />
             <span class="hidden sm:block"> {{ step.label }} </span>
           </div>
         </button>
@@ -58,7 +58,7 @@
                   <tr>
                     <td>Description</td>
                     <td>
-                      <div class="max-h-[11.5rem] overflow-y-scroll">
+                      <div class="max-h-[11.5rem] overflow-y-auto">
                         {{ projectFormStore.project_info.description }}
                       </div>
                     </td>
@@ -131,10 +131,10 @@ const selectedDatasets = computed(() => projectFormStore.datasets);
 const step = ref(0);
 const loading = ref(false);
 const steps = [
-  { label: "General Info", icon: "lightbulb" },
-  { label: "Datasets", icon: "dataset" },
-  { label: "Users", icon: "people" },
-  { label: "Create", icon: "add_task" },
+{ label: "General Info", icon: "material-symbols:lightbulb" },
+  { label: "Datasets", icon: "material-symbols:dataset" },
+  { label: "Users", icon: "material-symbols:group" },
+  { label: "Create", icon: "material-symbols:add-task" },
 ];
 const is_last_step = computed(() => {
   return step.value === steps.length - 1;

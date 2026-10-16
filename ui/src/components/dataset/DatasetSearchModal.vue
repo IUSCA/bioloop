@@ -51,7 +51,7 @@
             placeholder="Choose a value"
           >
             <template #prependInner>
-              <Icon icon="mdi-cloud-sync" class="text-xl" />
+              <Icon icon="mdi:cloud-sync" class="text-xl" />
             </template>
           </va-select>
         </div>

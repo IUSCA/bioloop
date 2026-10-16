@@ -2,11 +2,16 @@
   <va-button
     round
     data-testid="theme-toggle"
-    :icon="isDark ? 'light_mode' : 'dark_mode'"
     @click="toggleDark()"
     preset="primary"
     :color="isDark ? 'warning' : 'primary'"
-  ></va-button>
+    :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+  >
+    <Icon
+      :icon="isDark ? 'material-symbols:light-mode' : 'material-symbols:dark-mode'"
+      class="text-xl"
+    />
+  </va-button>
 </template>
 
 <script setup>

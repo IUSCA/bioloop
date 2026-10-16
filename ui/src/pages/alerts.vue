@@ -23,7 +23,7 @@
       preset="primary"
       class="flex-none"
     >
-      <i-mdi-filter />
+      <Icon icon="mdi:filter" />
       <span>
         Filters
         <span v-if="activeFilters.length > 0" class="ml-1">
@@ -41,11 +41,11 @@
 
     <!-- New Alert button -->
     <va-button
-      icon="add"
       class="px-1"
       color="success"
       @click="showNewAlertModal"
     >
+      <Icon icon="material-symbols:add" class="mr-2 text-xl" />
       New Alert
     </va-button>
   </div>
@@ -76,10 +76,10 @@
     <template #cell(is_hidden)="{ value }">
       <va-popover :message="strToBool(value) ? 'Hidden' : 'Visible'">
         <span v-if="strToBool(value)" class="flex justify-center">
-          <i-mdi-eye-off-outline class="va-text-secondary" />
+          <Icon icon="mdi:eye-off-outline" class="va-text-secondary" />
         </span>
         <span v-else class="flex justify-center">
-          <i-mdi-eye-outline class="va-text-primary" />
+          <Icon icon="mdi:eye-outline" class="va-text-primary" />
         </span>
       </va-popover>
     </template>
@@ -117,7 +117,7 @@
         <va-popover message="View Alert">
           <va-button preset="plain" @click="showViewAlertModal(rowData)">
             <div>
-              <i-mdi-arrow-expand />
+              <Icon icon="mdi:arrow-expand" />
             </div>
           </va-button>
         </va-popover>
@@ -125,7 +125,7 @@
         <va-popover message="Edit Alert">
           <va-button preset="plain" @click="showEditAlertModal(rowData)">
             <div>
-              <i-mdi-pencil />
+              <Icon icon="mdi:pencil" />
             </div>
           </va-button>
         </va-popover>

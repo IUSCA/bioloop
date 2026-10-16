@@ -4,13 +4,13 @@
   >
     <va-card class="w-full max-w-md" v-if="notAuthorized || authFailure">
       <va-card-content>
-        <env-alert class="w-full" icon="warning" />
+        <env-alert class="w-full" icon="mdi:alert" />
 
         <div
           class="text-lg flex flex-col items-center gap-5 text-center"
           v-if="notAuthorized"
         >
-          <i-mdi-alert class="text-amber-600 text-5xl" />
+          <Icon icon="mdi:alert" class="text-amber-600 text-5xl" />
           <span data-testid="not-authorized">
             It appears that you do not currently have permission to access this
             application. If you require access, please send a message to
@@ -26,7 +26,7 @@
           class="text-lg text-gray-700 flex flex-col items-center gap-5 text-center"
           v-if="authFailure"
         >
-          <i-mdi-alert-octagon class="text-red-600 text-5xl" />
+          <Icon icon="mdi:alert-octagon" class="text-red-600 text-5xl" />
           <span class="va-text-text-primary">
             Authentication Failed. Something went wrong.
           </span>

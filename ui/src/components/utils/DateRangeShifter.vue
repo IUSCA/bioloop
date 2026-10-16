@@ -3,16 +3,20 @@
     <va-button
       v-if="enableJumpToRangeExtremes"
       preset="secondary"
-      icon="keyboard_double_arrow_left"
+      aria-label="Jump to start"
       @click="jumpToStartDateExtreme(props.startDateMin)"
       :disabled="isAtStartDateExtreme"
-    ></va-button>
+    >
+      <Icon icon="material-symbols:keyboard-double-arrow-left" class="text-xl" />
+    </va-button>
     <va-button
-      icon="keyboard_arrow_left"
       preset="secondary"
+      aria-label="Previous range"
       @click="changeDateRange(false, props.shiftBy)"
       :disabled="isAtStartDateExtreme"
-    ></va-button>
+    >
+      <Icon icon="material-symbols:keyboard-arrow-left" class="text-xl" />
+    </va-button>
     &nbsp;&nbsp;
     <va-date-input
       class="w-32"
@@ -39,18 +43,22 @@
     ></va-date-input>
     &nbsp;&nbsp;
     <va-button
-      icon="keyboard_arrow_right"
       preset="secondary"
+      aria-label="Next range"
       @click="changeDateRange(true, props.shiftBy)"
       :disabled="isAtEndDateExtreme"
-    ></va-button>
+    >
+      <Icon icon="material-symbols:keyboard-arrow-right" class="text-xl" />
+    </va-button>
     <va-button
       v-if="enableJumpToRangeExtremes"
       preset="secondary"
-      icon="keyboard_double_arrow_right"
+      aria-label="Jump to end"
       @click="jumpToEndDateExtreme(props.endDateMax)"
       :disabled="isAtEndDateExtreme"
-    ></va-button>
+    >
+      <Icon icon="material-symbols:keyboard-double-arrow-right" class="text-xl" />
+    </va-button>
   </va-button-group>
 </template>
 
