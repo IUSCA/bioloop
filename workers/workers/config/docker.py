@@ -1,4 +1,5 @@
 import datetime
+import os
 
 YEAR = datetime.datetime.now().year
 
@@ -55,3 +56,12 @@ config = {
         'register_ondemand': '/opt/sca/logs/register_ondemand'
     }
 }
+
+# Disposable previews use tiny synthetic files and short stability waits. Keep
+# app_env=docker so archive/stage/delete retain their existing local behavior.
+if os.environ.get('BIOLOOP_PREVIEW_MODE') == '1':
+    config['registration'].update({
+        'recency_threshold_seconds': 2,
+        'wait_between_stability_checks_seconds': 1,
+        'minimum_dataset_size': 1,
+    })

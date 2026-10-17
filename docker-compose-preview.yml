@@ -1,0 +1,190 @@
+name: bioloop-preview
+
+x-service: &service
+  restart: 'no'
+  init: true
+  cpus: 1.0
+  mem_limit: 512m
+  pids_limit: 128
+  security_opt: ['no-new-privileges:true']
+  logging:
+    driver: local
+    options: {max-size: 5m, max-file: '2'}
+  networks: [application]
+
+x-node-health: &node-health
+  interval: 5s
+  timeout: 5s
+  retries: 30
+  start_period: 15s
+
+x-workers: &workers
+  <<: *service
+  image: bioloop-preview-workers:local
+  build:
+    context: ${PREVIEW_SOURCE_DIR:?Set PREVIEW_SOURCE_DIR}/workers
+    dockerfile: ${PREVIEW_TOOLS_DIR:?Set PREVIEW_TOOLS_DIR}/Dockerfile.workers
+  env_file: ["${PREVIEW_STATE_DIR:?Set PREVIEW_STATE_DIR}/workers.env"]
+  volumes:
+    - data:/opt/sca/data
+    - ${PREVIEW_STATE_DIR}/workers.env:/opt/sca/app/.env:ro
+    - ${PREVIEW_TOOLS_DIR}:/preview:ro
+  mem_limit: 1g
+  pids_limit: 256
+
+services:
+  postgres:
+    <<: *service
+    image: postgres:14.5
+    env_file: ["${PREVIEW_STATE_DIR}/database.env"]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    command: [postgres, -c, shared_buffers=64MB, -c, max_connections=40]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U appuser -d app']
+      <<: *node-health
+  signet_db:
+    <<: *service
+    image: postgres:14.5
+    env_file: ["${PREVIEW_STATE_DIR}/database.env"]
+    volumes: [signet_data:/var/lib/postgresql/data]
+    command: [postgres, -c, shared_buffers=32MB, -c, max_connections=20]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U appuser -d app']
+      <<: *node-health
+  mongo:
+    <<: *service
+    image: mongo:5
+    mem_limit: 768m
+    env_file: ["${PREVIEW_STATE_DIR}/mongo.env"]
+    volumes: [mongo_data:/data/db]
+    command: [mongod, --wiredTigerCacheSizeGB, '0.25']
+    healthcheck:
+      test: [CMD-SHELL, 'mongo --quiet -u "$$MONGO_INITDB_ROOT_USERNAME" -p "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "quit(db.runCommand({ping:1}).ok ? 0 : 1)"']
+      <<: *node-health
+  queue:
+    <<: *service
+    image: rabbitmq:3.13-alpine
+    # Health probes must use the same UID as the broker, otherwise an early
+    # probe can create a root-owned Erlang cookie before broker initialization.
+    user: rabbitmq
+    env_file: ["${PREVIEW_STATE_DIR}/queue.env"]
+    volumes: [queue_data:/var/lib/rabbitmq]
+    environment:
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: '+S 2:2'
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      <<: *node-health
+  rhythm:
+    <<: *service
+    build:
+      context: ${PREVIEW_STATE_DIR}/dependencies/rhythm
+      dockerfile: ${PREVIEW_TOOLS_DIR}/Dockerfile.python-service
+    env_file: ["${PREVIEW_STATE_DIR}/rhythm.env"]
+    volumes:
+      - ${PREVIEW_STATE_DIR}/rhythm-keys:/app/keys:ro
+    command: [uvicorn, rhythm_api.main:app, --host, 0.0.0.0, --port, '5001']
+    depends_on:
+      queue: {condition: service_healthy}
+      mongo: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -c, "from urllib.request import urlopen; urlopen('http://localhost:5001/health', timeout=3)"]
+      <<: *node-health
+  signet:
+    <<: *service
+    build:
+      context: ${PREVIEW_STATE_DIR}/dependencies/signet
+      dockerfile: ${PREVIEW_TOOLS_DIR}/Dockerfile.python-service
+    env_file: ["${PREVIEW_STATE_DIR}/signet.env"]
+    volumes:
+      - ${PREVIEW_STATE_DIR}/signet-keys:/app/keys:ro
+    command: [gunicorn, --bind, '0.0.0.0:5050', --workers, '1', --threads, '1', --timeout, '60', app:app]
+    depends_on:
+      signet_db: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -c, "from urllib.request import urlopen; urlopen('http://localhost:5050/health', timeout=3)"]
+      <<: *node-health
+  init_data_dirs:
+    <<: *workers
+    command: [bash, -c, 'bash bin/init_dirs.sh && python /preview/sample-data.py']
+  api:
+    <<: *service
+    build:
+      context: ${PREVIEW_SOURCE_DIR}/api
+      dockerfile: ${PREVIEW_TOOLS_DIR}/Dockerfile.node
+      target: app
+    mem_limit: 1g
+    env_file: ["${PREVIEW_STATE_DIR}/api.env"]
+    volumes:
+      - data:/opt/sca/data
+      - ${PREVIEW_STATE_DIR}/api.env:/opt/sca/app/.env:ro
+      - ${PREVIEW_STATE_DIR}/api-keys:/opt/sca/app/keys:ro
+      - ${PREVIEW_TOOLS_DIR}:/preview:ro
+    depends_on:
+      postgres: {condition: service_healthy}
+      rhythm: {condition: service_healthy}
+      signet: {condition: service_healthy}
+      init_data_dirs: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, node, -e, "require('http').get('http://localhost:3030/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      <<: *node-health
+  secure_download:
+    <<: *service
+    build:
+      context: ${PREVIEW_SOURCE_DIR}/secure_download
+      dockerfile: ${PREVIEW_TOOLS_DIR}/Dockerfile.node
+      target: app
+    env_file: ["${PREVIEW_STATE_DIR}/download.env"]
+    volumes:
+      - data:/opt/sca/data:ro
+    depends_on:
+      signet: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, -e, "require('http').get('http://localhost:3060/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      <<: *node-health
+  celery_worker:
+    <<: *workers
+    command: [python, -m, celery, -A, workers.celery_app, worker, --loglevel, INFO, --concurrency, '1', --queues, bioloop-dev.sca.iu.edu.q, --without-gossip, --without-mingle]
+    depends_on:
+      api: {condition: service_healthy}
+  watch:
+    <<: *workers
+    command: [python, -m, workers.scripts.watch]
+    depends_on:
+      api: {condition: service_healthy}
+  upload_poller:
+    <<: *workers
+    command: [bash, -c, 'while true; do python -m workers.scripts.manage_upload_workflows; sleep 15; done']
+    depends_on:
+      api: {condition: service_healthy}
+  ui:
+    <<: *service
+    networks: [application, ingress]
+    build:
+      context: ${PREVIEW_SOURCE_DIR}/ui
+      dockerfile: ${PREVIEW_TOOLS_DIR}/Dockerfile.node
+      target: ui
+    ports: ['127.0.0.1:8080:80']
+    volumes:
+      - ${PREVIEW_TOOLS_DIR}/gateway.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      api: {condition: service_healthy}
+      secure_download: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, 'wget -q -O /dev/null http://127.0.0.1/']
+      <<: *node-health
+
+networks:
+  ingress: {}
+  application:
+    internal: true
+volumes:
+  postgres_data:
+  signet_data:
+  mongo_data:
+  queue_data:
+  data:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=512m,mode=0755

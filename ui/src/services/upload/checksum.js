@@ -164,7 +164,6 @@ export async function computeManifestHash(files, progressCallback = null) {
     const hasher = await createBlake3();
 
     const manifest = [];
-    const totalFiles = files.length;
     const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
     let processedBytes = 0;
 

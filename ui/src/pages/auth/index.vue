@@ -18,14 +18,28 @@
         <p
           class="w-full text-center text-xl font-semibold mb-4 tracking-normal"
         >
-          <span v-if="auth.isFeatureEnabled('signup')">
+          <span v-if="config.preview">Preview demo accounts</span>
+          <span v-else-if="auth.isFeatureEnabled('signup')">
             Sign Up or Log In
           </span>
           <span v-else>Log In with</span>
         </p>
 
+        <div v-if="config.preview" class="flex flex-col gap-3 px-8 mb-3">
+          <p class="text-center text-sm">
+            Temporary preview using synthetic data.
+          </p>
+          <va-button
+            v-for="role in ['admin', 'operator', 'user']"
+            :key="role"
+            :to="{ path: '/auth/iucas', query: { ticket: role } }"
+          >
+            Continue as {{ role }}
+          </va-button>
+        </div>
+
         <!-- IU CAS -->
-        <div class="flex justify-center px-8 mb-3">
+        <div v-else class="flex justify-center px-8 mb-3">
           <va-button
             class=""
             preset="secondary"
