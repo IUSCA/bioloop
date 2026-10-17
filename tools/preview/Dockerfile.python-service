@@ -1,0 +1,10 @@
+FROM python:3.11-slim-bookworm
+ENV PYTHONUNBUFFERED=1
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev libpq-dev openssl \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir poetry==1.8.2 poetry-plugin-export==1.8.0
+COPY pyproject.toml poetry.lock ./
+RUN poetry export --only main --without-hashes --format=requirements.txt > requirements.txt \
+    && pip install --no-cache-dir -r requirements.txt
+COPY . .

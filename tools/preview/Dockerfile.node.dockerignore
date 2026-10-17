@@ -1,0 +1,14 @@
+.git
+node_modules
+dist
+.env*
+!.env.default
+!.env.example
+.cert
+keys
+admins.json
+operators.json
+users.json
+.db_seeded
+*.log
+coverage

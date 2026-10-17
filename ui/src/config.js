@@ -1,15 +1,25 @@
+const previewMode = import.meta.env.VITE_PREVIEW_MODE === "true";
+const previewOrigin = previewMode ? window.location.origin : null;
+
 const exports = {
-  mode: "development",
+  mode: previewMode ? "ci" : "development",
+  preview: previewMode,
   // vite server redirects traffic on URLs starting with apiBaseURL
   // to http://${config.apiHost}:${config.apiPort} in dev environment
   apiBasePath: "/api",
-  casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
-  googleReturn:
-    import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
-  cilogonReturn:
-    import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
-  microsoftReturn:
-    import.meta.env.VITE_MICROSOFT_RETURN || "https://localhost/auth/microsoft",
+  casReturn: previewMode
+    ? `${previewOrigin}/auth/iucas`
+    : import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
+  googleReturn: previewMode
+    ? `${previewOrigin}/auth/google`
+    : import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
+  cilogonReturn: previewMode
+    ? `${previewOrigin}/auth/cil`
+    : import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
+  microsoftReturn: previewMode
+    ? `${previewOrigin}/auth/microsoft`
+    : import.meta.env.VITE_MICROSOFT_RETURN ||
+      "https://localhost/auth/microsoft",
   refreshTokenTMinusSeconds: {
     appToken: 300,
   },
@@ -52,9 +62,9 @@ const exports = {
     SLATE_SCRATCH_FILES: "/N/scratch files",
   },
   auth_enabled: {
-    google: true,
-    cilogon: true,
-    microsoft: true,
+    google: !previewMode,
+    cilogon: !previewMode,
+    microsoft: !previewMode,
   },
   dashboard: {
     active_tasks: {
