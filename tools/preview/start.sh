@@ -18,7 +18,10 @@ compose run --rm --no-deps -T rhythm python -m rhythm_api.scripts.issue_token \
 python3 "$PREVIEW_TOOLS_DIR/configure.py" workflow-token
 compose run --rm --no-deps -T api npx prisma migrate deploy
 compose run --rm --no-deps -T api npx prisma db seed
-compose run --rm --no-deps -T -v "$PREVIEW_STATE_DIR/output:/preview-output" api node /preview/bootstrap.mjs
+# The host reads this private output next. Match its UID/GID so a Linux runner
+# can read the mode-0600 file instead of receiving a root-owned credential file.
+compose run --rm --no-deps -T --user "$(id -u):$(id -g)" \
+  -v "$PREVIEW_STATE_DIR/output:/preview-output" api node /preview/bootstrap.mjs
 python3 "$PREVIEW_TOOLS_DIR/configure.py" bootstrap
 compose up -d --wait --wait-timeout 180 api secure_download
 compose up -d celery_worker watch upload_poller
