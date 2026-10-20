@@ -1,3 +1,7 @@
+const forceResumeStaleHours = Number(
+  import.meta.env.VITE_WORKFLOW_FORCE_RESUME_STALE_HOURS ?? 24,
+);
+
 const exports = {
   mode: "development",
   // vite server redirects traffic on URLs starting with apiBaseURL
@@ -19,6 +23,13 @@ const exports = {
     app_admin: "bioloop-ops-l@list.iu.edu",
   },
   dataset_polling_interval: 10000,
+  workflow: {
+    // Visibility threshold only; age does not prove that a task has stopped.
+    force_resume_stale_hours:
+      Number.isFinite(forceResumeStaleHours) && forceResumeStaleHours > 0
+        ? forceResumeStaleHours
+        : 24,
+  },
   paths: {
     download: "",
   },

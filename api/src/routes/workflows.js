@@ -375,10 +375,19 @@ router.post(
 router.post(
   '/:id/resume',
   isPermittedTo('update'),
+  validate([
+    query('force').optional()
+      .custom((value) => value === 'true' || value === 'false')
+      .withMessage('Must be true or false')
+      .bail()
+      .toBoolean(),
+  ]),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
-      const api_res = await wf_service.resume(req.params.id);
+      const api_res = await wf_service.resume(req.params.id, {
+        force: req.query.force ?? false,
+      });
       res.json(api_res.data);
     },
   ),
