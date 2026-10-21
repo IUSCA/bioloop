@@ -19,6 +19,10 @@ const exports = {
     app_admin: "bioloop-ops-l@list.iu.edu",
   },
   dataset_polling_interval: 10000,
+  workflow: {
+    // Visibility threshold only; age does not prove that a task has stopped.
+    force_resume_stale_hours: 24,
+  },
   paths: {
     download: "",
   },

@@ -52,8 +52,10 @@ function deleteOne(id) {
   return wfApi.delete(`/workflows/${id}`);
 }
 
-function resume(id) {
-  return wfApi.post(`/workflows/${id}/resume`, {});
+function resume(id, { force = false } = {}) {
+  return wfApi.post(`/workflows/${id}/resume`, {}, {
+    params: { force },
+  });
 }
 
 function create(wf) {
