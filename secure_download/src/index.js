@@ -5,13 +5,12 @@ const path = require('path');
 global.__basedir = path.join(__dirname, '..');
 
 // Load .env first so production values take precedence, then load .env.default
-// as fallback for any vars not present in .env. 
-// 
+// as fallback for any vars not present in .env.
+//
 // dotenv v8 does not override already-set env vars, so this achieves the
 //  desired override semantics without needing a newer dotenv version.
 require('dotenv').config();
 require('dotenv').config({ path: '.env.default' });
-
 
 // require('./db');
 const config = require('config');

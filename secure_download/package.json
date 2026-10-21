@@ -28,6 +28,7 @@
     "config": "^3.3.9",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "dotenv": "^8.6.0",
     "dotenv-safe": "^8.2.0",
     "express": "^4.21.2",
     "express-validator": "^7.0.1",

@@ -252,7 +252,10 @@ router.get(
     // #swagger.summary = 'Get uploads by status'
 
     const raw = req.query.statuses;
-    const statuses = raw === undefined ? [] : (Array.isArray(raw) ? raw : [raw]);
+    let statuses = [];
+    if (raw !== undefined) {
+      statuses = Array.isArray(raw) ? raw : [raw];
+    }
 
     const uploads = await prisma.dataset_upload_log.findMany({
       where: {

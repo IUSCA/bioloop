@@ -353,6 +353,25 @@ async function main() {
   });
 
   // Seed notification fixtures for E2E roles.
+  // A fresh preview has no prior test-login sessions to create these users.
+  // Insert them after the base fixtures so existing fixture user IDs stay stable.
+  if (process.env.BIOLOOP_PREVIEW_MODE === '1') {
+    await Promise.all(data.roles.map(async (role) => {
+      const username = config.get(`e2e.users.${role.name}.username`);
+      if (!username) throw new Error(`Missing preview username for ${role.name}`);
+      await prisma.user.upsert({
+        where: { username },
+        update: {},
+        create: {
+          username,
+          name: username,
+          cas_id: username,
+          email: `${username}@example.test`,
+          user_role: { create: { role_id: role.id } },
+        },
+      });
+    }));
+  }
   runNotificationSeedScript(['e2eAdmin', 'e2eOperator', 'e2eUser']);
 }
 

@@ -1,0 +1,11 @@
+.git
+.env*
+!.env.default
+!.env.example
+.hsirc
+*.keytab
+__pycache__
+**/__pycache__
+venv
+core*
+*.log
