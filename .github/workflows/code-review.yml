@@ -65,9 +65,12 @@ jobs:
           review_task_timeout: '10'
           review_concurrency: '1'
           effort: medium
-          # Soft limit: a final round can exceed it, and partial reviews can still succeed.
-          max_tokens_budget: '100000'
+          # No token budget cap; API and timeout limits still apply.
+          max_tokens_budget: '0'
+          # Review the full PR diff on every run.
+          checkpoint_range: 'false'
           stream_progress: 'true'
           sticky_summary: 'true'
+          # Only prevent duplicate inline comments; do not narrow the review range.
           incremental: 'true'
           upload_artifacts: 'false'
