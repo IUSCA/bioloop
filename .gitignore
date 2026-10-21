@@ -36,6 +36,7 @@ cypress
 tests/videos
 tests/screenshots
 tests/*.png
+/test-results/
 
 logs
 log

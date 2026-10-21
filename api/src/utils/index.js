@@ -214,14 +214,14 @@ function decodeJWT(token) {
 }
 
 /**
- * Read a JSON array from a file relative to global.__basedir.
+ * Read a JSON array from the instance directory, or global.__basedir by default.
  * Returns an empty array if the file does not exist, is not a JSON array, or cannot be read.
- * @param {string} fname - Filename (e.g., 'admins.json'), resolved against global.__basedir
+ * @param {string} fname - Filename (e.g., 'admins.json').
  * @returns {Array}
  */
 function readFromJSON(fname) {
   try {
-    const fpath = path.join(global.__basedir, fname);
+    const fpath = path.join(process.env.API_INSTANCE_DIR || global.__basedir, fname);
     const exists = fs.existsSync(fpath, fs.constants.F_OK);
     if (exists) {
       const data = JSON.parse(fs.readFileSync(fpath, 'utf8'));
