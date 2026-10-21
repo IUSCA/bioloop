@@ -10,11 +10,17 @@
       class="shadow-2xl"
       v-visible="props.numItems > props.itemsInView"
       @click="isNearBottom ? scrollToTop() : scrollToBottom()"
-      :icon="
-        isNearBottom ? 'keyboard_double_arrow_up' : 'keyboard_double_arrow_down'
-      "
       round
+      :aria-label="isNearBottom ? 'Scroll to top' : 'Scroll to bottom'"
     >
+      <Icon
+        :icon="
+          isNearBottom
+            ? 'material-symbols:keyboard-double-arrow-up'
+            : 'material-symbols:keyboard-double-arrow-down'
+        "
+        class="text-xl"
+      />
     </va-button>
   </va-badge>
 </template>

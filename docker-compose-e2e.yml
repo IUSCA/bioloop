@@ -1,35 +1,30 @@
 # This is the docker-compose file for the Bioloop project
 # Here we make heavy use of entrypoint scripts to set up the keys and any pre-requisites for the containers.
 # We use the command to run a script that runs any commands that need to run after the containers are up.
-name: bioloop
+name: bioloop-e2e
 services:
   ui:
-    image: node:21
+    image: bioloop-ui:e2e
+    build:
+      context: .
+      dockerfile: ui/Dockerfile
     ports:
-      - 127.0.0.1:443:443
-    env_file:
-      - ui/.env.default
-    # environment:
-      # If this stack's UI port is remapped to something other than :443,
-      # override these so CAS/OAuth callbacks and upload API calls land on the
-      # correct port rather than the default.  Example for a stack on :13443:
-        # - VITE_CAS_RETURN=https://localhost:13443/auth/iucas
-        # - VITE_GOOGLE_RETURN=https://localhost:13443/auth/google
-        # - VITE_CILOGON_RETURN=https://localhost:13443/auth/cil
-        # - VITE_MICROSOFT_RETURN=https://localhost:13443/auth/microsoft
-        # - VITE_UPLOAD_API_BASE_PATH=http://localhost:<secure_download_port>
+      - 127.0.0.1:13443:443
+    environment:
+      # Keep the UI and Playwright expectations on the same instance profile.
+      - UPLOAD_ENABLED_ROLES=${UPLOAD_ENABLED_ROLES:-admin}
     volumes:
-      - ./ui/:/opt/sca/app
-      - ui_node_modules:/opt/sca/app/node_modules
-    working_dir: /opt/sca/app
-    entrypoint: ["bin/entrypoint.sh"]
-    command: ["npm", "run", "dev"]
+      # The E2E runner creates these short-lived self-signed certificates.
+      - ${E2E_TLS_CERT_DIR:?E2E_TLS_CERT_DIR must be set}:/etc/nginx/certs:ro
+    depends_on:
+      api:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-k", "-f", "https://localhost:443"]
-      interval: 10s
+      test: ["CMD-SHELL", "wget --no-check-certificate -qO- https://localhost/ > /dev/null || exit 1"]
+      interval: 5s
       timeout: 10s
-      retries: 18
-      start_period: 120s
+      retries: 20
+      start_period: 10s
 
   api:
     image: node:21
@@ -69,12 +64,10 @@ services:
     image: postgres:14.5
     expose:
       - 5432
-    ports:
-      - 127.0.0.1:5433:5432
     env_file:
       - db/postgres/.env.default # For Postgres connection settings
     volumes:
-      - ./db/postgres/data:/var/lib/postgresql/data # Setting the data to a volume. This is where the postgres data is stored.
+      - e2e_postgres_data:/var/lib/postgresql/data
       - ./db/postgres/aux_scripts:/opt/sca/scripts # Setting the data to a volume. This is where the postgres data is stored.
 
 # Workers
@@ -179,12 +172,11 @@ services:
     image: rabbitmq:4-management
     expose:
       - 5672
-    ports:
-      - 127.0.0.1:15672:15672
     env_file:
       - db/queue/.env.default # For RabbitMQ connection settings
     volumes:
       - queue_volume:/var/lib/rabbitmq/
+      - ./db/queue/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
 
 
   mongo:
@@ -192,12 +184,10 @@ services:
     image: mongo:5
     expose:
       - 27017
-    ports:
-      - 127.0.0.1:27017:27017
     env_file:
       - db/mongo/.env.default # For MongoDB connection settings
     volumes:
-      - ./db/mongo/data:/data/db
+      - e2e_mongo_data:/data/db
       - ./db/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro # for importing database files.  This will automatically be run by being moutned into the initialization folder, if you're not using docker you will need to run this manually.
 
   # You must clone the rhythm_api repo and place it in the rhythm folder
@@ -231,8 +221,6 @@ services:
   secure_download:
     image: node:19
     restart: unless-stopped
-    ports:
-      - "3060:3060"
     env_file:
       - secure_download/.env.default # For all default settings
     volumes:
@@ -284,7 +272,7 @@ services:
     volumes:
       - signet_db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "appuser"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 10s
       retries: 10
@@ -391,6 +379,10 @@ services:
         condition: service_completed_successfully
 
 volumes:
+  e2e_postgres_data:
+    external: false
+  e2e_mongo_data:
+    external: false
   grafana_data:
     external: false
   prometheus_data:
@@ -406,8 +398,6 @@ volumes:
   rhythm_keys:
     external: false
   api_node_modules:
-    external: false
-  ui_node_modules:
     external: false
   secure_download_node_modules:
     external: false

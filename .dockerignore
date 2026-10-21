@@ -1,0 +1,8 @@
+.git
+**/node_modules
+ui/.cert
+ui/dist
+tests/playwright-report
+tests/test-results
+db/postgres/data
+db/mongo/data

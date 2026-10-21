@@ -86,12 +86,8 @@
       </div>
 
       <div v-show="step == 2" class="w-full h-full">
-        <VaButton
-          @click="step = 1"
-          preset="plain"
-          class="mb-4"
-          icon="arrow_back"
-        >
+        <VaButton @click="step = 1" preset="plain" class="mb-4">
+          <Icon icon="material-symbols:arrow-back" class="mr-2 text-xl" />
           Previous
         </VaButton>
 

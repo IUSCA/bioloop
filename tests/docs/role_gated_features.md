@@ -1,6 +1,6 @@
 ## Role-Gated Features
 
-Some features are only available to a subset of roles (e.g. a feature enabled for admin and operator but not for user). Testing this correctly requires keeping three things in sync, and following a consistent project layout.
+Some features are only available to a subset of roles (e.g. a feature enabled for admin and operator but not for user). Statically configured features require keeping three things in sync and following a consistent project layout. Dataset Upload is the runtime-configured exception described below.
 
 ### The Three-Way Sync Requirement
 
@@ -10,7 +10,27 @@ Some features are only available to a subset of roles (e.g. a feature enabled fo
 | Test environment feature config (the `config` package read by spec files) | Must mirror the UI config exactly. Spec files read this to decide whether to run or skip a test. If the two diverge, tests silently skip when they should run, or fail when they should be skipped. |
 | Playwright project definitions (`testMatch` / `testIgnore` per project) | Routes each role to either the full functional test suite or the access-control check, based on whether that role has access. |
 
-All three must be updated together whenever a role is added to or removed from a feature's access list.
+For statically configured features, all three must be updated together whenever a role is added to or removed from a feature's access list.
+
+### Dataset Upload runtime roles
+
+Dataset Upload is configured per instance through one comma-separated
+environment variable:
+
+```bash
+UPLOAD_ENABLED_ROLES=admin,operator
+```
+
+The production UI container converts this value into `runtime-config.js` when
+it starts. The E2E UI receives the same value as
+`VITE_UPLOAD_ENABLED_ROLES`, while Playwright reads
+`UPLOAD_ENABLED_ROLES` directly. This keeps the application and its expected
+test behavior on the same instance profile without copying the role list into
+multiple source files.
+
+The required CI profile defaults to `admin`. All three roles run the Upload
+access-control spec, while functional User-specific Upload projects are only
+registered when `user` is included in `UPLOAD_ENABLED_ROLES`.
 
 ### Project Layout
 
@@ -78,4 +98,3 @@ test.describe('My feature access control', () => {
 3. In `playwright.config.js`, change the role's project `testMatch` to the full functional glob and add `testIgnore` for `access_control.spec.js`.
 
 **To remove a role's access**, reverse the steps above: remove from both configs and switch the project back to only matching `access_control.spec.js` (remove `testIgnore`).
-

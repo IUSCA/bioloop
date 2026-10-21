@@ -4,7 +4,7 @@
     @click="emit('click')"
     :color="props.color"
   >
-    <Icon icon="mdi-alert-circle-outline" class="mr-3 text-xl" />
+    <Icon icon="mdi:alert-circle-outline" class="mr-3 text-xl" />
     <span> Click again to confirm </span>
   </va-button>
   <va-button

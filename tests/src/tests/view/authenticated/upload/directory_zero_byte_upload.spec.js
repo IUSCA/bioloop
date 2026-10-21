@@ -2,7 +2,10 @@ import {
   selectAutocompleteResult,
   selectDropdownOption,
 } from '../../../../actions';
-import { selectDirectory } from '../../../../actions/datasetUpload';
+import {
+  openNewUpload,
+  selectDirectory,
+} from '../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../actions/stepper';
 import { generateUniqueDatasetName } from '../../../../api/dataset';
 import { expect, test } from '../../../../fixtures';
@@ -19,22 +22,17 @@ test('directory upload succeeds with a zero-byte file', async ({
   attachmentManager,
 }) => {
   const page = await browser.newPage();
-  await page.goto('/datasets/uploads/new');
+  await openNewUpload({ page });
 
-  const filePaths = attachments.map(
-    (file) => `${attachmentManager.getPath()}/${file.name}`,
-  );
-  await selectDirectory({ page, filePaths });
+  const directoryPath = `${attachmentManager.getPath()}/sample-dir`;
+  await selectDirectory({ page, directoryPath });
+
   const selectedFilesTable = page.getByTestId('upload-selected-files-table');
-  try {
-    await expect(selectedFilesTable).toBeVisible({ timeout: 5000 });
-  } catch {
-    test.skip(
-      true,
-      'Directory selection is not reproducible in this runner; skipping directory-specific assertion path.',
-    );
-  }
-  await expect(page.getByTestId('file-name')).toHaveCount(2);
+  await expect(selectedFilesTable).toBeVisible({ timeout: 15000 });
+  await expect(selectedFilesTable.getByTestId('folder-icon')).toBeVisible();
+  await expect(selectedFilesTable.getByTestId('file-name')).toHaveText(
+    'sample-dir',
+  );
 
   await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
   await selectAutocompleteResult({
@@ -58,14 +56,30 @@ test('directory upload succeeds with a zero-byte file', async ({
 
   await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
-  const token = await page.evaluate(() => localStorage.getItem('token'));
+  const token = await page.evaluate(
+    () => globalThis.localStorage.getItem('token'),
+  );
   const datasetName = await generateUniqueDatasetName({
     requestContext: page.request,
     token,
     type: 'DATA_PRODUCT',
   });
   await page.getByTestId('upload-details-dataset-name-input').fill(datasetName);
+
+  const completionRequestPromise = page.waitForRequest(
+    (request) => request.method() === 'POST'
+      && /\/datasets\/uploads\/\d+\/complete(?:\?|$)/.test(request.url()),
+    { timeout: 120000 },
+  );
   await page.getByTestId('upload-next-button').click();
+
+  const completionRequest = await completionRequestPromise;
+  const sizeManifest = completionRequest.postDataJSON().metadata.size_manifest;
+  expect(sizeManifest.file_count).toBe(2);
+  expect(sizeManifest.files).toEqual(expect.arrayContaining([
+    { path: 'data.csv', size: 12 },
+    { path: '.end-of-run', size: 0 },
+  ]));
 
   await expect(page.getByTestId('chip-uploaded')).toBeVisible({ timeout: 120000 });
   await expect(page.getByTestId('submission-alert')).toContainText('uploaded successfully');

@@ -79,14 +79,17 @@
                 :failure-reason="uploadLogFailureReason"
               />
               <!-- Admin: link to upload details page -->
-              <va-popover v-if="isUpload && auth.canAdmin" message="View upload details">
+              <va-popover
+                v-if="isUpload && auth.canAdmin"
+                message="View upload details"
+              >
                 <router-link
                   :to="`/datasets/uploads/${props.dataset.id}`"
                   target="_blank"
                   class="va-link"
                   title="View upload details"
                 >
-                  <va-icon name="open_in_new" size="small" />
+                  <Icon icon="mdi:open-in-new" class="text-lg" />
                 </router-link>
               </va-popover>
             </div>
@@ -95,7 +98,7 @@
         <tr>
           <td>Description</td>
           <td>
-            <div class="max-h-[11.5rem] overflow-y-scroll">
+            <div class="max-h-[11.5rem] overflow-y-auto">
               {{ props.dataset.description }}
             </div>
           </td>
