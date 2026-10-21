@@ -48,6 +48,9 @@ jobs:
       # The action checks out the repository and installs its own CLI on the runner.
       - name: Review and post PR comments
         uses: alibaba/open-code-review@fabbdb296b0d97e2140ada8d54ca7d6d6d1d7ad4 # v1.12.13
+        env:
+          # Keep the pinned CLI from updating itself while the action is running.
+          OCR_NO_UPDATE: '1'
         with:
           ocr_version: '1.12.13'
           github_token: ${{ github.token }}
