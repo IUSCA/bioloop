@@ -13,8 +13,8 @@ const he = require('he');
 // const logger = require('@/services/logger');
 const prisma = require('@/db');
 const asyncHandler = require('@/middleware/asyncHandler');
-const { accessControl } = require('@/middleware/auth');
-const { validate } = require('@/middleware/validators');
+const { accessControl, requireFeature } = require('@/middleware/auth');
+const { validate, optionalBigIntBody } = require('@/middleware/validators');
 const datasetService = require('@/services/dataset');
 const authService = require('@/services/auth');
 const wfService = require('@/services/workflow');
@@ -22,6 +22,7 @@ const CONSTANTS = require('@/constants');
 const logger = require('@/services/logger');
 
 const isPermittedTo = accessControl('datasets');
+const requireImport = requireFeature('import');
 const router = express.Router();
 
 // stats - UI
@@ -501,13 +502,19 @@ router.get(
 router.post(
   '/',
   isPermittedTo('create'),
+  (req, res, next) => {
+    if (req.body?.create_method === CONSTANTS.DATASET_CREATE_METHODS.IMPORT) {
+      return requireImport(req, res, next);
+    }
+    return next();
+  },
   validate([
     body('name').notEmpty(),
     body('type').isIn(config.get('dataset_types')),
     body('origin_path').trim().notEmpty(),
-    body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
-    body('size').optional().notEmpty().customSanitizer(BigInt),
-    body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    optionalBigIntBody('du_size'),
+    optionalBigIntBody('size'),
+    optionalBigIntBody('bundle_size'),
     body('project_id').optional(),
     body('origin_path').notEmpty().escape(),
     body('src_instrument_id').optional(),
@@ -588,14 +595,23 @@ router.post(
 router.post(
   '/bulk',
   isPermittedTo('create'),
+  (req, res, next) => {
+    const hasImports = Array.isArray(req.body?.datasets)
+      && req.body.datasets.some((dataset) => dataset?.create_method === CONSTANTS.DATASET_CREATE_METHODS.IMPORT);
+    // Reject unauthorized imports before any dataset in the batch is created.
+    if (hasImports) {
+      return requireImport(req, res, next);
+    }
+    return next();
+  },
   validate([
     body('datasets').isArray({ min: 1, max: 100 }),
     body('datasets.*.name').notEmpty(),
     body('datasets.*.type').isIn(config.get('dataset_types')),
     body('datasets.*.origin_path').notEmpty(),
-    body('datasets.*.du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
-    body('datasets.*.size').optional().notEmpty().customSanitizer(BigInt),
-    body('datasets.*.bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    optionalBigIntBody('datasets.*.du_size'),
+    optionalBigIntBody('datasets.*.size'),
+    optionalBigIntBody('datasets.*.bundle_size'),
     body('datasets.*.project_id').optional(),
     body('datasets.*.src_instrument_id').optional(),
     body('datasets.*.src_dataset_id').optional(),
@@ -729,12 +745,9 @@ router.patch(
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
-    body('du_size').optional().notEmpty().bail()
-      .customSanitizer(BigInt), // convert to BigInt
-    body('size').optional().notEmpty().bail()
-      .customSanitizer(BigInt),
-    body('bundle_size').optional().notEmpty().bail()
-      .customSanitizer(BigInt),
+    optionalBigIntBody('du_size'),
+    optionalBigIntBody('size'),
+    optionalBigIntBody('bundle_size'),
     body('bundle').optional().isObject(),
   ]),
   asyncHandler(async (req, res, next) => {

@@ -1,4 +1,5 @@
 import "@fontsource/audiowide"; // cspell: disable-line
+import axios from "axios";
 import { createPinia } from "pinia";
 import { createApp } from "vue";
 import { createVuestic } from "vuestic-ui";
@@ -19,6 +20,7 @@ import "./styles/main.css";
 // import "material-design-icons-iconfont/dist/material-design-icons.min.css"; // cspell: disable-line
 
 import router from "@/router";
+import appConfig from "./config";
 import App from "./App.vue";
 import vVisible from "./directives/v-visible";
 
@@ -31,7 +33,22 @@ const app = createApp(App);
 
 app.use(createVuestic({ config }));
 app.use(createPinia());
-app.use(router);
-app.use(vVisible);
 
-app.mount("#app");
+async function mountApp() {
+  try {
+    // Load the instance policy before routes or components evaluate feature gates.
+    const { data } = await axios.get(`${appConfig.apiBasePath}/env/features`, {
+      timeout: 5000,
+    });
+    appConfig.enabledFeatures.import = data?.import ?? false;
+  } catch (error) {
+    // Keep the rest of the UI available, with Import disabled on failure.
+    console.error("Failed to load Import feature configuration", error);
+  }
+
+  app.use(router);
+  app.use(vVisible);
+  app.mount("#app");
+}
+
+mountApp();

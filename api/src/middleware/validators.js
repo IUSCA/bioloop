@@ -1,4 +1,4 @@
-const { validationResult } = require('express-validator');
+const { body, validationResult } = require('express-validator');
 
 // const validator = (fn) => (req, res, next) => {
 //   // express-validators functions such as body, query, param are used to validate requests
@@ -21,6 +21,27 @@ const validate = (rules) => [
     next();
   },
 ];
+
+// Validate optional body fields before conversion so malformed values return 400.
+function optionalBigIntBody(field) {
+  return body(field)
+    .optional()
+    .custom((value) => {
+      if (typeof value === 'number') {
+        // Large integers must be sent as strings to avoid JSON number precision loss.
+        if (!Number.isSafeInteger(value)) return false;
+      } else if (typeof value !== 'string' || !/^[+-]?\d+$/.test(value.trim())) {
+        return false;
+      }
+
+      const integer = BigInt(value);
+      // Prisma BigInt fields map to PostgreSQL signed 64-bit integers.
+      return integer >= -9223372036854775808n && integer <= 9223372036854775807n;
+    })
+    .withMessage('Must be a signed 64-bit integer; use a string for large values')
+    .bail()
+    .customSanitizer(BigInt);
+}
 
 function parseSortString(value) {
   // https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
@@ -55,5 +76,6 @@ const addSortSanitizer = (validationChain) => validationChain
 
 module.exports = {
   validate,
+  optionalBigIntBody,
   addSortSanitizer,
 };
