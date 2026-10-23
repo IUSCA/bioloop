@@ -3,6 +3,9 @@ FROM node:24
 ARG APP_GID
 ARG APP_UID 
 
+# remove the image's default node user (UID/GID 1000) so APP_UID/APP_GID can reuse those ids.
+RUN userdel -r node
+
 # create appuser and appgroup with the same ids as in the production VM.
 RUN groupadd -o --gid ${APP_GID} appgroup
 RUN useradd -ms /bin/bash --uid ${APP_UID} --gid ${APP_GID} appuser
