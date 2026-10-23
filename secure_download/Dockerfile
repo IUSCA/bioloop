@@ -1,4 +1,4 @@
-FROM node:19
+FROM node:24
 
 ARG APP_GID
 ARG APP_UID
