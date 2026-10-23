@@ -16,7 +16,10 @@
       </div>
 
       <!-- Data Product Stats -->
-      <div class="">
+      <div
+        v-if="auth.isFeatureEnabled('dataProducts')"
+        data-testid="dashboard-data-products"
+      >
         <!-- <span class="text-xl font-bold block my-1"> DATA PRODUCTS </span> -->
         <router-link to="/dataproducts" class="va-link">
           <stats :data="data_products_stats" title="DATA PRODUCTS"></stats>
@@ -63,8 +66,10 @@
 import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
 // import workflowService from "@/services/workflow";
+import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 
+const auth = useAuthStore();
 const nav = useNavStore();
 
 nav.setNavItems([], false);
@@ -93,14 +98,16 @@ DatasetService.getStats({ type: "RAW_DATA" })
     toast.error("Unable to fetch raw data stats");
   });
 
-DatasetService.getStats({ type: "DATA_PRODUCT" })
-  .then((res) => {
-    data_products_stats.value = res.data;
-  })
-  .catch((err) => {
-    console.error(err);
-    toast.error("Unable to fetch data products stats");
-  });
+if (auth.isFeatureEnabled("dataProducts")) {
+  DatasetService.getStats({ type: "DATA_PRODUCT" })
+    .then((res) => {
+      data_products_stats.value = res.data;
+    })
+    .catch((err) => {
+      console.error(err);
+      toast.error("Unable to fetch data products stats");
+    });
+}
 </script>
 
 <route lang="yaml">

@@ -74,6 +74,9 @@ const exports = {
   enabledFeatures: {
     genomeBrowser: true,
     notifications: false,
+    dataProducts: {
+      enabledForRoles: ["admin"],
+    },
     import: {
       enabledForRoles: ["admin"],
     },

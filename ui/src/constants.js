@@ -56,6 +56,7 @@ const exports = {
         test_id: "sidebar-raw-data",
       },
       {
+        feature_key: "dataProducts",
         icon: "mdi-package-variant-closed",
         title: "Data Products",
         path: "/dataproducts",
