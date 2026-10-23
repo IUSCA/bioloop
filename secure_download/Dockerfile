@@ -3,6 +3,10 @@ FROM node:19
 ARG APP_GID
 ARG APP_UID
 
+# Modify node user to be gid and uid 1001 to not conflict with rcsconf
+RUN groupmod -g 1001 node \
+  && usermod -u 1001 -g 1001 node
+
 # cspell:ignore scauser
 # create scauser and sca group with the same ids as in the production VM.
 RUN groupadd -o --gid ${APP_GID} sca
