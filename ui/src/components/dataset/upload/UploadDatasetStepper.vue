@@ -574,13 +574,26 @@ const datasetSearchText = ref("");
 // Search-text for Project search
 const projectSearchText = ref("");
 
+const isDataProductsEnabled = auth.isFeatureEnabled("dataProducts");
+
 // Options available to choose from in the `Dataset Type` dropdown.
-const datasetTypeOptions = ref(datasetTypes);
+const datasetTypeOptions = ref(
+  datasetTypes.filter(
+    (type) =>
+      isDataProductsEnabled ||
+      type.value !== config.dataset.types.DATA_PRODUCT.key,
+  ),
+);
 
 // The type of Dataset that the user has selected to upload.
 const selectedDatasetType = ref(
-  // By default, it is assumed that user will upload a Data Product.
-  datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key),
+  datasetTypeOptions.value.find(
+    (type) =>
+      type.value ===
+      (isDataProductsEnabled
+        ? config.dataset.types.DATA_PRODUCT.key
+        : config.dataset.types.RAW_DATA.key),
+  ),
 );
 
 /**
