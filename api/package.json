@@ -73,6 +73,9 @@
     "seed": "node prisma/seed.js"
   },
   "jest": {
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    },
     "collectCoverageFrom": [
       "tests/**/*.js",
       "!src/_test.js"
