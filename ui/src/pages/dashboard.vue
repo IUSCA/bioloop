@@ -6,7 +6,10 @@
       <Storage></Storage>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+    <div
+      class="grid grid-cols-1 gap-3"
+      :class="{ 'lg:grid-cols-2': auth.isFeatureEnabled('dataProducts') }"
+    >
       <!-- Raw Data Stats -->
       <div class="">
         <!-- <span class="text-xl font-bold block my-1">RAW DATA</span> -->

@@ -1,8 +1,8 @@
 <template>
   <va-alert
-    v-if="!auth.isFeatureEnabled('dataProducts')"
     color="warning"
     icon="warning"
+    v-if="!auth.isFeatureEnabled('dataProducts')"
     data-testid="data-products-feature-disabled-alert"
   >
     This feature is currently disabled
