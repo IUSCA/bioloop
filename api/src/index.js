@@ -1,3 +1,4 @@
+require('./services/processErrors')();
 require('module-alias/register');
 const path = require('path');
 
