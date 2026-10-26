@@ -3,10 +3,6 @@ FROM node:24
 ARG APP_GID
 ARG APP_UID
 
-# Modify node user to be gid and uid 1001 to not conflict with rcsconf
-RUN groupmod -g 1001 node \
-  && usermod -u 1001 -g 1001 node
-
 # cspell:ignore scauser
 # remove the image's default node user (UID/GID 1000) so APP_UID/APP_GID can reuse those ids.
 RUN userdel -r node
@@ -34,7 +30,6 @@ ENV PATH="/home/scauser/.local/bin/:${PATH}"
 RUN npm install pm2 -g
 # RUN npm install -g pnpm
 #ENTRYPOINT npm ci && npx prisma db push && exec pm2-runtime ecosystem.config.js
-#ENTRYPOINT npm install && exec pm2-runtime ecosystem.config.js
 ENTRYPOINT npm ci && exec pm2-runtime ecosystem.config.js
 # ENTRYPOINT pnpm fetch && npx prisma db push && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
 
