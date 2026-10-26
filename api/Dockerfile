@@ -1,11 +1,10 @@
-FROM node:19
+FROM node:24
 
 ARG APP_GID
 ARG APP_UID 
 
-# Modify node user to be gid and uid 1001 to not conflict with rcsconf
-RUN groupmod -g 1001 node \
-  && usermod -u 1001 -g 1001 node
+# remove the image's default node user (UID/GID 1000) so APP_UID/APP_GID can reuse those ids.
+RUN userdel -r node
 
 # create appuser and appgroup with the same ids as in the production VM.
 RUN groupadd -o --gid ${APP_GID} appgroup

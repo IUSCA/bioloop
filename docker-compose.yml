@@ -4,7 +4,7 @@
 name: bioloop
 services:
   ui:
-    image: node:21
+    image: node:24
     ports:
       - 127.0.0.1:443:443
     env_file:
@@ -17,7 +17,7 @@ services:
     command: ["npm", "run", "dev"]
 
   api:
-    image: node:21
+    image: node:24
     restart: unless-stopped # This can help with loading conatainer after it has all the keys set up.
     expose:
       - 3030
@@ -211,7 +211,7 @@ services:
 
   # Secure_download container
   secure_download:
-    image: node:19
+    image: node:24
     restart: unless-stopped
     ports:
       - "3060:3060"
@@ -274,7 +274,7 @@ services:
 
 # Dev containers
   docs:
-    image: node:21
+    image: node:24
     volumes:
       - ./package.json:/opt/sca/app/package.json
       - ./package-lock.json:/opt/sca/app/package-lock.json
