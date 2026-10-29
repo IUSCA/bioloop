@@ -17,7 +17,7 @@
         @keydown.enter.prevent.stop="openNotificationMenuFromKeyboard"
         @keydown.space.prevent.stop="openNotificationMenuFromKeyboard"
       >
-        <Icon icon="mdi-bell-outline" height="36px" width="36px" />
+        <Icon icon="mdi:bell-outline" height="36px" width="36px" />
       </va-button>
     </va-badge>
 

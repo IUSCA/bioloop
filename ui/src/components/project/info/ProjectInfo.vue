@@ -56,7 +56,7 @@
               This is a visual cue to the user indicating that the entire text is not visible 
               and prompting them to scroll further. Mac browsers will not show scroll bar unless scrolled
             -->
-            <div class="max-h-[11.5rem] overflow-y-scroll">
+            <div class="max-h-[11.5rem] overflow-y-auto">
               {{ props.project.description }}
             </div>
           </td>
