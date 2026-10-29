@@ -23,13 +23,7 @@
               <va-sidebar-item-title :data-testid="item.test_id">
                 {{ item.title }}
               </va-sidebar-item-title>
-              <Icon
-                :icon="
-                  isCollapsed
-                    ? 'material-symbols:keyboard-arrow-up'
-                    : 'material-symbols:keyboard-arrow-down'
-                "
-              />
+              <va-icon :name="isCollapsed ? 'va-arrow-up' : 'va-arrow-down'" />
             </va-sidebar-item-content>
           </va-sidebar-item>
         </template>

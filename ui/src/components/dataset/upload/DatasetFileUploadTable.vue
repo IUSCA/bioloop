@@ -15,7 +15,7 @@
       >
         <Icon
           v-if="rowData.type === 'directory'"
-          icon="mdi:folder"
+          icon="mdi-folder"
           class="text-xl flex-none text-gray-700"
           data-testid="file-type-folder-icon"
         />
@@ -45,10 +45,9 @@
           message="Succeeded"
           data-testid="status-uploaded"
         >
-          <Icon
-            icon="mdi:check-circle-outline"
-            class="text-2xl"
-            style="color: var(--va-success)"
+          <va-icon
+            name="check_circle_outline"
+            color="success"
             data-testid="status-icon-uploaded"
           />
         </va-popover>
@@ -57,10 +56,9 @@
           message="Uploading"
           data-testid="status-uploading"
         >
-          <Icon
-            icon="mdi:progress-clock"
-            class="text-2xl"
-            style="color: var(--va-info)"
+          <va-icon
+            name="pending"
+            color="info"
             data-testid="status-icon-uploading"
           />
         </va-popover>
@@ -69,10 +67,9 @@
           message="Failed"
           data-testid="status-failed"
         >
-          <Icon
-            icon="mdi:alert-circle-outline"
-            class="text-2xl"
-            style="color: var(--va-danger)"
+          <va-icon
+            name="error_outline"
+            color="danger"
             data-testid="status-icon-failed"
           />
         </va-popover>

@@ -3,8 +3,7 @@
     <!-- Dataset details -->
     <div class="flex flex-row gap-1 items-center">
       <div class="flex-none">
-        <Icon
-          icon="mdi:package-variant-closed"
+        <i-mdi-package-variant-closed
           aria-label="dataset"
           class="text-lg text-slate-700 dark:text-slate-300"
         />
@@ -32,8 +31,7 @@
     <!-- Start time and Progress -->
     <div class="flex flex-row gap-1 items-center">
       <div class="flex-none">
-        <Icon
-          icon="mdi:timer"
+        <i-mdi-timer
           aria-label="times"
           class="text-lg text-slate-700 dark:text-slate-300"
         />
@@ -59,8 +57,7 @@
     <!-- Where is the task running -->
     <div class="flex flex-row gap-1 items-center">
       <div class="flex-none">
-        <Icon
-          icon="mdi:cog"
+        <i-mdi-cog
           aria-label="queue and worker"
           class="text-lg text-slate-700 dark:text-slate-300"
         />
@@ -81,8 +78,7 @@
     <!-- Workflow details -->
     <div class="flex flex-row gap-1 items-center">
       <div class="flex-none">
-        <Icon
-          icon="mdi:map-marker-path"
+        <i-mdi:map-marker-path
           aria-label="workflow"
           class="text-lg text-slate-700 dark:text-slate-300"
         />

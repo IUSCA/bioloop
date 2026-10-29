@@ -58,15 +58,13 @@
       </VaValue>
 
       <VaButton
+        icon="delete"
         color="danger"
         size="small"
         preset="primary"
         class="!p-0"
-        aria-label="Delete"
         @click="removeKey(key)"
-      >
-        <Icon icon="material-symbols:delete" class="text-xl" />
-      </VaButton>
+      />
     </div>
 
     <!-- Add New KV -->
@@ -82,15 +80,13 @@
         class="border rounded px-1 py-0.5 value-input"
       />
       <VaButton
+        icon="add"
         size="small"
         color="success"
         @click="addKeyValue"
         :disabled="!newKey || newKey in localObject"
         class="!p-0"
-        aria-label="Add"
-      >
-        <Icon icon="material-symbols:add" class="text-xl" />
-      </VaButton>
+      />
     </div>
   </div>
 </template>

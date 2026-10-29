@@ -1,8 +1,9 @@
 <template>
-  <va-alert color="warning" v-if="!auth.isFeatureEnabled('import')">
-    <template #icon>
-      <Icon icon="mdi:alert" class="text-xl" />
-    </template>
+  <va-alert
+    color="warning"
+    icon="warning"
+    v-if="!auth.isFeatureEnabled('import')"
+  >
     This feature is currently disabled
   </va-alert>
 

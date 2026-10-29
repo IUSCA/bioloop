@@ -5,7 +5,7 @@ import AutoImport from "unplugin-auto-import/vite";
 import { VueRouterAutoImports } from "unplugin-vue-router";
 import { defineConfig } from "vitest/config";
 
-// Separate from vite.config.js: that file reads TLS certs on load and would fail in CI.
+// Unit tests need auto-imports, but not routing, icon generation, or build reports.
 export default defineConfig({
   plugins: [
     vue({

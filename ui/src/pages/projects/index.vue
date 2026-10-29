@@ -20,8 +20,7 @@
 
       <!-- reset button -->
       <div class="flex-none" v-if="isResetVisible">
-        <va-button @click="resetSortParams" preset="primary">
-          <Icon icon="material-symbols:restart-alt" class="mr-2 text-xl" />
+        <va-button icon="restart_alt" @click="resetSortParams" preset="primary">
           Reset Sort
         </va-button>
       </div>
@@ -29,11 +28,11 @@
       <!-- create button -->
       <div class="flex-none" v-if="auth.canOperate">
         <va-button
+          icon="add"
           class="px-1"
           color="success"
           @click="router.push('/projects/new')"
         >
-          <Icon icon="material-symbols:add" class="mr-2 text-xl" />
           Create Project
         </va-button>
       </div>
@@ -105,20 +104,16 @@
             <va-button
               class="flex-auto"
               preset="plain"
-              aria-label="Edit"
+              icon="edit"
               @click="openModalToEditProject(rowData)"
-            >
-              <Icon icon="material-symbols:edit" class="text-xl" />
-            </va-button>
+            />
             <va-button
               class="flex-auto"
               preset="plain"
+              icon="delete"
               color="danger"
-              aria-label="Delete"
               @click="openModalToDeleteProject(rowData)"
-            >
-              <Icon icon="material-symbols:delete" class="text-xl" />
-            </va-button>
+            />
           </div>
         </template>
       </va-data-table>

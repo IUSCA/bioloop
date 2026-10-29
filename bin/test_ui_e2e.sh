@@ -75,7 +75,7 @@ cd "$PROJECT_ROOT"
 E2E_TLS_CERT_DIR="$(mktemp -d "$PROJECT_ROOT/.e2e-tls.XXXXXX")"
 export E2E_TLS_CERT_DIR
 
-echo "Generating a temporary TLS certificate for the production UI..."
+echo "Generating a temporary TLS certificate for the E2E UI..."
 openssl req -x509 -newkey rsa:2048 \
   -keyout "$E2E_TLS_CERT_DIR/key.pem" \
   -out "$E2E_TLS_CERT_DIR/cert.pem" \

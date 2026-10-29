@@ -1,8 +1,9 @@
 <template>
-  <va-alert color="warning" v-if="!auth.isFeatureEnabled('import')">
-    <template #icon>
-      <Icon icon="mdi:alert" class="text-xl" />
-    </template>
+  <va-alert
+    color="warning"
+    icon="warning"
+    v-if="!auth.isFeatureEnabled('import')"
+  >
     This feature is currently disabled
   </va-alert>
 
@@ -25,11 +26,11 @@
 
       <div class="flex-none">
         <va-button
+          icon="add"
           class="px-1"
           color="success"
           @click="router.push('/datasets/imports/new')"
         >
-          <Icon icon="material-symbols:add" class="mr-2 text-xl" />
           Import Dataset
         </va-button>
       </div>
@@ -55,11 +56,7 @@
           class="flex justify-center"
         >
           <va-popover :message="'Registration completed successfully'">
-            <Icon
-              icon="mdi:check-circle"
-              class="text-2xl"
-              style="color: var(--va-success)"
-            />
+            <va-icon name="check_circle" color="success" />
           </va-popover>
         </div>
         <div
@@ -67,11 +64,7 @@
           class="flex justify-center"
         >
           <va-popover :message="'Registration failed'">
-            <Icon
-              icon="mdi:alert"
-              class="text-2xl"
-              style="color: var(--va-warning)"
-            />
+            <va-icon name="warning" color="warning" />
           </va-popover>
         </div>
       </template>
@@ -142,6 +135,7 @@ import toast from "@/services/toast";
 import wfService from "@/services/workflow";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
+import { Icon } from "@iconify/vue";
 import { HalfCircleSpinner } from "epic-spinners";
 import _ from "lodash";
 import { useColors } from "vuestic-ui";

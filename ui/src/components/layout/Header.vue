@@ -14,17 +14,9 @@
         <va-list>
           <va-list-item @keyup.enter="$emit('toggleSidebarVisibility')">
             <va-list-item-section class="m-0" icon>
-              <Icon
+              <va-icon
                 @click="$emit('toggleSidebarVisibility')"
-                :icon="
-                  props.isSidebarCollapsed
-                    ? 'material-symbols:menu-open'
-                    : 'material-symbols:menu'
-                "
-                class="text-2xl cursor-pointer"
-                :aria-label="
-                  props.isSidebarCollapsed ? 'Open sidebar' : 'Close sidebar'
-                "
+                :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')"
               />
             </va-list-item-section>
           </va-list-item>
@@ -47,7 +39,7 @@
 
     <template #right>
       <va-navbar-item class="flex items-center">
-        <env-alert icon="mdi:alert" />
+        <env-alert icon="warning" />
       </va-navbar-item>
 
       <va-navbar-item

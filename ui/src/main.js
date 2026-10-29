@@ -2,7 +2,6 @@ import "@fontsource/audiowide"; // cspell: disable-line
 import { createPinia } from "pinia";
 import { createApp } from "vue";
 import { createVuestic } from "vuestic-ui";
-import { vuesticIcons } from "./vuesticIcons";
 
 // reset styles first
 import "vuestic-ui/styles/reset.css";
@@ -17,6 +16,8 @@ import "./styles/overrides.css";
 import "./styles/footer.css";
 import "./styles/main.css";
 
+// import "material-design-icons-iconfont/dist/material-design-icons.min.css"; // cspell: disable-line
+
 import router from "@/router";
 import App from "./App.vue";
 import vVisible from "./directives/v-visible";
@@ -28,14 +29,7 @@ import vVisible from "./directives/v-visible";
 
 const app = createApp(App);
 
-app.use(
-  createVuestic({
-    config: {
-      ...config,
-      icons: vuesticIcons,
-    },
-  }),
-);
+app.use(createVuestic({ config }));
 app.use(createPinia());
 app.use(router);
 app.use(vVisible);

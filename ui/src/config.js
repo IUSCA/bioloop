@@ -1,5 +1,3 @@
-import { uploadEnabledForRoles } from "./runtimeConfig";
-
 const exports = {
   mode: "development",
   // vite server redirects traffic on URLs starting with apiBaseURL
@@ -34,13 +32,13 @@ const exports = {
         key: "RAW_DATA",
         label: "Raw Data",
         collection_path: "rawdata",
-        icon: "mdi:dna",
+        icon: "mdi-dna",
       },
       DATA_PRODUCT: {
         key: "DATA_PRODUCT",
         label: "Data Product",
         collection_path: "dataproducts",
-        icon: "mdi:package-variant-closed",
+        icon: "mdi-package-variant-closed",
       },
     },
   },
@@ -77,12 +75,12 @@ const exports = {
     genomeBrowser: true,
     notifications: false,
     import: {
-      enabledForRoles: ["admin", "operator"],
+      enabledForRoles: ["admin"],
     },
     downloads: true,
     signup: false,
     uploads: {
-      enabledForRoles: uploadEnabledForRoles,
+      enabledForRoles: ["admin"],
     },
     // Compute and send a BLAKE3 manifest-hash before each upload so the
     // verification worker can confirm file integrity end-to-end.

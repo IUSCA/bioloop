@@ -69,7 +69,7 @@
                   size="medium"
                   padding-direction="left"
                   padding-amount="sm"
-                  icon="mdi:information"
+                  icon="info"
                 >
                   A new Project will be created
                 </OutlinedAlert>

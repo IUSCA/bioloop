@@ -1,6 +1,6 @@
 import {
-  openNewUpload,
-  selectFilesAndGoToGeneralInfo,
+  selectFiles,
+  trackSelectedFilesMetadata,
 } from '../../../../../actions/datasetUpload';
 import {
   navigateToNextStep,
@@ -16,18 +16,38 @@ test.describe.serial('Dataset Upload Process', () => {
 
   let selectedDatasetType;
 
-  test.beforeAll(async ({ browser, attachmentManager }) => {
+  const selectedFiles = []; // array of selected files
+
+  test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
-    await openNewUpload({ page });
-    const filePaths = attachments.map(
-      (file) => `${attachmentManager.getPath()}/${file.name}`,
-    );
-    await selectFilesAndGoToGeneralInfo({ page, filePaths });
+    // Visit the dataset uploads page
+    await page.goto('/datasets/uploads/new');
+  });
+
+  test.describe('File selection step', () => {
+    test.beforeAll(async ({ attachmentManager }) => {
+      // Select files
+      const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
+      await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
+    });
+
+    test('Wait for the file upload table to be visible', async () => {
+      // Track selected files metadata
+      const files = await trackSelectedFilesMetadata({ page, tableTestId: 'upload-selected-files-table' });
+
+      // Store the selected files' information in state
+      selectedFiles.push(...files);
+    });
   });
 
   test.describe('General-Info selection step', async () => {
-    test('should allow leaving optional metadata unassigned', async () => {
+    test.beforeAll(async () => {
+      // Click the "Next" button to proceed to the Upload-Details step
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
+    });
+
+    test('should allow selecting values in the General-Info form\'s fields', async () => {
       // Select (or track, if pre-populated) Dataset Type
       // Capture the pre-populated Dataset Type
       const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');

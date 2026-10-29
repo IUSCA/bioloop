@@ -9,19 +9,9 @@ import { defineConfig, loadEnv } from "vite";
 import Layouts from "vite-plugin-vue-layouts";
 // import basicSsl from "@vitejs/plugin-basic-ssl";
 import { visualizer } from "rollup-plugin-visualizer";
+import IconsResolver from "unplugin-icons/resolver";
+import Icons from "unplugin-icons/vite";
 import { VueRouterAutoImports } from "unplugin-vue-router";
-
-function loadDevHttps() {
-  const keyPath = "./.cert/key.pem";
-  const certPath = "./.cert/cert.pem";
-  if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) {
-    return undefined;
-  }
-  return {
-    key: fs.readFileSync(keyPath),
-    cert: fs.readFileSync(certPath),
-  };
-}
 
 // https://vitejs.dev/config/
 // eslint-disable-next-line no-unused-vars
@@ -59,6 +49,10 @@ export default defineConfig(({ command, mode }) => {
 
         // custom resolvers
         resolvers: [
+          // auto import icons
+          // https://github.com/antfu/unplugin-icons#auto-importing
+          IconsResolver(),
+
           // auto import Icon - iconify vue component
           // https://docs.iconify.design/icon-components/vue/
           (componentName) => {
@@ -66,6 +60,11 @@ export default defineConfig(({ command, mode }) => {
               return { name: "Icon", from: "@iconify/vue" };
           },
         ],
+      }),
+
+      // https://github.com/antfu/unplugin-icons
+      Icons({
+        autoInstall: true,
       }),
 
       // https://github.com/JohnCampionJr/vite-plugin-vue-layouts
@@ -88,8 +87,15 @@ export default defineConfig(({ command, mode }) => {
       port: 443,
 
       // https://vitejs.dev/config/#server-https
-      // Certs are local-only; CI and `vite build` run without them.
-      https: loadDevHttps(),
+      https:
+        command === "serve" &&
+        fs.existsSync("./.cert/key.pem") &&
+        fs.existsSync("./.cert/cert.pem")
+          ? {
+              key: fs.readFileSync("./.cert/key.pem"),
+              cert: fs.readFileSync("./.cert/cert.pem"),
+            }
+          : undefined,
       // just `true` yields errors with Firefox as of 2022.12
       // https: true,
 

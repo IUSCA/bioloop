@@ -8,7 +8,7 @@
       fontSizeClass,
     ]"
   >
-    <Icon :icon="props.icon" :class="['mr-2', iconSizeClass]" />
+    <va-icon :name="props.icon" :size="props.iconSize" class="mr-2" />
     <span><slot></slot></span>
   </div>
 </template>
@@ -17,7 +17,7 @@
 const props = defineProps({
   icon: {
     type: String,
-    default: "mdi:information",
+    default: "info",
   },
   iconSize: {
     type: String,
@@ -54,17 +54,6 @@ const props = defineProps({
     default: "medium",
     validator: (value) => ["small", "medium", "large"].includes(value),
   },
-});
-
-const iconSizeClass = computed(() => {
-  switch (props.iconSize) {
-    case "small":
-      return "text-lg";
-    case "large":
-      return "text-3xl";
-    default:
-      return "text-2xl";
-  }
 });
 
 const borderClass = computed(() => {

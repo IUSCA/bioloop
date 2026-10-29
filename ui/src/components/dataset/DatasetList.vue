@@ -20,7 +20,7 @@
 
       <!-- Filter button -->
       <va-button @click="searchModal.show()" preset="primary" class="flex-none">
-        <Icon icon="mdi:filter" />
+        <i-mdi-filter />
         <span> Filters </span>
       </va-button>
 
@@ -54,13 +54,13 @@
 
       <template #cell(archived)="{ source }">
         <span v-if="source" class="flex justify-center">
-          <Icon icon="mdi:check-circle-outline" class="text-green-700" />
+          <i-mdi-check-circle-outline class="text-green-700" />
         </span>
       </template>
 
       <template #cell(staged)="{ source }">
         <span v-if="source" class="flex justify-center">
-          <Icon icon="mdi:check-circle-outline" class="text-green-700" />
+          <i-mdi-check-circle-outline class="text-green-700" />
         </span>
       </template>
 
@@ -104,7 +104,7 @@
                 launch_modal.selected = rowData;
               "
             >
-              <Icon icon="mdi:rocket-launch" />
+              <i-mdi-rocket-launch />
             </va-button>
           </va-popover>
 
@@ -129,7 +129,7 @@
                 delete_modal.selected = rowData;
               "
             >
-              <Icon icon="mdi:delete" />
+              <i-mdi-delete />
             </va-button>
           </va-popover>
         </div>

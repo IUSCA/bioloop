@@ -84,3 +84,6 @@ signet/signet
 .ai/
 .cursor/
 .cursorrules
+
+# Generated only for the isolated E2E stack.
+.e2e-tls.*/

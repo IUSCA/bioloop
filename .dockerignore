@@ -1,6 +1,7 @@
 .git
 **/node_modules
 ui/.cert
+.e2e-tls.*
 ui/dist
 tests/playwright-report
 tests/test-results

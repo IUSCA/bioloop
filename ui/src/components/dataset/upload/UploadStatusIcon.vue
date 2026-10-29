@@ -5,11 +5,12 @@
     class="flex items-center space-x-2"
     data-testid="status-processing"
   >
-    <Icon
+    <va-icon
       v-if="props.showIcon"
-      class="animate-spin text-2xl"
-      icon="mdi:loading"
-      style="color: var(--va-primary)"
+      class="text-2xl"
+      name="loop"
+      spin="clockwise"
+      color="primary"
       data-testid="icon-processing"
     />
     <va-chip size="small" color="primary" data-testid="chip-processing"
@@ -124,6 +125,7 @@
 
 <script setup>
 import constants from "@/constants";
+import { Icon } from "@iconify/vue";
 
 const props = defineProps({
   submissionStatus: {

@@ -11,7 +11,7 @@
       @click="editing = true"
       size="small"
     >
-      <Icon icon="mdi:pencil" />
+      <i-mdi-pencil />
     </VaButton>
 
     <div v-else>
@@ -23,11 +23,11 @@
           emit('update:modelValue', model);
         "
       >
-        <Icon icon="mdi:check" />
+        <i-mdi-check />
       </VaButton>
 
       <VaButton preset="secondary" color="secondary" @click="editing = false">
-        <Icon icon="mdi:close" />
+        <i-mdi-close />
       </VaButton>
     </div>
   </div>

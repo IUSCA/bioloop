@@ -1,11 +1,9 @@
 import {
-  openNewUpload,
+  selectAutocompleteResult, selectDropdownOption,
+} from '../../../../actions';
+import {
   selectFiles,
 } from '../../../../actions/datasetUpload';
-import {
-  selectAutocompleteResult,
-  selectDropdownOption,
-} from '../../../../actions';
 import {
   navigateToNextStep,
 } from '../../../../actions/stepper';
@@ -21,7 +19,14 @@ test.describe.serial('Dataset Upload Process', () => {
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
-    await openNewUpload({ page });
+    // Visit the dataset uploads page
+    await page.goto('/datasets/uploads/new');
+  });
+
+  test.beforeAll(async ({ attachmentManager }) => {
+    // Select files
+    const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
+    await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
   });
 
   test('should show all steps\' buttons with the correct labels', async () => {
@@ -49,6 +54,7 @@ test.describe.serial('Dataset Upload Process', () => {
 
   test.describe('File-selection step', () => {
     test.beforeAll(async ({ attachmentManager }) => {
+      // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
       await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
     });
@@ -81,31 +87,24 @@ test.describe.serial('Dataset Upload Process', () => {
       const uploadStepButton = page.getByTestId('step-button-2');
       await expect(uploadStepButton).toBeDisabled();
     });
+
+    test('should allow selecting values in the General-Info form\'s fields', async () => {
+      const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
+      await expect(datasetTypeSelect).toBeVisible();
+
+      // Select source Raw Data
+      await selectAutocompleteResult({ page, testId: 'upload-metadata-dataset-autocomplete', resultIndex: 0 });
+
+      // Select Project
+      await selectAutocompleteResult({ page, testId: 'upload-metadata-project-autocomplete', resultIndex: 0 });
+
+      // Select Source Instrument
+      await selectDropdownOption({ page, testId: 'upload-metadata-source-instrument-select', optionIndex: 0 });
+    });
   });
 
   test.describe('Upload-details step', async () => {
     test.beforeAll(async () => {
-      // Complete the required General Info fields so the Upload step becomes
-      // available.
-      await selectAutocompleteResult({
-        page,
-        testId: 'upload-metadata-dataset-autocomplete',
-        resultIndex: 0,
-        verify: true,
-      });
-      await selectAutocompleteResult({
-        page,
-        testId: 'upload-metadata-project-autocomplete',
-        resultIndex: 0,
-        verify: true,
-      });
-      await selectDropdownOption({
-        page,
-        testId: 'upload-metadata-source-instrument-select',
-        optionIndex: 0,
-        verify: true,
-      });
-
       // Click the "Next" button to proceed to the Upload-details step
       await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
     });

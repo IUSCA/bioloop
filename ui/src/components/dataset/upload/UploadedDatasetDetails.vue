@@ -3,12 +3,10 @@
   <va-alert
     v-if="props.isSubmissionAlertVisible"
     dense
+    :icon="submissionAlertIcon"
     :color="props.submissionAlertColor"
     data-testid="submission-alert"
   >
-    <template #icon>
-      <Icon :icon="submissionAlertIcon" class="text-xl" />
-    </template>
     {{ props.submissionAlert }}
   </va-alert>
 
@@ -90,7 +88,7 @@
               size="medium"
               padding-direction="left"
               padding-amount="sm"
-              icon="mdi:information"
+              icon="info"
               data-testid="new-project-alert"
             >
               A new Project will be created
@@ -196,9 +194,7 @@ const datasetNameInput = computed({
 });
 
 const submissionAlertIcon = computed(() => {
-  return props.submissionAlertColor === "success"
-    ? "mdi:check-circle"
-    : "mdi:alert";
+  return props.submissionAlertColor === "success" ? "check_circle" : "warning";
 });
 </script>
 

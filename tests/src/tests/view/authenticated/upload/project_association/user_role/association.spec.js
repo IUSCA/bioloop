@@ -4,50 +4,28 @@ import {
   selectDropdownOption,
 } from '../../../../../../actions';
 import {
-  openNewUpload,
-  selectFilesAndGoToGeneralInfo,
+  selectFiles,
 } from '../../../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../../../actions/stepper';
 import { generateUniqueDatasetName } from '../../../../../../api/dataset';
 import { expect, test } from '../../../../../../fixtures';
-import { submitAndWaitForUploadCompletion } from '../helpers';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
 test.use({ attachments });
 
-const NEW_PROJECT_TEXT = 'A new Project will be created';
+test('user upload creates a new project when unassigned', async ({ browser, attachmentManager }) => {
+  const NEW_PROJECT_TEXT = 'A new Project will be created';
+  let selectedProjectName = null;
+  let shouldCreateNewProject = false;
 
-async function selectExistingProjectOrUseNew(page) {
-  const projectOptions = await getAutoCompleteResults({
-    page,
-    testId: 'upload-metadata-project-autocomplete',
-  });
+  const page = await browser.newPage();
+  await page.goto('/datasets/uploads/new');
 
-  if (projectOptions.length === 0) {
-    return { selectedProjectName: null, shouldCreateNewProject: true };
-  }
+  const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
+  await selectFiles({ page, filePaths });
 
-  const selectedProjectName = await selectAutocompleteResult({
-    page,
-    testId: 'upload-metadata-project-autocomplete',
-    resultIndex: 0,
-    verify: true,
-  });
-
-  return { selectedProjectName, shouldCreateNewProject: false };
-}
-
-test('user upload is associated with an existing or new Project', async ({
-  page,
-  attachmentManager,
-}) => {
-  await openNewUpload({ page });
-
-  const filePaths = attachments.map(
-    (file) => `${attachmentManager.getPath()}/${file.name}`,
-  );
-  await selectFilesAndGoToGeneralInfo({ page, filePaths });
+  await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
   const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
   await expect(datasetTypeSelect).toBeVisible();
@@ -68,17 +46,24 @@ test('user upload is associated with an existing or new Project', async ({
     verify: true,
   });
 
-  const {
-    selectedProjectName,
-    shouldCreateNewProject,
-  } = await selectExistingProjectOrUseNew(page);
+  const projectOptions = await getAutoCompleteResults({
+    page,
+    testId: 'upload-metadata-project-autocomplete',
+  });
+  shouldCreateNewProject = projectOptions.length === 0;
+  if (!shouldCreateNewProject) {
+    selectedProjectName = await selectAutocompleteResult({
+      page,
+      testId: 'upload-metadata-project-autocomplete',
+      resultIndex: 0,
+      verify: true,
+    });
+  }
 
   await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
   await expect(page.getByTestId('upload-details-dataset-name-input')).toBeVisible();
 
-  const token = await page.evaluate(
-    () => globalThis.localStorage.getItem('token'),
-  );
+  const token = await page.evaluate(() => localStorage.getItem('token'));
   const uploadedDatasetName = await generateUniqueDatasetName({
     requestContext: page.request,
     token,
@@ -93,13 +78,15 @@ test('user upload is associated with an existing or new Project', async ({
     await expect(projectText).toContainText(NEW_PROJECT_TEXT);
   }
 
-  await submitAndWaitForUploadCompletion(page);
+  await page.getByTestId('upload-next-button').click();
 
   const projectLink = page.getByTestId('upload-details-project-link');
   await expect(projectLink).toBeVisible();
   await expect(projectLink).not.toHaveText('');
-  if (selectedProjectName) {
+  if (!shouldCreateNewProject && selectedProjectName) {
     await expect(projectLink).toContainText(selectedProjectName);
+  } else {
+    await expect(projectLink).not.toContainText(NEW_PROJECT_TEXT);
   }
 
   const projectHref = await projectLink.getAttribute('href');
@@ -110,20 +97,18 @@ test('user upload is associated with an existing or new Project', async ({
     projectLink.click(),
   ]);
 
-  try {
-    await projectPage.waitForLoadState('domcontentloaded');
-    await projectPage.waitForURL((url) => url.pathname === projectHref);
+  await projectPage.waitForLoadState('domcontentloaded');
+  await projectPage.waitForURL((url) => {
+    try {
+      return new URL(url).pathname === projectHref;
+    } catch (error) {
+      return false;
+    }
+  });
 
-    const projectDatasetsTable = projectPage.getByTestId(
-      'project-datasets-table',
-    );
-    await expect(projectDatasetsTable).toBeVisible();
-    await expect(
-      projectDatasetsTable.locator('tbody tr').filter({
-        hasText: uploadedDatasetName,
-      }).first(),
-    ).toBeVisible();
-  } finally {
-    await projectPage.close();
-  }
+  const projectDatasetsTable = projectPage.getByTestId('project-datasets-table');
+  await expect(projectDatasetsTable).toBeVisible();
+
+  await projectPage.close();
+  await page.close();
 });

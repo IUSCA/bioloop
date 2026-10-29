@@ -89,7 +89,7 @@
                   class="va-link"
                   title="View upload details"
                 >
-                  <Icon icon="mdi:open-in-new" class="text-lg" />
+                  <va-icon name="open_in_new" size="small" />
                 </router-link>
               </va-popover>
             </div>
@@ -98,7 +98,7 @@
         <tr>
           <td>Description</td>
           <td>
-            <div class="max-h-[11.5rem] overflow-y-auto">
+            <div class="max-h-[11.5rem] overflow-y-scroll">
               {{ props.dataset.description }}
             </div>
           </td>

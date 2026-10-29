@@ -76,7 +76,7 @@
       <div class="flex gap-1">
         <va-button preset="primary" @click="getData" class="max-w-[120px]">
           <div class="flex justify-between gap-1">
-            <Icon icon="mdi:refresh" class="text-lg" />
+            <i-mdi:refresh class="text-lg" />
           </div>
         </va-button>
 
@@ -164,8 +164,7 @@
         v-if="workflows.length === 0"
         class="text-center mt-24 flex flex-col gap-5 justify-center items-center"
       >
-        <Icon
-          icon="mdi:alert-circle-outline"
+        <i-mdi:alert-circle-outline
           style="color: var(--va-info)"
           class="text-4xl"
         />

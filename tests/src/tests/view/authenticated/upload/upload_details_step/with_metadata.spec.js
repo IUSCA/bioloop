@@ -3,8 +3,7 @@ import {
   selectDropdownOption,
 } from '../../../../../actions';
 import {
-  openNewUpload,
-  selectFilesAndGoToGeneralInfo,
+  selectFiles,
 } from '../../../../../actions/datasetUpload';
 import {
   navigateToNextStep,
@@ -26,14 +25,21 @@ test.describe.serial('Dataset Upload Process', () => {
   test.beforeAll(async ({ browser, attachmentManager }) => {
     page = await browser.newPage();
 
-    await openNewUpload({ page });
+    // Visit the dataset uploads page
+    await page.goto('/datasets/uploads/new');
     const filePaths = attachments.map(
       (file) => `${attachmentManager.getPath()}/${file.name}`,
     );
-    await selectFilesAndGoToGeneralInfo({ page, filePaths });
+    await selectFiles({ page, filePaths });
+    await expect(page.getByTestId('upload-selected-files-table')).toBeVisible();
   });
 
   test.describe('General-Info selection step', async () => {
+    test.beforeAll(async () => {
+      // Click the "Next" button to proceed to the Upload-Details step
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
+    });
+
     test('should allow selecting values in the General-Info form\'s fields', async () => {
       // Select (or track, if pre-populated) Dataset Type
       // Capture the pre-populated Dataset Type

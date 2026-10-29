@@ -50,11 +50,7 @@
     class="flex items-center"
   >
     <va-popover message="Upload verified">
-      <Icon
-        icon="mdi:check-circle-outline"
-        class="text-2xl"
-        style="color: var(--va-success)"
-      />
+      <va-icon name="check_circle_outline" color="success" />
     </va-popover>
   </div>
 
@@ -79,11 +75,7 @@
     class="flex items-center"
   >
     <va-popover message="Registration completed successfully">
-      <Icon
-        icon="mdi:check-circle"
-        class="text-2xl"
-        style="color: var(--va-success)"
-      />
+      <va-icon name="check_circle" color="success" />
     </va-popover>
   </div>
 
@@ -93,11 +85,7 @@
     class="flex items-center"
   >
     <va-popover message="Registration failed">
-      <Icon
-        icon="mdi:alert"
-        class="text-2xl"
-        style="color: var(--va-warning)"
-      />
+      <va-icon name="warning" color="warning" />
     </va-popover>
   </div>
 
@@ -113,11 +101,7 @@
           : 'Upload verification failed'
       "
     >
-      <Icon
-        icon="mdi:alert-circle"
-        class="text-2xl"
-        style="color: var(--va-danger)"
-      />
+      <va-icon name="error" color="danger" />
     </va-popover>
   </div>
 
@@ -133,11 +117,7 @@
           : 'Upload permanently failed — all retries exhausted'
       "
     >
-      <Icon
-        icon="mdi:alert-circle"
-        class="text-2xl"
-        style="color: var(--va-danger)"
-      />
+      <va-icon name="error" color="danger" />
     </va-popover>
   </div>
 
@@ -153,11 +133,7 @@
           : 'Processing failed'
       "
     >
-      <Icon
-        icon="mdi:alert-circle"
-        class="text-2xl"
-        style="color: var(--va-danger)"
-      />
+      <va-icon name="error" color="danger" />
     </va-popover>
   </div>
 
@@ -182,11 +158,7 @@
     class="flex items-center"
   >
     <va-popover message="Upload complete">
-      <Icon
-        icon="mdi:check-circle"
-        class="text-2xl"
-        style="color: var(--va-success)"
-      />
+      <va-icon name="check_circle" color="success" />
     </va-popover>
   </div>
 
@@ -202,22 +174,14 @@
           : 'Upload failed'
       "
     >
-      <Icon
-        icon="mdi:alert-circle"
-        class="text-2xl"
-        style="color: var(--va-danger)"
-      />
+      <va-icon name="error" color="danger" />
     </va-popover>
   </div>
 
   <!-- Fallback: unknown / null status (upload log not yet available) -->
   <div v-else-if="props.status" class="flex items-center">
     <va-popover :message="`Status: ${props.status}`">
-      <Icon
-        icon="mdi:help-circle-outline"
-        class="text-2xl"
-        style="color: var(--va-secondary)"
-      />
+      <va-icon name="help_outline" color="secondary" />
     </va-popover>
   </div>
 </template>

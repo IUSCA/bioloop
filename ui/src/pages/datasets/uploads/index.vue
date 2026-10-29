@@ -1,12 +1,9 @@
 <template>
   <va-alert
     color="warning"
+    icon="warning"
     v-if="!auth.isFeatureEnabled('uploads')"
-    data-testid="upload-feature-disabled-alert"
   >
-    <template #icon>
-      <Icon icon="mdi:alert" class="text-xl" />
-    </template>
     This feature is currently disabled
   </va-alert>
 
@@ -31,11 +28,11 @@
       <!-- create button -->
       <div class="flex-none">
         <va-button
+          icon="add"
           class="px-1"
           color="success"
           @click="router.push('/datasets/uploads/new')"
         >
-          <Icon icon="material-symbols:add" class="mr-2 text-xl" />
           Upload Dataset
         </va-button>
       </div>
@@ -107,11 +104,7 @@
           class="flex justify-center"
         >
           <va-popover message="Upload verified">
-            <Icon
-              icon="mdi:check-circle-outline"
-              class="text-2xl"
-              style="color: var(--va-success)"
-            />
+            <va-icon name="check_circle_outline" color="success" />
           </va-popover>
         </div>
         <!-- Integrated workflow running -->
@@ -134,11 +127,7 @@
           class="flex justify-center"
         >
           <va-popover message="Registration completed successfully">
-            <Icon
-              icon="mdi:check-circle"
-              class="text-2xl"
-              style="color: var(--va-success)"
-            />
+            <va-icon name="check_circle" color="success" />
           </va-popover>
         </div>
         <!-- Integrated workflow failed -->
@@ -147,11 +136,7 @@
           class="flex justify-center"
         >
           <va-popover message="Registration failed">
-            <Icon
-              icon="mdi:alert"
-              class="text-2xl"
-              style="color: var(--va-warning)"
-            />
+            <va-icon name="warning" color="warning" />
           </va-popover>
         </div>
         <!-- Upload verification failed -->
@@ -168,11 +153,7 @@
                 : 'Upload verification failed'
             "
           >
-            <Icon
-              icon="mdi:alert-circle"
-              class="text-2xl"
-              style="color: var(--va-danger)"
-            />
+            <va-icon name="error" color="danger" />
           </va-popover>
         </div>
         <!-- Permanently failed -->
@@ -189,11 +170,7 @@
                 : 'Upload permanently failed — all retries exhausted'
             "
           >
-            <Icon
-              icon="mdi:alert-circle"
-              class="text-2xl"
-              style="color: var(--va-danger)"
-            />
+            <va-icon name="error" color="danger" />
           </va-popover>
         </div>
         <!-- Processing failed -->
@@ -210,11 +187,7 @@
                 : 'Processing failed'
             "
           >
-            <Icon
-              icon="mdi:alert-circle"
-              class="text-2xl"
-              style="color: var(--va-danger)"
-            />
+            <va-icon name="error" color="danger" />
           </va-popover>
         </div>
         <!-- Processing (workflow triggered but not yet detected) -->
@@ -237,11 +210,7 @@
           class="flex justify-center"
         >
           <va-popover message="Upload complete">
-            <Icon
-              icon="mdi:check-circle"
-              class="text-2xl"
-              style="color: var(--va-success)"
-            />
+            <va-icon name="check_circle" color="success" />
           </va-popover>
         </div>
         <!-- Upload failed -->
@@ -256,21 +225,13 @@
                 : 'Upload failed'
             "
           >
-            <Icon
-              icon="mdi:alert-circle"
-              class="text-2xl"
-              style="color: var(--va-danger)"
-            />
+            <va-icon name="error" color="danger" />
           </va-popover>
         </div>
         <!-- Fallback: unknown status -->
         <div v-else class="flex justify-center">
           <va-popover :message="`Status: ${rowData.status || 'Unknown'}`">
-            <Icon
-              icon="mdi:help-circle-outline"
-              class="text-2xl"
-              style="color: var(--va-secondary)"
-            />
+            <va-icon name="help_outline" color="secondary" />
           </va-popover>
         </div>
       </template>
@@ -338,6 +299,7 @@ import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
+import { Icon } from "@iconify/vue";
 import { HalfCircleSpinner } from "epic-spinners";
 import _ from "lodash";
 import { useColors } from "vuestic-ui";

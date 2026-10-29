@@ -5,6 +5,8 @@
     <va-card class="w-full max-w-sm">
       <va-card-content>
         <div class="flex flex-col gap-2 items-center justify-center opacity-90">
+          <!-- <env-alert class="w-full" icon="warning" /> -->
+
           <AppIcon size="3rem" />
           <AppTitle />
         </div>

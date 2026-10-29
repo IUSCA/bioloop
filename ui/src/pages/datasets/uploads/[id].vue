@@ -160,6 +160,7 @@ import constants from "@/constants";
 import datasetService from "@/services/dataset.js";
 import wfService from "@/services/workflow.js";
 import { useNavStore } from "@/stores/nav";
+import { Icon } from "@iconify/vue";
 
 const props = defineProps({
   id: {

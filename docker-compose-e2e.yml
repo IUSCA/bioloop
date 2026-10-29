@@ -7,12 +7,9 @@ services:
     image: bioloop-ui:e2e
     build:
       context: .
-      dockerfile: ui/Dockerfile
+      dockerfile: tests/Dockerfile.ui
     ports:
       - 127.0.0.1:13443:443
-    environment:
-      # Keep the UI and Playwright expectations on the same instance profile.
-      - UPLOAD_ENABLED_ROLES=${UPLOAD_ENABLED_ROLES:-admin}
     volumes:
       # The E2E runner creates these short-lived self-signed certificates.
       - ${E2E_TLS_CERT_DIR:?E2E_TLS_CERT_DIR must be set}:/etc/nginx/certs:ro
@@ -27,7 +24,7 @@ services:
       start_period: 10s
 
   api:
-    image: node:21
+    image: node:24
     restart: unless-stopped # This can help with loading conatainer after it has all the keys set up.
     expose:
       - 3030
@@ -45,7 +42,7 @@ services:
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
-    command: ["npm", "run", "dev"]
+    command: ["node", "src/index.js"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
       interval: 10s
@@ -219,7 +216,7 @@ services:
 
   # Secure_download container
   secure_download:
-    image: node:19
+    image: node:24
     restart: unless-stopped
     env_file:
       - secure_download/.env.default # For all default settings
@@ -229,7 +226,7 @@ services:
       - secure_download_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
-    command: ["npm", "run", "dev"]
+    command: ["node", "src/index.js"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3060/health"]
       interval: 5s
@@ -280,7 +277,7 @@ services:
 
 # Dev containers
   docs:
-    image: node:21
+    image: node:24
     volumes:
       - ./package.json:/opt/sca/app/package.json
       - ./package-lock.json:/opt/sca/app/package-lock.json

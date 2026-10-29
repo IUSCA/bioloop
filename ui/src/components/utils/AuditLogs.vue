@@ -27,7 +27,7 @@
 
               <!-- timestamp -->
               <div class="flex items-center gap-2">
-                <Icon icon="mdi:calendar" />
+                <i-mdi-calendar />
                 <span>{{ datetime.displayDateTime(log.timestamp) }}</span>
               </div>
 
