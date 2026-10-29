@@ -74,14 +74,14 @@ module.exports = {
       authenticatedProject('upload', 'admin', '/view/authenticated/upload/**/*.spec.js', {
         testIgnore: [
           '/view/authenticated/upload/project_association/user_role/association.spec.js',
-          '/view/authenticated/upload/uploads_index_admin_visibility.spec.js',
+          '/view/authenticated/upload/access_control.spec.js',
         ],
       }),
-      {
-        name: 'upload_role_visibility',
-        use: { ...devices['Desktop Chrome'] },
-        testMatch: '/view/authenticated/upload/uploads_index_admin_visibility.spec.js',
-      },
+      ...Object.keys(sessions).map((role) => authenticatedProject(
+        `upload_access_${role}`,
+        role,
+        '/view/authenticated/upload/access_control.spec.js',
+      )),
       // main only enables Upload for admin. User association tests become
       // applicable when a later PR explicitly enables that role in the app.
       ...importProjects,

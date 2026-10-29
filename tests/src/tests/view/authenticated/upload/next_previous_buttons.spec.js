@@ -4,6 +4,7 @@ import {
   selectDropdownOption,
 } from '../../../../actions';
 import {
+  openNewUpload,
   selectFiles,
 } from '../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../actions/stepper';
@@ -19,11 +20,10 @@ test.describe.serial('Dataset Upload Process', () => {
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
-    // Visit the dataset uploads page
-    await page.goto('/datasets/uploads/new');
+    await openNewUpload({ page });
   });
 
-test('should show the Previous button as disabled and Next button as enabled on page load', async () => {
+  test('should show the Previous button as disabled and Next button as enabled on page load', async () => {
     // Check the Previous button
     const previousButton = page.getByTestId('upload-previous-button');
     await expect(previousButton).toBeDisabled();
@@ -54,13 +54,13 @@ test('should show the Previous button as disabled and Next button as enabled on 
     });
   });
 
-  test.describe('should show the Previous button enabled and Next button disabled on the `General Info` step', async () => {
+  test.describe('should show the Previous and Next buttons enabled on the `General Info` step', async () => {
     test.beforeAll(async () => {
       // Click the Next button to move to the General-Info step
       await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
     });
 
-    test('should show the Previous button as enabled and Next button disabled', async () => {
+    test('should show the Previous and Next buttons as enabled', async () => {
       // Wait for the General Info step to load
       await page.waitForSelector('[data-testid="upload-metadata-dataset-type-select"]');
 
@@ -99,7 +99,7 @@ test('should show the Previous button as disabled and Next button as enabled on 
       await expect(previousButton).toBeEnabled();
     });
 
-    test('should show the Next button as disabled if either of the `Source Raw Data` or `Project` fields are cleared ', async () => {
+    test('should keep the Next button enabled if `Source Raw Data` or `Project` is cleared', async () => {
       // Clear Source Raw Data and check Next/Previous buttons
       await clearAutoComplete({
         page,
