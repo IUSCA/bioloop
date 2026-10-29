@@ -1,20 +1,32 @@
-import { selectFiles, trackSelectedFilesMetadata } from '../../../../actions/datasetUpload';
+import {
+  openNewUpload,
+  selectFiles,
+  trackSelectedFilesMetadata,
+} from '../../../../actions/datasetUpload';
 import { expect, test } from '../../../../fixtures';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
 test.use({ attachments });
 
+async function deleteAllSelectedFiles(page) {
+  const fileRows = page.getByTestId('file-table-row-name');
+  const currentFileCount = await fileRows.count();
+
+  if (currentFileCount === 0) return;
+
+  await page.getByTestId('delete-file-button').first().click();
+  await expect(fileRows).toHaveCount(currentFileCount - 1);
+  await deleteAllSelectedFiles(page);
+}
+
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance
-
-  const selectedFiles = []; // array of selected files
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
-    // Visit the dataset uploads page
-    await page.goto('/datasets/uploads/new');
+    await openNewUpload({ page });
   });
 
   test.describe('File selection and deletion', () => {
@@ -28,11 +40,10 @@ test.describe.serial('Dataset Upload Process', () => {
     });
 
     test('Should show the correct number of files in the table', async () => {
-      // Track selected files metadata
-      const files = await trackSelectedFilesMetadata({ page, tableTestId: 'upload-selected-files-table' });
-
-      // Store the selected files' information in state
-      selectedFiles.push(...files);
+      const selectedFiles = await trackSelectedFilesMetadata({
+        page,
+        tableTestId: 'upload-selected-files-table',
+      });
 
       // Verify that the correct number of files were selected
       expect(selectedFiles.length).toBe(attachments.length);
@@ -101,25 +112,9 @@ test.describe.serial('Dataset Upload Process', () => {
       // Wait for the file upload table to be visible
       await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
 
-      // Delete all files one by one so row-count assertions follow the actual UI transition order.
-      let currentFileCount = await page.locator('[data-testid="file-table-row-name"]').count();
-      while (currentFileCount > 0) {
-        await page.locator('[data-testid="delete-file-button"]').first().click();
+      await deleteAllSelectedFiles(page);
 
-        const expectedCount = currentFileCount - 1;
-        await expect(async () => {
-          const refreshedCount = await page.locator('[data-testid="file-table-row-name"]').count();
-          expect(refreshedCount).toBe(expectedCount);
-        }).toPass();
-        currentFileCount = expectedCount;
-      }
-
-      // Assert that the file table is no longer visible
-      await expect(page.locator('[data-testid="upload-selected-files-table"]')).not.toBeVisible();
-
-      // Assert that the file table is not present in the DOM
-      const fileTableExists = await page.locator('[data-testid="upload-selected-files-table"]').count() > 0;
-      expect(fileTableExists).toBe(false);
+      await expect(page.getByTestId('upload-selected-files-table')).toHaveCount(0);
     });
   });
 });
