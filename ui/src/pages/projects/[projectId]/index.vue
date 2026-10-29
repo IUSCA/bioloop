@@ -99,7 +99,7 @@
                 @click="openMergeModal"
               >
                 <div class="flex items-center gap-2">
-                  <i-mdi-merge />
+                  <Icon icon="mdi:merge" />
                   <span> Merge Projects </span>
                 </div>
               </va-button>
@@ -113,7 +113,7 @@
                 @click="openModalToDeleteProject"
               >
                 <div class="flex items-center gap-2">
-                  <i-mdi-delete />
+                  <Icon icon="mdi:delete" />
                   <span> Delete Project </span>
                 </div>
               </va-button>

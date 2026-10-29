@@ -1,0 +1,5 @@
+// Generated when the production container starts. Do not edit in the running
+// container; set UPLOAD_ENABLED_ROLES on the deployment instead.
+window["__BIOLOOP_CONFIG__"] = {
+  uploadEnabledRoles: "${UPLOAD_ENABLED_ROLES}",
+};

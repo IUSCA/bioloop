@@ -110,13 +110,13 @@ class AlertService {
   getAlertIcon(alertType) {
     switch (alertType) {
       case "ERROR":
-        return "warning";
+        return "mdi:alert";
       case "WARNING":
-        return "warning";
+        return "mdi:alert";
       case "INFO":
-        return "info";
+        return "mdi:information";
       default:
-        return "info";
+        return "mdi:information";
     }
   }
 

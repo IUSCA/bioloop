@@ -2,18 +2,20 @@
 
 <template>
   <Icon
-    icon="mdi-file"
+    icon="mdi:file"
     class="text-2xl flex-none text-blue-600"
     v-if="icon_name === 'file'"
   />
   <Icon
     v-else
-    :icon="`vscode-icons:file-type-${icon_name}`"
+    :icon="`vscode-icons:file-type-${icon_name.replaceAll('_', '-')}`"
     class="text-2xl flex-none"
   />
 </template>
 
 <script setup>
+import "virtual:bioloop-file-icons";
+
 import { getVsiFileIconName } from "./vsiFileIconName";
 
 const props = defineProps(["filename"]);
