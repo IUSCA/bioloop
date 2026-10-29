@@ -3,10 +3,12 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env.default') });
 
 const { defineConfig, devices } = require('@playwright/test');
 const config = require('config');
+const { getUploadEnabledRoles } = require('./src/config/featureRoles');
 
 const USER_STORAGE_STATE = path.join(__dirname, '.auth/user_storage_state.json');
 const OPERATOR_STORAGE_STATE = path.join(__dirname, '.auth/operator_storage_state.json');
 const ADMIN_STORAGE_STATE = path.join(__dirname, '.auth/admin_storage_state.json');
+const uploadEnabledForRoles = getUploadEnabledRoles();
 
 const sessions = {
   admin: ADMIN_STORAGE_STATE,
@@ -82,8 +84,11 @@ module.exports = {
         role,
         '/view/authenticated/upload/access_control.spec.js',
       )),
-      // main only enables Upload for admin. User association tests become
-      // applicable when a later PR explicitly enables that role in the app.
+      ...(uploadEnabledForRoles.includes('user') ? [authenticatedProject(
+        'upload--project_association--user_role--association',
+        'user',
+        '/view/authenticated/upload/project_association/user_role/association.spec.js',
+      )] : []),
       ...importProjects,
     ],
   }),

@@ -8,6 +8,8 @@ services:
     build:
       context: .
       dockerfile: tests/Dockerfile.ui
+      args:
+        UPLOAD_ENABLED_ROLES: ${UPLOAD_ENABLED_ROLES:-admin}
     ports:
       - 127.0.0.1:13443:443
     volumes:
