@@ -37,7 +37,10 @@ or start a new Vite development server.
 The test profile matches the UI on `main`: Import and Upload are admin-only.
 Operator and User Import projects check the disabled-feature warning.
 User-only Upload association cases require an enabled User Upload UI and
-are not selected by this admin-only profile. Notifications remain excluded
+are not selected by this admin-only profile. Upload access-control projects
+verify that Admin reaches the form and User/Operator see the disabled-feature
+warning. Functional metadata cases are selected only for enabled roles.
+Notifications remain excluded
 while their access policy is WIP; no notification implementation is changed.
 
 ### Run a project or one file
