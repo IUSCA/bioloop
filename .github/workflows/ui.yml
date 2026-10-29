@@ -1,4 +1,4 @@
-# Lint + production build for ui/. No deploy.
+# Lint, unit tests, production build, and the configured E2E suite. No deploy.
 name: UI CI
 
 on:
@@ -12,6 +12,7 @@ on:
       - "rhythm/**"
       - "signet/**"
       - "nginx/**"
+      - ".dockerignore"
       - "bin/test_ui_e2e.sh"
       - "docker-compose*.yml"
       - "package.json"
@@ -27,6 +28,7 @@ on:
       - "rhythm/**"
       - "signet/**"
       - "nginx/**"
+      - ".dockerignore"
       - "bin/test_ui_e2e.sh"
       - "docker-compose*.yml"
       - "package.json"
