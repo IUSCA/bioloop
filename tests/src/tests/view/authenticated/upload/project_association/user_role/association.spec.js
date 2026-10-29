@@ -55,6 +55,7 @@ test('user upload is associated with their selected Project', async ({
   });
 
   const projectInput = page.getByTestId('upload-metadata-project-autocomplete');
+  await projectInput.click();
   await projectInput.fill(project.name);
   await expect(
     page.getByTestId('upload-metadata-project-autocomplete--search-results-ul'),
