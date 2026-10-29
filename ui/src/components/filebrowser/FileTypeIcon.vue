@@ -16,34 +16,9 @@
 <script setup>
 import "virtual:bioloop-file-icons";
 
-import {
-  vsiFileExtensionsToIcons,
-  vsiFileNamesToIcons,
-} from "./vsiFileIconName";
+import { getVsiFileIconName } from "./vsiFileIconName";
 
 const props = defineProps(["filename"]);
 
-const icon_name = computed(() => {
-  const fileName = (props.filename || "").toLowerCase();
-  let splitName = fileName.split(".");
-  let iconName = "";
-
-  while (splitName.length) {
-    let curName = splitName.join(".");
-    if (vsiFileNamesToIcons[curName]) {
-      iconName = vsiFileNamesToIcons[curName];
-      break;
-    }
-    if (vsiFileExtensionsToIcons[curName]) {
-      iconName = vsiFileExtensionsToIcons[curName];
-      break;
-    }
-
-    splitName.shift();
-  }
-
-  if (iconName === "") iconName = "file";
-
-  return iconName;
-});
+const icon_name = computed(() => getVsiFileIconName(props.filename));
 </script>
