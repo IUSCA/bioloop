@@ -36,12 +36,14 @@
       <va-list-item-section v-if="props.showRemove" class="flex-none">
         <va-button
           preset="secondary"
-          icon="person_remove"
           color="danger"
           round
+          aria-label="Remove user"
           @click="emit('remove', user)"
           class="self-end"
-        />
+        >
+          <Icon icon="material-symbols:person-remove" class="text-xl" />
+        </va-button>
       </va-list-item-section>
     </va-list-item>
   </va-list>

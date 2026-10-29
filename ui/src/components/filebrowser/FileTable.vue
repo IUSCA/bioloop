@@ -26,7 +26,7 @@
         class="flex items-center gap-1"
         v-if="rowData.filetype === 'directory'"
       >
-        <Icon icon="mdi-folder" class="text-xl flex-none text-gray-700" />
+        <Icon icon="mdi:folder" class="text-xl flex-none text-gray-700" />
         <span> {{ rowData.name }} </span>
       </div>
 
@@ -49,10 +49,11 @@
         class="flex-none"
         preset="plain"
         color="primary"
-        icon="download"
+        aria-label="Download"
         v-if="showDownload && rowData.filetype !== 'directory'"
         @click="showDownload ? initiate_file_download(rowData) : () => {}"
       >
+        <Icon icon="material-symbols:download" class="text-xl" />
       </va-button>
     </template>
 
