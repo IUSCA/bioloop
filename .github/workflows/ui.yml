@@ -66,6 +66,9 @@ jobs:
       - name: Show Node and npm
         run: node -v && npm -v
 
+      - name: Runtime script regression tests
+        run: node --test ../tests/scripts/runtime-scripts.test.cjs
+
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
