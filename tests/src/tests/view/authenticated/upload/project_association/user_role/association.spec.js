@@ -19,6 +19,11 @@ test.use({ attachments });
 const NEW_PROJECT_TEXT = 'A new Project will be created';
 
 async function selectExistingProjectOrUseNew(page) {
+  // A fresh User has no Project choices, so the app creates a new one and
+  // disables this field. The assertion below verifies the new-Project notice.
+  if (await page.getByTestId('upload-metadata-project-autocomplete').isDisabled()) {
+    return { selectedProjectName: null, shouldCreateNewProject: true };
+  }
   const projectOptions = await getAutoCompleteResults({
     page,
     testId: 'upload-metadata-project-autocomplete',
@@ -51,6 +56,14 @@ test('user upload is associated with an existing or new Project', async ({
 
   const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
   await expect(datasetTypeSelect).toBeVisible();
+  // Project association does not require a source Dataset. A fresh User has
+  // no readable raw-data fixtures, so use Raw Data for this scenario.
+  await selectDropdownOption({
+    page,
+    testId: 'upload-metadata-dataset-type-select',
+    optionToSelect: 'Raw Data',
+    verify: true,
+  });
   const selectedDatasetType = (await datasetTypeSelect
     .locator('.va-select-content__option')
     .textContent()).trim();
@@ -59,12 +72,6 @@ test('user upload is associated with an existing or new Project', async ({
     page,
     testId: 'upload-metadata-source-instrument-select',
     optionIndex: 0,
-    verify: true,
-  });
-  await selectAutocompleteResult({
-    page,
-    testId: 'upload-metadata-dataset-autocomplete',
-    resultIndex: 0,
     verify: true,
   });
 
