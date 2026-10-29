@@ -102,7 +102,7 @@ if ! (
   npm test -- "$@"
 ); then
   echo "Playwright tests failed. E2E service logs follow."
-  docker compose -f "$COMPOSE_FILE" logs --no-color
+  docker compose -f "$COMPOSE_FILE" logs --no-color --tail=100
   exit 1
 fi
 
