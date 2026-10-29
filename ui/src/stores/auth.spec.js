@@ -277,6 +277,16 @@ describe("useAuthStore", () => {
       expect(store.isFeatureEnabled("uploads")).toBe(true);
       expect(store.isFeatureEnabled("notifications")).toBe(false);
     });
+
+    it.each([
+      ["admin", true],
+      ["operator", true],
+      ["user", false],
+    ])("%s has the intended Import visibility", (role, expected) => {
+      const store = useAuthStore();
+      loginAs(store, [role]);
+      expect(store.isFeatureEnabled("import")).toBe(expected);
+    });
   });
 
   // -- Signup data --
