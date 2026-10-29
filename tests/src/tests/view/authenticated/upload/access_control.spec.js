@@ -1,6 +1,6 @@
 /**
  * Verifies that each role sees either the Upload UI or the disabled-feature
- * warning according to the current instance's UPLOAD_ENABLED_ROLES setting.
+ * warning according to the unchanged UI role policy in the test config.
  */
 import { expect, test } from '@playwright/test';
 
@@ -17,11 +17,15 @@ function getExpectedAccess(testInfo) {
 async function expectAccessState({ page, shouldHaveAccess, enabledTestId }) {
   if (shouldHaveAccess) {
     await expect(page.getByTestId(enabledTestId)).toBeVisible();
-    await expect(page.getByTestId('upload-feature-disabled-alert')).toHaveCount(0);
+    await expect(
+      page.locator('.va-alert').filter({ hasText: 'This feature is currently disabled' }),
+    ).toHaveCount(0);
     return;
   }
 
-  await expect(page.getByTestId('upload-feature-disabled-alert')).toBeVisible();
+  await expect(
+    page.locator('.va-alert').filter({ hasText: 'This feature is currently disabled' }),
+  ).toBeVisible();
   await expect(page.getByTestId(enabledTestId)).toHaveCount(0);
 }
 

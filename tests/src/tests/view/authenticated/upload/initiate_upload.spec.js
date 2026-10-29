@@ -22,11 +22,26 @@ function getUploadStatusChip(page, status) {
 
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance
+  let releaseUpload;
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
+    // Hold file transfer until the status assertions finish. Tiny fixtures
+    // otherwise finish before the test can observe the Uploading state.
+    const transferGate = new Promise((resolve) => { releaseUpload = resolve; });
+    await page.route('**/api/uploads/files**', async (route) => {
+      if (['POST', 'PATCH'].includes(route.request().method())) await transferGate;
+      await route.continue();
+    });
+
     await openNewUpload({ page });
+  });
+
+  test.afterAll(async () => {
+    releaseUpload?.();
+    await page?.unrouteAll({ behavior: 'wait' });
+    await page?.close();
   });
 
   test.describe('Upload-initiation step', () => {
