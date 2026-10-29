@@ -31,7 +31,14 @@ test.describe('Uploads list role visibility', () => {
     await loginAndNavigate({ page, ticket: userRoleUser.username, path: '/datasets/uploads' });
 
     await expect(page.locator('th', { hasText: 'Upload Details' })).toHaveCount(0);
+    await expect(page.getByText('This feature is currently disabled')).toBeVisible();
 
     await context.close();
+  });
+
+  test('operator sees the disabled-feature warning', async ({ page }) => {
+    await loginAndNavigate({ page, ticket: 'operator', path: '/datasets/uploads' });
+    await expect(page.getByText('This feature is currently disabled')).toBeVisible();
+    await expect(page.getByTestId('upload-container')).not.toBeVisible();
   });
 });
