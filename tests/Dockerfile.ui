@@ -6,6 +6,8 @@ COPY ui/package.json ui/package-lock.json ./
 RUN npm ci --legacy-peer-deps
 COPY ui/ ./
 COPY ui/.env.default .env.production
+ARG UPLOAD_ENABLED_ROLES=admin
+ENV VITE_UPLOAD_ENABLED_ROLES=$UPLOAD_ENABLED_ROLES
 RUN npm run build
 
 FROM nginx:1.31.3-alpine

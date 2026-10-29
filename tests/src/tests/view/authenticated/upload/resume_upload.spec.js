@@ -3,7 +3,8 @@ import {
   selectDropdownOption,
 } from '../../../../actions';
 import {
-  selectFiles,
+  openNewUpload,
+  selectFilesAndGoToGeneralInfo,
   setUploadFailureSimulation,
 } from '../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../actions/stepper';
@@ -19,80 +20,102 @@ const attachments = [
 
 test.use({ attachments });
 
+function trackTusRecoveryRequests(page) {
+  const requests = {
+    failedPatchResponses: 0,
+    resumeHeadRequests: 0,
+  };
+  const isTusFileRequest = (url) => /\/uploads\/files\/[^/]+$/.test(url);
+
+  page.on('response', (response) => {
+    const request = response.request();
+
+    if (
+      request.method() === 'PATCH'
+      && isTusFileRequest(request.url())
+      && response.status() >= 500
+    ) {
+      requests.failedPatchResponses += 1;
+    }
+  });
+
+  page.on('request', (request) => {
+    if (
+      request.method() === 'HEAD'
+      && isTusFileRequest(request.url())
+    ) {
+      requests.resumeHeadRequests += 1;
+    }
+  });
+
+  return requests;
+}
+
 test('upload resumes after simulated mid-upload failure', async ({
   browser,
   attachmentManager,
 }) => {
   const page = await browser.newPage();
-  let failedPatchResponses = 0;
-  let resumeHeadRequests = 0;
+  const recoveryRequests = trackTusRecoveryRequests(page);
 
-  page.on('response', (response) => {
-    const request = response.request();
-    const url = request.url();
-    const method = request.method();
+  try {
+    await openNewUpload({ page });
+    await setUploadFailureSimulation({
+      page,
+      mode: 'mid-upload',
+      count: 1,
+    });
 
-    if (method === 'PATCH' && /\/uploads\/files\/[^/]+$/.test(url) && response.status() >= 500) {
-      failedPatchResponses += 1;
+    const filePath = `${attachmentManager.getPath()}/${attachments[0].name}`;
+    await selectFilesAndGoToGeneralInfo({
+      page,
+      filePaths: [filePath],
+    });
+
+    await selectAutocompleteResult({
+      page,
+      testId: 'upload-metadata-dataset-autocomplete',
+      resultIndex: 0,
+      verify: true,
+    });
+    await selectAutocompleteResult({
+      page,
+      testId: 'upload-metadata-project-autocomplete',
+      resultIndex: 0,
+      verify: true,
+    });
+    await selectDropdownOption({
+      page,
+      testId: 'upload-metadata-source-instrument-select',
+      optionIndex: 0,
+      verify: true,
+    });
+
+    await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
+
+    const token = await page.evaluate(
+      () => globalThis.localStorage.getItem('token'),
+    );
+    const datasetName = await generateUniqueDatasetName({
+      requestContext: page.request,
+      token,
+      type: 'DATA_PRODUCT',
+    });
+    await page.getByTestId('upload-details-dataset-name-input').fill(datasetName);
+    await page.getByTestId('upload-next-button').click();
+
+    await expect(page.getByTestId('chip-uploaded')).toBeVisible({
+      timeout: 120000,
+    });
+    await expect(page.getByTestId('submission-alert')).toContainText(
+      'uploaded successfully',
+    );
+    expect(recoveryRequests.failedPatchResponses).toBeGreaterThan(0);
+    expect(recoveryRequests.resumeHeadRequests).toBeGreaterThan(0);
+  } finally {
+    if (!page.isClosed()) {
+      await setUploadFailureSimulation({ page });
+      await page.close();
     }
-  });
-
-  page.on('request', (request) => {
-    const url = request.url();
-    const method = request.method();
-
-    if (method === 'HEAD' && /\/uploads\/files\/[^/]+$/.test(url)) {
-      resumeHeadRequests += 1;
-    }
-  });
-
-  await page.goto('/datasets/uploads/new');
-
-  await setUploadFailureSimulation({
-    page,
-    mode: 'mid-upload',
-    count: 1,
-  });
-
-  const filePath = `${attachmentManager.getPath()}/${attachments[0].name}`;
-  await selectFiles({ page, filePaths: [filePath] });
-  await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
-
-  await selectAutocompleteResult({
-    page,
-    testId: 'upload-metadata-dataset-autocomplete',
-    resultIndex: 0,
-    verify: true,
-  });
-  await selectAutocompleteResult({
-    page,
-    testId: 'upload-metadata-project-autocomplete',
-    resultIndex: 0,
-    verify: true,
-  });
-  await selectDropdownOption({
-    page,
-    testId: 'upload-metadata-source-instrument-select',
-    optionIndex: 0,
-    verify: true,
-  });
-
-  await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
-
-  const token = await page.evaluate(() => localStorage.getItem('token'));
-  const datasetName = await generateUniqueDatasetName({
-    requestContext: page.request,
-    token,
-    type: 'DATA_PRODUCT',
-  });
-  await page.getByTestId('upload-details-dataset-name-input').fill(datasetName);
-  await page.getByTestId('upload-next-button').click();
-
-  await expect(page.getByTestId('chip-uploaded')).toBeVisible({ timeout: 120000 });
-  await expect(page.getByTestId('submission-alert')).toContainText('uploaded successfully');
-  await expect(failedPatchResponses).toBeGreaterThan(0);
-  await expect(resumeHeadRequests).toBeGreaterThan(0);
-
-  await setUploadFailureSimulation({ page });
-  await page.close();
+  }
 });
