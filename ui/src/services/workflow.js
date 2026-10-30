@@ -1,6 +1,17 @@
 import api from "./api";
 
 const DONE_STATUSES = ["REVOKED", "FAILURE", "SUCCESS"];
+const FORCE_RESUME_STATUSES = ["STARTED", "PENDING"];
+
+function parseWorkflowTimestamp(value) {
+  if (typeof value !== "string" || !value.includes("T")) return NaN;
+
+  // Rhythm serializes UTC timestamps without a timezone suffix.
+  const timestamp = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value)
+    ? value
+    : `${value}Z`;
+  return Date.parse(timestamp);
+}
 
 class WorkflowService {
   getWorkflowNames() {
@@ -57,8 +68,49 @@ class WorkflowService {
     return api.delete(`/workflows/${id}`);
   }
 
-  resume(id) {
-    return api.post(`/workflows/${id}/resume`);
+  resume(id, { force = false } = {}) {
+    return api.post(`/workflows/${id}/resume`, {}, { params: { force } });
+  }
+
+  get_force_resume_candidate(workflow, staleAfterMs, now = Date.now()) {
+    if (
+      !FORCE_RESUME_STATUSES.includes(workflow?.status) ||
+      !Number.isFinite(staleAfterMs) ||
+      staleAfterMs <= 0
+    ) {
+      return null;
+    }
+
+    // Match rhythm's get_pending_step(): the first step that has not succeeded.
+    const step = Array.isArray(workflow.steps)
+      ? workflow.steps.find((item) => item?.status !== "SUCCESS")
+      : null;
+    const task = step?.last_task_run;
+    if (
+      !FORCE_RESUME_STATUSES.includes(step?.status) ||
+      typeof task?._id !== "string" ||
+      !Array.isArray(task.args)
+    ) {
+      // Rhythm cannot restart a never-run step without explicitly supplied args.
+      return null;
+    }
+
+    const updatedAt = parseWorkflowTimestamp(workflow.updated_at);
+    if (!Number.isFinite(updatedAt) || !Number.isFinite(now)) return null;
+
+    const startedAt = parseWorkflowTimestamp(task.date_start);
+    const lastActivityAt = Number.isFinite(startedAt)
+      ? Math.max(updatedAt, startedAt)
+      : updatedAt;
+    if (now - lastActivityAt < staleAfterMs) return null;
+
+    return {
+      stepName: step.name,
+      taskId: task._id,
+      status: step.status,
+      updatedAt,
+      lastActivityAt,
+    };
   }
 
   is_workflow_done(workflow) {
