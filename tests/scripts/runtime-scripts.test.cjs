@@ -1,4 +1,4 @@
-// Regression tests for E2E teardown and pre-install API environment loading.
+// Regression tests for E2E teardown, API environment loading, and seed prerequisites.
 // All commands run against temporary fixtures; no Docker services are started.
 const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
@@ -6,6 +6,7 @@ const { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require
 const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
+const { runInNewContext } = require('node:vm');
 
 const root = path.resolve(__dirname, '../..');
 const loader = path.join(root, 'api/bin/runtime_env.sh');
@@ -184,6 +185,63 @@ for (const seedStatus of [0, 23]) {
     if (!succeeded) assert.match(result.stderr, /ERROR: prisma db seed failed/);
   });
 }
+
+// A fresh database has no login-created role users when fixture seeding runs.
+const seedSource = readFileSync(path.join(root, 'api/prisma/seed.js'), 'utf8');
+const notificationUserSeeder = seedSource.match(/^async function seedNotificationUsers\(\) \{[\s\S]*?^\}/m)?.[0];
+assert.ok(notificationUserSeeder, 'Notification recipients must be prepared before fixture seeding');
+const seedData = require('../../api/prisma/seed_data/data');
+
+function prepareNotificationUsers(prisma) {
+  return runInNewContext(`${notificationUserSeeder}\nseedNotificationUsers();`, { prisma, data: seedData });
+}
+
+test('fixture recipients exist before notification seeding with their expected roles', async () => {
+  const created = [];
+  const users = new Map();
+  const prisma = { user: { upsert: async ({ where, create }) => {
+    assert.equal(where.username, create.username);
+    const user = JSON.parse(JSON.stringify(create));
+    users.set(user.username, user);
+    created.push(user);
+    return user;
+  } } };
+
+  const usernames = await prepareNotificationUsers(prisma);
+  assert.deepEqual(Array.from(usernames), ['e2eAdmin', 'e2eOperator', 'e2eUser']);
+  assert.deepEqual(created.map((u) => u.user_role.create[0].role_id), [1, 2, 3]);
+  for (const username of usernames) {
+    assert.equal(users.get(username).email, `${username}@iu.edu`);
+    assert.equal(users.get(username).cas_id, username);
+  }
+  assert.match(seedSource, /const notificationUsers = await seedNotificationUsers\(\);\s+runNotificationSeedScript\(notificationUsers\);/);
+});
+
+test('repeated fixture-user seeding preserves existing users and sample IDs', async () => {
+  const admin = { id: 2, username: 'e2eAdmin', name: 'Existing Admin' };
+  const sampleUser = { id: 6, username: 'user-0', name: 'Existing sample user' };
+  const users = new Map([[admin.username, admin], [sampleUser.username, sampleUser]]);
+  let created = 0;
+  const prisma = { user: { upsert: async ({ where, update, create }) => {
+    assert.deepEqual(Object.keys(update), []);
+    if (!users.has(where.username)) {
+      created += 1;
+      users.set(where.username, { id: 100 + created, ...JSON.parse(JSON.stringify(create)) });
+    }
+    return users.get(where.username);
+  } } };
+
+  await prepareNotificationUsers(prisma);
+  await prepareNotificationUsers(prisma);
+  assert.equal(created, 2);
+  assert.equal(users.get('e2eAdmin'), admin);
+  assert.equal(users.get('user-0'), sampleUser);
+});
+
+test('fixture-user preparation failures propagate instead of being ignored', async () => {
+  const prisma = { user: { upsert: async () => { throw new Error('database unavailable'); } } };
+  await assert.rejects(prepareNotificationUsers(prisma), /database unavailable/);
+});
 
 // Exercise the exact EXIT-trap function without running the rest of the stack.
 const runner = readFileSync(path.join(root, 'bin/test_ui_e2e.sh'), 'utf8');
