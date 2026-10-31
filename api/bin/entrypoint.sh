@@ -98,13 +98,13 @@ echo "prisma migrate deploy done."
 # the persistent .db_seeded marker from the bind-mounted api/ directory.
 if [ "${NODE_ENV}" = "ci" ]; then
   echo "Running prisma db seed for the temporary E2E database..."
-  npx prisma db seed
+  npx prisma db seed || { echo "ERROR: prisma db seed failed." >&2; exit 1; }
   echo "prisma db seed done."
 elif [ -f ".db_seeded" ]; then
   echo "DB already seeded (.db_seeded marker present). Skipping seed."
 else
   echo "Running prisma db seed..."
-  npx prisma db seed
+  npx prisma db seed || { echo "ERROR: prisma db seed failed." >&2; exit 1; }
   touch .db_seeded
   echo "prisma db seed done."
 fi
@@ -160,7 +160,7 @@ if ! grep -q "^APP_API_TOKEN=[^ ]\+" "workers/.env"; then
     # Remove the marker and re-seed to restore the expected DB state.
     echo "svc_tasks user not found. Removing stale .db_seeded marker and re-seeding..."
     rm -f .db_seeded
-    npx prisma db seed
+    npx prisma db seed || { echo "ERROR: prisma db seed failed." >&2; exit 1; }
     touch .db_seeded
     echo "Re-seed complete. Retrying APP_API_TOKEN generation..."
     APP_API_TOKEN=$(node src/scripts/issue_token.js svc_tasks 2>/dev/null)
@@ -176,6 +176,7 @@ else
   echo "APP_API_TOKEN already set. Skipping."
 fi
 
+# Re-load .env to reflect OAUTH_* credentials written by Signet registration above.
 load_runtime_env "$_COMPOSE_NODE_ENV" || exit 1
 
 echo "=== API entrypoint complete ==="

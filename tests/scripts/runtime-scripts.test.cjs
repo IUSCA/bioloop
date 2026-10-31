@@ -120,6 +120,71 @@ test('a parser error is not silently lost by the shell process substitution', (t
   assert.equal(result.stdout, '');
 });
 
+// Run the entrypoint's actual seed sections without enabling `set -e` in tests.
+// Only npx is mocked; database access and application startup never occur.
+const entrypoint = readFileSync(path.join(root, 'api/bin/entrypoint.sh'), 'utf8');
+const seedBlock = entrypoint.match(/^if \[ "\$\{NODE_ENV\}" = "ci" \]; then[\s\S]*?^fi$/m)?.[0];
+const recoverySeedBlock = entrypoint.match(
+  /^    rm -f \.db_seeded\n[\s\S]*?^    echo "Re-seed complete\. Retrying APP_API_TOKEN generation\.\.\."$/m,
+)?.[0];
+assert.ok(seedBlock, 'The API entrypoint must seed CI and uninitialized databases');
+assert.ok(recoverySeedBlock, 'The API entrypoint must handle stale seed markers');
+
+function runSeedBlock(block, directory, mode, seedStatus) {
+  return spawnSync('bash', ['-c', `
+    NODE_ENV="$1"
+    MOCK_SEED_STATUS="$2"
+    npx() { printf 'SEED_CALLED\\n'; return "$MOCK_SEED_STATUS"; }
+    ${block}
+    printf 'AFTER_SEED\\n'
+  `, 'seed-test', mode, String(seedStatus)], {
+    cwd: directory,
+    encoding: 'utf8',
+    env: { PATH: process.env.PATH },
+  });
+}
+
+for (const [mode, seedStatus, existingMarker, expectedStatus, seedCalled, finalMarker] of [
+  ['ci', 0, true, 0, true, true],
+  ['ci', 23, true, 1, true, true],
+  ['docker', 0, false, 0, true, true],
+  ['docker', 23, false, 1, true, false],
+  ['docker', 23, true, 0, false, true],
+]) {
+  test(`${mode} seed exit ${seedStatus}, existing marker ${existingMarker}: startup exit ${expectedStatus}`, (t) => {
+    const directory = temporaryDirectory(t);
+    const marker = path.join(directory, '.db_seeded');
+    if (existingMarker) writeFileSync(marker, 'existing seed marker');
+
+    const result = runSeedBlock(seedBlock, directory, mode, seedStatus);
+    assert.equal(result.status, expectedStatus, result.stderr);
+    assert.equal(result.stdout.includes('SEED_CALLED'), seedCalled);
+    assert.equal(result.stdout.includes('AFTER_SEED'), expectedStatus === 0);
+    assert.equal(existsSync(marker), finalMarker);
+    if (expectedStatus !== 0) {
+      assert.match(result.stderr, /ERROR: prisma db seed failed/);
+      assert.doesNotMatch(result.stdout, /prisma db seed done/);
+    }
+  });
+}
+
+for (const seedStatus of [0, 23]) {
+  test(`stale-marker recovery with seed exit ${seedStatus} only continues after success`, (t) => {
+    const directory = temporaryDirectory(t);
+    const marker = path.join(directory, '.db_seeded');
+    writeFileSync(marker, 'stale seed marker');
+
+    const result = runSeedBlock(recoverySeedBlock, directory, 'docker', seedStatus);
+    const succeeded = seedStatus === 0;
+    assert.equal(result.status, succeeded ? 0 : 1, result.stderr);
+    assert.equal(result.stdout.includes('SEED_CALLED'), true);
+    assert.equal(result.stdout.includes('AFTER_SEED'), succeeded);
+    assert.equal(result.stdout.includes('Re-seed complete.'), succeeded);
+    assert.equal(existsSync(marker), succeeded);
+    if (!succeeded) assert.match(result.stderr, /ERROR: prisma db seed failed/);
+  });
+}
+
 // Exercise the exact EXIT-trap function without running the rest of the stack.
 const runner = readFileSync(path.join(root, 'bin/test_ui_e2e.sh'), 'utf8');
 const cleanup = runner.match(/^cleanup\(\) \{[\s\S]*?^\}/m)?.[0];
