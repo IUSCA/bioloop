@@ -1,0 +1,9 @@
+.git
+**/node_modules
+ui/.cert
+.e2e-tls.*
+ui/dist
+tests/playwright-report
+tests/test-results
+db/postgres/data
+db/mongo/data

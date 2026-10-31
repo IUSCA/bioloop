@@ -79,7 +79,10 @@
                 :failure-reason="uploadLogFailureReason"
               />
               <!-- Admin: link to upload details page -->
-              <va-popover v-if="isUpload && auth.canAdmin" message="View upload details">
+              <va-popover
+                v-if="isUpload && auth.canAdmin"
+                message="View upload details"
+              >
                 <router-link
                   :to="`/datasets/uploads/${props.dataset.id}`"
                   target="_blank"

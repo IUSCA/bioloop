@@ -110,6 +110,26 @@ function runNotificationSeedScript(usernames) {
   });
 }
 
+async function seedNotificationUsers() {
+  const users = [
+    { username: 'e2eAdmin', role: 'admin' },
+    { username: 'e2eOperator', role: 'operator' },
+    { username: 'e2eUser', role: 'user' },
+  ];
+  await Promise.all(users.map(({ username, role }) => prisma.user.upsert({
+    where: { username },
+    update: {},
+    create: {
+      username,
+      name: username,
+      email: `${username}@iu.edu`,
+      cas_id: username,
+      user_role: { create: [{ role_id: data.roles.find((r) => r.name === role).id }] },
+    },
+  })));
+  return users.map(({ username }) => username);
+}
+
 async function main() {
   await Promise.allSettled(data.roles.map((role) => prisma.role.upsert({
     where: { id: role.id },
@@ -352,8 +372,10 @@ async function main() {
     })),
   });
 
-  // Seed notification fixtures for E2E roles.
-  runNotificationSeedScript(['e2eAdmin', 'e2eOperator', 'e2eUser']);
+  // Login-created users do not exist yet in a fresh DB. Prepare them before
+  // notification fixtures, after all ID-based sample associations are seeded.
+  const notificationUsers = await seedNotificationUsers();
+  runNotificationSeedScript(notificationUsers);
 }
 
 main()

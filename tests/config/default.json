@@ -16,12 +16,13 @@
   },
   "enabledFeatures": {
     "notifications": {
+      "enabledForRoles": []
+    },
+    "import": {
       "enabledForRoles": ["admin"]
     },
     "uploads": {
-      "enabledForRoles": [
-        "admin"
-      ]
+      "enabledForRoles": ["admin"]
     }
   }
 }

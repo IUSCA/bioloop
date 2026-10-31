@@ -16,7 +16,7 @@ test.describe('Uploads list role visibility', () => {
   });
 
   test('admin sees Upload Details navigation column', async ({ browser }) => {
-    const context = await browser.newContext();
+    const context = await browser.newContext({ ignoreHTTPSErrors: true, baseURL: test.info().project.use.baseURL });
     const page = await context.newPage();
     await loginAndNavigate({ page, ticket: 'admin', path: '/datasets/uploads' });
 
@@ -26,12 +26,19 @@ test.describe('Uploads list role visibility', () => {
   });
 
   test('user does not see Upload Details navigation column', async ({ browser }) => {
-    const context = await browser.newContext();
+    const context = await browser.newContext({ ignoreHTTPSErrors: true, baseURL: test.info().project.use.baseURL });
     const page = await context.newPage();
     await loginAndNavigate({ page, ticket: userRoleUser.username, path: '/datasets/uploads' });
 
     await expect(page.locator('th', { hasText: 'Upload Details' })).toHaveCount(0);
+    await expect(page.getByText('This feature is currently disabled')).toBeVisible();
 
     await context.close();
+  });
+
+  test('operator sees the disabled-feature warning', async ({ page }) => {
+    await loginAndNavigate({ page, ticket: 'operator', path: '/datasets/uploads' });
+    await expect(page.getByText('This feature is currently disabled')).toBeVisible();
+    await expect(page.getByTestId('upload-container')).not.toBeVisible();
   });
 });
