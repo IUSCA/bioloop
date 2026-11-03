@@ -57,6 +57,22 @@
                     : searchResultSelections.length
                 }}
               </va-button>
+              <va-button
+                v-if="props.enableSelectAllMatching"
+                class="flex-none"
+                preset="secondary"
+                color="success"
+                border-color="success"
+                icon="playlist_add"
+                @click="emit('select-all-matching')"
+                :disabled="
+                  props.searchResultCount === 0 ||
+                  props.loading ||
+                  props.selectAllMatchingLoading
+                "
+              >
+                Add all {{ props.searchResultCount }} matching
+              </va-button>
             </div>
 
             <va-chip outline>{{ countLabel }} </va-chip>
@@ -173,7 +189,7 @@
             </div>
 
             <va-chip outline>
-              {{ props.selectedResults.length }} results
+              {{ selectedCountLabel }}
             </va-chip>
           </div>
         </div>
@@ -337,6 +353,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  enableSelectAllMatching: {
+    type: Boolean,
+    default: false,
+  },
+  selectAllMatchingLoading: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const selectionRequiredError = computed(() => {
@@ -366,6 +390,7 @@ const emit = defineEmits([
   "reset",
   "update:searchTerm",
   "scroll-end",
+  "select-all-matching",
 ]);
 
 const infiniteScrollTarget_search = ref(null);
@@ -375,6 +400,10 @@ const countLabel = computed(() => {
                       ${props.searchResultCount}
                       ${props.searchTerm !== "" ? "filtered " : ""}
                       results`;
+});
+
+const selectedCountLabel = computed(() => {
+  return `${props.selectedResults.length} results`;
 });
 
 const searchResultSelections = ref([]);

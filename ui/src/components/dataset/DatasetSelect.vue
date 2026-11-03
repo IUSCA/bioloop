@@ -14,6 +14,13 @@
     :show-error="props.showError"
     :error="props.error"
     :messages="props.messages"
+    :enable-select-all-matching="
+      props.selectMode === 'multiple' && props.enableSelectAllMatching
+    "
+    :select-all-matching-loading="selectAllMatchingLoading"
+    @select="(datasets) => emit('select', datasets)"
+    @remove="(datasets) => emit('remove', datasets)"
+    @select-all-matching="showAddAllConfirm = true"
     @reset="
       () => {
         searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
@@ -50,6 +57,21 @@
       />
     </template>
   </SearchAndSelect>
+
+  <va-modal
+    v-model="showAddAllConfirm"
+    title="Add all matching datasets?"
+    ok-text="Add"
+    cancel-text="Cancel"
+    size="small"
+    :ok-disabled="selectAllMatchingLoading"
+    @ok="confirmAddAllMatching"
+    @cancel="showAddAllConfirm = false"
+  >
+    <va-inner-loading :loading="selectAllMatchingLoading">
+      Add all {{ totalResultCount }} datasets matching the current filters?
+    </va-inner-loading>
+  </va-modal>
 </template>
 
 <script setup>
@@ -96,11 +118,22 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  enableSelectAllMatching: {
+    type: Boolean,
+    default: true,
+  },
 });
 
-const emit = defineEmits(["loading", "loaded"]);
+const emit = defineEmits([
+  "loading",
+  "loaded",
+  "select",
+  "remove",
+]);
 
 const loadingResources = inject("loadingResources");
+const selectAllMatchingLoading = ref(false);
+const showAddAllConfirm = ref(false);
 
 const page = ref(1);
 const skip = computed(() => {
@@ -199,6 +232,13 @@ const fetchQuery = computed(() => {
   };
 });
 
+const matchingQuery = computed(() => {
+  return {
+    ...(searchTerm.value && { name: searchTerm.value }),
+    ...filterQuery.value,
+  };
+});
+
 const queryDatasets = ({ queryIndex = null, query = null } = {}) => {
   return datasetService.getAll(query).then((res) => {
     return { data: res.data, ...(queryIndex && { queryIndex }) };
@@ -254,6 +294,28 @@ const performSearch = (searchIndex) => {
     logQuery: true,
   });
 };
+
+async function confirmAddAllMatching() {
+  selectAllMatchingLoading.value = true;
+  emit("loading");
+  try {
+    const res = await datasetService.getAll(matchingQuery.value);
+    const matching = res.data.datasets || [];
+    if (matching.length === 0) {
+      toast.error("No matching datasets to add");
+      return;
+    }
+    emit("select", matching);
+    showAddAllConfirm.value = false;
+  } catch (err) {
+    const message =
+      err?.response?.data?.message || "Failed to fetch matching datasets";
+    toast.error(message);
+  } finally {
+    selectAllMatchingLoading.value = false;
+    emit("loaded");
+  }
+}
 
 watch([searchTerm, filterQuery], () => {
   searchIndex.value += 1;
