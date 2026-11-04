@@ -23,7 +23,8 @@ function getKey(header, callback) {
 
 function checkJWT(token) {
   return new Promise((resolve, reject) => {
-    jsonwt.verify(token, getKey, (err, decoded) => {
+    // Accept only the algorithms the auth server signs with, never HMAC.
+    jsonwt.verify(token, getKey, { algorithms: config.get('auth.algorithms') }, (err, decoded) => {
       if (err) {
         return reject(err);
       }

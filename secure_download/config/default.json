@@ -8,7 +8,8 @@
     "level": "debug"
   },
   "auth": {
-    "jwks_uri": "http://127.0.0.1:5050/oauth/jwks"
+    "jwks_uri": "http://127.0.0.1:5050/oauth/jwks",
+    "algorithms": ["RS256"]
   },
   "scope_prefix": "download_file:",
   "download_path": "/opt/sca/data/downloads"
