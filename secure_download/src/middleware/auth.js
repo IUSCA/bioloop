@@ -23,6 +23,10 @@ function authenticate(req, res, next) {
     if (e instanceof jsonwt.TokenExpiredError) {
       return next(createError.Unauthorized('Authentication failed. Token expired.'));
     }
+    // A malformed or wrongly signed token is the client's error, not a server error.
+    if (e instanceof jsonwt.JsonWebTokenError) {
+      return next(invalid_token_err);
+    }
     next(e);
   });
 }
