@@ -9,9 +9,8 @@ import { defineConfig, loadEnv } from "vite";
 import Layouts from "vite-plugin-vue-layouts";
 // import basicSsl from "@vitejs/plugin-basic-ssl";
 import { visualizer } from "rollup-plugin-visualizer";
-import IconsResolver from "unplugin-icons/resolver";
-import Icons from "unplugin-icons/vite";
 import { VueRouterAutoImports } from "unplugin-vue-router";
+import { bundledIcons } from "./build/iconify";
 
 // https://vitejs.dev/config/
 // eslint-disable-next-line no-unused-vars
@@ -20,6 +19,7 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd());
   return {
     plugins: [
+      bundledIcons(),
       // https://github.com/posva/unplugin-vue-router
       // ⚠️ `Vue` must be placed after VueRouter()
       VueRouter({
@@ -49,22 +49,13 @@ export default defineConfig(({ command, mode }) => {
 
         // custom resolvers
         resolvers: [
-          // auto import icons
-          // https://github.com/antfu/unplugin-icons#auto-importing
-          IconsResolver(),
-
           // auto import Icon - iconify vue component
           // https://docs.iconify.design/icon-components/vue/
           (componentName) => {
             if (componentName == "Icon")
-              return { name: "Icon", from: "@iconify/vue" };
+              return { name: "Icon", from: "@iconify/vue/offline" };
           },
         ],
-      }),
-
-      // https://github.com/antfu/unplugin-icons
-      Icons({
-        autoInstall: true,
       }),
 
       // https://github.com/JohnCampionJr/vite-plugin-vue-layouts

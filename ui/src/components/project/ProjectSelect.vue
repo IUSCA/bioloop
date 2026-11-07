@@ -15,12 +15,12 @@
         </div>
         <div class="flex gap-3 flex-none">
           <div class="flex items-center gap-1">
-            <i-mdi-zip-box-outline class="va-text-secondary" />
+            <Icon icon="mdi:zip-box-outline" class="va-text-secondary" />
             <span class=""> {{ item.datasets?.length }} </span>
           </div>
 
           <div class="flex items-center gap-1">
-            <i-mdi-account class="va-text-secondary" />
+            <Icon icon="mdi:account" class="va-text-secondary" />
             <span class=""> {{ item.users?.length }} </span>
           </div>
         </div>

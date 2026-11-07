@@ -4,7 +4,7 @@
     <template #anchor>
       <va-badge :offset="[-3, 10]" :text="activeAlerts.length" overlap>
         <va-button class="alert-bell" plain>
-          <Icon icon="mdi-alert-outline" height="36px" width="36px" />
+          <Icon icon="mdi:alert-outline" height="36px" width="36px" />
         </va-button>
       </va-badge>
     </template>

@@ -21,7 +21,7 @@
         <va-list-item>
           <!-- icon -->
           <va-list-item-section avatar>
-            <i-mdi:monitor-arrow-down class="text-2xl" />
+            <Icon icon="mdi:monitor-arrow-down" class="text-2xl" />
           </va-list-item-section>
 
           <!-- Name and caption -->
@@ -45,11 +45,13 @@
             <a target="_blank" :href="downloadURL" aria-label="Download">
               <va-button
                 preset="secondary"
-                icon="open_in_new"
                 color="primary"
                 round
                 class="self-end"
-              />
+                aria-label="Open in new tab"
+              >
+                <Icon icon="mdi:open-in-new" class="text-xl" />
+              </va-button>
             </a>
           </va-list-item-section>
         </va-list-item>
@@ -58,7 +60,7 @@
         <va-list-item v-if="datasetService.get_bundle_name(props.dataset)">
           <!-- icon -->
           <va-list-item-section avatar>
-            <i-mdi:folder-zip-outline class="text-2xl" />
+            <Icon icon="mdi:folder-zip-outline" class="text-2xl" />
           </va-list-item-section>
 
           <!-- .tar file download -->
@@ -77,12 +79,14 @@
           <va-list-item-section class="flex-none">
             <va-button
               preset="secondary"
-              icon="download"
               color="primary"
               round
               class="self-end"
+              aria-label="Download archive"
               @click="initiate_dataset_download"
-            />
+            >
+              <Icon icon="material-symbols:download" class="text-xl" />
+            </va-button>
           </va-list-item-section>
         </va-list-item>
 
@@ -90,7 +94,7 @@
         <va-list-item>
           <!-- icon -->
           <va-list-item-section avatar>
-            <i-mdi:console class="text-2xl" />
+            <Icon icon="mdi:console" class="text-2xl" />
           </va-list-item-section>
 
           <!-- Name and caption -->

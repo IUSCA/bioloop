@@ -28,11 +28,11 @@
     </template>
 
     <template #appendInner>
-      <va-icon
+      <Icon
         v-if="props.validating"
-        name="loop"
-        spin="clockwise"
-        color="primary"
+        icon="mdi:loading"
+        class="animate-spin text-xl"
+        style="color: var(--va-primary)"
       />
     </template>
   </AutoComplete>
