@@ -24,20 +24,36 @@ const collections = {
   "vscode-icons": vscodeIcons,
 };
 
+function isIconSource(filename) {
+  return /\.(vue|js)$/.test(filename) && !/\.(spec|test)\./.test(filename);
+}
+
 function sourceFiles(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const filename = path.join(directory, entry.name);
     if (entry.isDirectory()) return sourceFiles(filename);
-    return /\.(vue|js)$/.test(entry.name) && !/\.(spec|test)\./.test(entry.name)
-      ? [filename]
-      : [];
+    return isIconSource(entry.name) ? [filename] : [];
   });
+}
+
+function readIconNames(source) {
+  return new Set(
+    source.match(
+      /\b(?:mdi|material-symbols|vscode-icons):[a-z0-9][a-z0-9_-]*/g,
+    ),
+  );
 }
 
 // Vite selects SVG data here; the browser never loads the complete packs.
 export function bundledIcons() {
+  const iconsByFile = new Map();
+  let isBuild = false;
+
   return {
     name: "bioloop-bundled-icons",
+    configResolved({ command }) {
+      isBuild = command === "build";
+    },
     resolveId(id) {
       if (id === virtualId) return resolvedId;
       if (id === fileIconsId) return resolvedFileIconsId;
@@ -50,13 +66,12 @@ export function bundledIcons() {
       );
       names.add("mdi:help-circle-outline");
       for (const filename of sourceFiles(sourceRoot)) {
-        this.addWatchFile(filename);
-        const source = fs.readFileSync(filename, "utf8");
-        for (const match of source.matchAll(
-          /\b(mdi|material-symbols|vscode-icons):([a-z0-9][a-z0-9_-]*)/g,
-        )) {
-          names.add(`${match[1]}:${match[2]}`);
-        }
+        // Build watch needs these files. In dev, adding them would make every
+        // component a dependency of the global icon module in Vite's graph.
+        if (isBuild) this.addWatchFile(filename);
+        const icons = readIconNames(fs.readFileSync(filename, "utf8"));
+        if (!isBuild) iconsByFile.set(filename, icons);
+        for (const icon of icons) names.add(icon);
       }
       for (const name of Object.values({
         ...vsiFileExtensionsToIcons,
@@ -94,16 +109,31 @@ export function bundledIcons() {
         ),
       ].join("\n");
     },
-    handleHotUpdate({ file, server }) {
-      if (file.startsWith(sourceRoot)) {
-        const modules = [resolvedId, resolvedFileIconsId]
+    handleHotUpdate: {
+      // Vue filters the component modules first. Append icon modules afterward.
+      order: "post",
+      async handler({ file, modules, read, server }) {
+        const filename = path.normalize(file);
+        if (
+          !filename.startsWith(`${sourceRoot}${path.sep}`) ||
+          !isIconSource(path.basename(filename))
+        )
+          return;
+
+        const icons = readIconNames(await read());
+        const previousIcons = iconsByFile.get(filename) ?? new Set();
+        if (
+          icons.size === previousIcons.size &&
+          [...icons].every((icon) => previousIcons.has(icon))
+        )
+          return;
+
+        iconsByFile.set(filename, icons);
+        const iconModules = [resolvedId, resolvedFileIconsId]
           .map((id) => server.moduleGraph.getModuleById(id))
           .filter(Boolean);
-        modules.forEach((module) =>
-          server.moduleGraph.invalidateModule(module),
-        );
-        return modules;
-      }
+        return [...new Set([...modules, ...iconModules])];
+      },
     },
   };
 }

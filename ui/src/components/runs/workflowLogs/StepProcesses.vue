@@ -57,7 +57,7 @@
           class="flex gap-1 va-link hover:underline"
           @click="emit('showLogs', p.id)"
         >
-          <Icon icon="vscode-icons:file-type-log" class="text-2xl flex-none" />
+          <Icon icon="mdi:file-document-outline" class="text-2xl flex-none" />
           <span class="">Logs</span>
         </button>
       </va-list-item-section>
