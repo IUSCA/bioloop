@@ -2,13 +2,13 @@ const { test, expect } = require('@playwright/test');
 
 const { getProjectById } = require('../../../../api/project');
 
-const TEST_PROJECT_ID = '98045a35-723c-4e1b-88e6-9462c1aff4c1';
-const PROJECT_TO_MERGE_ID = '873d15e3-c221-4dc9-9357-2845d7fa25e2';
+const TEST_PROJECT_ID = 'D77C44B9-3905-4DC2-ACB0-BA285361755A';
+const PROJECT_TO_MERGE_ID = '69EF006F-53E0-432A-87F4-AECBD181FFE8';
 
 const TEST_ID_PROJECT_MERGE_BUTTON = 'merge-projects-button';
 const TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE = 'project-search-autocomplete';
 
-test.describe.serial('Project-datasets table', () => {
+test.describe.serial('Project merge modal', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`/projects/${TEST_PROJECT_ID}`);
   });
@@ -23,6 +23,8 @@ test.describe.serial('Project-datasets table', () => {
       token,
       id: PROJECT_TO_MERGE_ID,
     });
+    expect(getProjectResponse.ok()).toBeTruthy();
+
     const projectToMerge = await getProjectResponse.json();
 
     // open project merge modal
