@@ -8,13 +8,28 @@ E2E_TLS_CERT_DIR=""
 
 cleanup() {
   local exit_code=$?
+  local cleanup_failed=false
 
   echo "Stopping the isolated E2E stack and deleting its temporary data..."
-  docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
+  if ! docker compose -f "$COMPOSE_FILE" down -v --remove-orphans; then
+    echo "Failed to stop the E2E stack; still attempting TLS cleanup." >&2
+    cleanup_failed=true
+  fi
 
   if [[ -n "${E2E_TLS_CERT_DIR:-}" && -d "$E2E_TLS_CERT_DIR" ]]; then
-    rm -f -- "$E2E_TLS_CERT_DIR/cert.pem" "$E2E_TLS_CERT_DIR/key.pem"
-    rmdir "$E2E_TLS_CERT_DIR"
+    if ! rm -f -- "$E2E_TLS_CERT_DIR/cert.pem" "$E2E_TLS_CERT_DIR/key.pem"; then
+      echo "Failed to delete the temporary E2E certificates." >&2
+      cleanup_failed=true
+    fi
+    if ! rmdir "$E2E_TLS_CERT_DIR"; then
+      echo "Failed to remove the temporary E2E TLS directory." >&2
+      cleanup_failed=true
+    fi
+  fi
+
+  # Preserve the original failure, but never report success if teardown failed.
+  if [[ "$cleanup_failed" == true && "$exit_code" -eq 0 ]]; then
+    exit_code=1
   fi
 
   return "$exit_code"
