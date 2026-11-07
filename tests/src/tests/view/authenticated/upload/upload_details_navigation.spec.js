@@ -2,11 +2,13 @@ import {
   selectAutocompleteResult,
   selectDropdownOption,
 } from '../../../../actions';
+import {
+  openNewUpload,
+  selectFilesAndGoToGeneralInfo,
+} from '../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../actions/stepper';
 import { generateUniqueDatasetName } from '../../../../api/dataset';
 import { expect, test } from '../../../../fixtures';
-
-const config = require('config');
 
 const attachments = [
   { name: 'tiny-upload.txt', content: 'tiny upload payload' },
@@ -14,25 +16,28 @@ const attachments = [
 
 test.use({ attachments });
 
+test('uploads list navigates to the new upload page', async ({ page }) => {
+  await page.goto('/datasets/uploads');
+
+  await Promise.all([
+    page.waitForURL('**/datasets/uploads/new'),
+    page.getByRole('button', { name: 'Upload Dataset' }).click(),
+  ]);
+
+  await expect(page).toHaveURL('/datasets/uploads/new');
+  await expect(page.getByTestId('upload-dataset-stepper')).toBeVisible();
+});
+
 test('finished upload navigates to details page with correct info', async ({
-  browser,
+  page,
   attachmentManager,
 }) => {
-  const page = await browser.newPage();
+  await openNewUpload({ page });
 
-  // Login as admin (required for /datasets/uploads/:id access)
-  await page.goto(`${config.baseURL}/auth/iucas?ticket=admin`);
-
-  await page.goto('/datasets/uploads/new');
-
-  const uploadInput = page
-    .locator('[data-testid="upload-file-select"] input[type="file"]')
-    .first();
-  await uploadInput.waitFor({ state: 'attached' });
-  await uploadInput.setInputFiles([
+  const filePaths = [
     `${attachmentManager.getPath()}/${attachments[0].name}`,
-  ]);
-  await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
+  ];
+  await selectFilesAndGoToGeneralInfo({ page, filePaths });
 
   await selectAutocompleteResult({
     page,
@@ -52,7 +57,9 @@ test('finished upload navigates to details page with correct info', async ({
   });
   await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
-  const token = await page.evaluate(() => localStorage.getItem('token'));
+  const token = await page.evaluate(
+    () => globalThis.localStorage.getItem('token'),
+  );
   const datasetName = await generateUniqueDatasetName({
     requestContext: page.request,
     token,
@@ -86,6 +93,4 @@ test('finished upload navigates to details page with correct info', async ({
   await expect(page.getByTestId('upload-overview-card')).toBeVisible();
   await expect(page.getByTestId('upload-overview-dataset-link')).toContainText(datasetName);
   await expect(page.getByTestId('upload-overview-status-chip')).toBeVisible();
-
-  await page.close();
 });

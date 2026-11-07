@@ -35,11 +35,23 @@ certificate on success or failure. It does not use the production UI image
 or start a new Vite development server.
 
 The test profile matches the UI on `main`: Import and Upload are admin-only.
+The default remains admin-only. To exercise the runtime Upload-role setting
+introduced by the production UI PR, use the same variable for the test image
+and Playwright's role expectations:
+
+```bash
+UPLOAD_ENABLED_ROLES=admin,user npm run test:e2e -- \
+  --project=upload--project_association--user_role--association \
+  --project=upload_access_user
+```
+
+The E2E build passes it as `VITE_UPLOAD_ENABLED_ROLES`; deployed containers
+instead generate the runtime settings on startup. Both use the same role list.
 Operator and User Import projects check the disabled-feature warning.
 User-only Upload association cases require an enabled User Upload UI and
-are not selected by this admin-only profile. The existing User/Operator
-Upload metadata cases are explicitly skipped for the same reason; the
-visibility suite verifies that both roles see the disabled-feature warning.
+are not selected by this admin-only profile. Upload access-control projects
+verify that Admin reaches the form and User/Operator see the disabled-feature
+warning. Functional metadata cases are selected only for enabled roles.
 Notifications remain excluded
 while their access policy is WIP; no notification implementation is changed.
 
