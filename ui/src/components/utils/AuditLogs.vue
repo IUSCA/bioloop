@@ -18,11 +18,16 @@
             >
               <!-- user -->
               <div class="flex items-center gap-2">
-                <UserAvatar
-                  :username="log.user?.username"
-                  :name="log.user?.name"
-                />
-                <span> {{ log.user?.username }} </span>
+                <span v-if="log.action === 'auto_unstage' && !log.user"
+                  >System</span
+                >
+                <template v-else>
+                  <UserAvatar
+                    :username="log.user?.username"
+                    :name="log.user?.name"
+                  />
+                  <span> {{ log.user?.username }} </span>
+                </template>
               </div>
 
               <!-- timestamp -->
@@ -43,7 +48,7 @@
               <div class="w-96 hidden md:block">
                 <div class="va-text-secondary text-sm">Summary</div>
                 <div class="line-clamp-1 text-sm">
-                  {{ log.summary || log.comments }}
+                  {{ log.summary || auditComment(log) }}
                 </div>
               </div>
             </div>
@@ -55,7 +60,7 @@
             <!-- comments -->
             <div class="col-span-12 md:col-span-4">
               <p class="pt-1 pb-3 font-semibold">Comments</p>
-              <span class="whitespace-pre-line">{{ log.comments }}</span>
+              <span class="whitespace-pre-line">{{ auditComment(log) }}</span>
             </div>
 
             <!-- changes -->
@@ -86,4 +91,11 @@ import * as datetime from "@/services/datetime";
 const props = defineProps({
   logs: Array,
 });
+
+function auditComment(log) {
+  if (log.action === "auto_unstage") {
+    return log.new_data?.reason || log.comments;
+  }
+  return log.comments;
+}
 </script>
