@@ -1,24 +1,26 @@
 <template>
   <va-button
     :color="color"
-    :icon="icon_name"
     round
     v-if="props.showText"
     preset="primary"
     :border-color="color"
     class="shadow"
   >
+    <Icon :icon="icon_name" class="mr-2 text-xl" />
     {{ text }}
   </va-button>
   <va-button
     :color="color"
-    :icon="icon_name"
     round
     preset="secondary"
     :border-color="color"
     class="shadow"
+    :aria-label="text"
     v-else
-  />
+  >
+    <Icon :icon="icon_name" class="text-xl" />
+  </va-button>
 </template>
 
 <script setup>
@@ -34,7 +36,7 @@ const props = defineProps({
 });
 
 const icon_name = computed(() => {
-  return props.edit ? "edit" : "add";
+  return props.edit ? "material-symbols:edit" : "material-symbols:add";
 });
 const color = computed(() => {
   return props.edit ? "primary" : "success";
