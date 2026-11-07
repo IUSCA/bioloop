@@ -87,8 +87,10 @@
 <script setup>
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
-import { cmp, downloadFile, formatBytes } from "@/services/utils";
+import { downloadFile, formatBytes } from "@/services/utils";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
+
+import { compareFileNames, createFileTableRows } from "./fileBrowserUtils";
 
 const store = useFileBrowserStore();
 
@@ -136,7 +138,7 @@ const columns = computed(() => {
         key: "typeSortableName",
         label: "name",
         sortable: true,
-        sortingFn: nameSortingFn,
+        sortingFn: compareFileNames,
         tdStyle:
           "min-width: 300px; white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
       },
@@ -159,22 +161,7 @@ const sortBy = ref("typeSortableName");
 const sortingOrder = ref("asc");
 const data_loading = ref(false);
 
-function extension(name) {
-  const parts = name.split(".");
-  if (parts.length > 1) return parts.slice(-1)[0];
-  else return "";
-}
-
-const rows = computed(() => {
-  return props.files.map((obj) => {
-    return {
-      ...obj,
-      filetype:
-        obj.filetype === "directory" ? obj.filetype : `.${extension(obj.name)}`,
-      typeSortableName: { name: obj.name, filetype: obj.filetype },
-    };
-  });
-});
+const rows = computed(() => createFileTableRows(props.files));
 
 function onClick(event) {
   const row = event.item;
@@ -215,18 +202,6 @@ function initiate_file_download(row) {
 function getRowBind(row) {
   if (row.filetype === "directory") {
     return { class: ["cursor-pointer"] };
-  }
-}
-
-function nameSortingFn(a, b) {
-  // compare filetypes and then compare names
-  // in ascending order directories appear first, i.e. cmp(dir, file) < 0
-  if (a.filetype === b.filetype) {
-    return cmp(a.name, b.name);
-  } else if (a.filetype === "directory") {
-    return -1;
-  } else {
-    return 1;
   }
 }
 
