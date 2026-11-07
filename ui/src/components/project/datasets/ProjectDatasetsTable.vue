@@ -164,7 +164,11 @@
   />
 
   <!-- Download Modal -->
-  <DatasetDownloadModal ref="downloadModal" :dataset="datasetToDownload" :project-slug="props.project?.slug" />
+  <DatasetDownloadModal
+    ref="downloadModal"
+    :dataset="datasetToDownload"
+    :project-slug="props.project?.slug"
+  />
 
   <!-- Stage Modal -->
   <StageDatasetModal

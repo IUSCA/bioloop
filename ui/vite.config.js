@@ -87,10 +87,15 @@ export default defineConfig(({ command, mode }) => {
       port: 443,
 
       // https://vitejs.dev/config/#server-https
-      https: {
-        key: fs.readFileSync("./.cert/key.pem"),
-        cert: fs.readFileSync("./.cert/cert.pem"),
-      },
+      https:
+        command === "serve" &&
+        fs.existsSync("./.cert/key.pem") &&
+        fs.existsSync("./.cert/cert.pem")
+          ? {
+              key: fs.readFileSync("./.cert/key.pem"),
+              cert: fs.readFileSync("./.cert/cert.pem"),
+            }
+          : undefined,
       // just `true` yields errors with Firefox as of 2022.12
       // https: true,
 

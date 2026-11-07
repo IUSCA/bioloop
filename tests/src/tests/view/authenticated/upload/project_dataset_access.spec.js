@@ -1,3 +1,5 @@
+import config from 'config';
+
 import { getAutoCompleteResults } from '../../../../actions';
 import { loginAndNavigate } from '../../../../actions/auth';
 import { selectFiles } from '../../../../actions/datasetUpload';
@@ -110,6 +112,10 @@ test.describe.serial('Dataset Upload Process', () => {
     });
 
     test.describe('`user` role access to Projects and Datasets', () => {
+      test.skip(
+        !config.enabledFeatures.uploads.enabledForRoles.includes('user'),
+        'This profile disables the User Upload UI; the visibility suite checks that restriction.',
+      );
       test.beforeAll(async ({ browser, attachmentManager }) => {
         // Create a new browser instance for logging-in as `user` role User
         userPage = await browser.newPage();
@@ -160,6 +166,10 @@ test.describe.serial('Dataset Upload Process', () => {
     });
 
     test.describe('`operator` role access to Projects and Datasets', () => {
+      test.skip(
+        !config.enabledFeatures.uploads.enabledForRoles.includes('operator'),
+        'This profile disables the Operator Upload UI; the visibility suite checks that restriction.',
+      );
       test.beforeAll(async ({ browser, attachmentManager }) => {
         // Create a new browser instance for logging-in as `operator` role User
         operatorPage = await browser.newPage();
