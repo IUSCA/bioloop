@@ -4,7 +4,7 @@
     :class="{ 'cursor-pointer': !isDir }"
     @click="isDir ? null : emit('click', parent)"
   >
-    <div v-if="depth >= 4">
+    <div v-if="depth >= (isDir ? 3 : 4)">
       <va-popover :message="isDir ? props.data.path : parent" placement="top">
         <span>
           {{ getShortPath(props.data.path, isDir).replaceAll("/", " / ") }}
@@ -20,6 +20,8 @@
 </template>
 
 <script setup>
+import { getParentPath, getShortPath } from "./fileBrowserUtils";
+
 const props = defineProps({
   data: {
     type: Object,
@@ -29,28 +31,15 @@ const props = defineProps({
 
 const emit = defineEmits(["click"]);
 
-function getShortPath(path, isDirectory) {
-  const parts = path.split("/");
-
-  if (!isDirectory) {
-    if (parts.length >= 4) return `.../${parts.slice(-3, -1).join("/")}/`;
-    return `${parts.slice(0, -1).join("/")}/`;
-  } else {
-    if (parts.length >= 3) `.../${parts.slice(-2).join("/")}`;
-    return parts.join("/");
-  }
-}
-
 const isDir = computed(() => {
   return props.data?.filetype === "directory";
 });
 
 const parent = computed(() => {
-  const parts = props.data.path.split("/");
-  return parts.slice(0, -1).join("/");
+  return getParentPath(props.data.path);
 });
 
 const depth = computed(() => {
-  return props.data.path.split("/").length;
+  return (props.data.path || "").split("/").length;
 });
 </script>

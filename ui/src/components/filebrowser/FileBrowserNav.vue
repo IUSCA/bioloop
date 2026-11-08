@@ -20,6 +20,8 @@
 </template>
 
 <script setup>
+import { getBreadcrumbItems } from "./fileBrowserUtils";
+
 const props = defineProps({
   pwd: {
     type: String,
@@ -28,30 +30,5 @@ const props = defineProps({
 });
 const emit = defineEmits(["update:pwd"]);
 
-const path_items = computed(() => {
-  /**
-   * if pwd is 'dir1/dir2/dir3/file.txt'
-   * then path_items is
-   * [{
-   *    name: 'dir1',
-   *    rel_path: 'dir1'
-   * }, {
-   *    name: 'dir2',
-   *    rel_path: 'dir1/dir2'
-   * }, {
-   *    name: 'dir3',
-   *    rel_path: 'dir1/dir2/dir3'
-   * }]
-   */
-
-  if (props.pwd === "") {
-    return [];
-  }
-  const parts = props.pwd.split("/");
-  const result = parts.map((t, i) => ({
-    name: t,
-    rel_path: parts.slice(0, i + 1).join("/"),
-  }));
-  return result;
-});
+const path_items = computed(() => getBreadcrumbItems(props.pwd));
 </script>
