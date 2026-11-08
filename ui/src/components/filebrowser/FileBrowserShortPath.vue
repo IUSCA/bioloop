@@ -4,7 +4,7 @@
     :class="{ 'cursor-pointer': !isDir }"
     @click="isDir ? null : emit('click', parent)"
   >
-    <div v-if="depth >= 4">
+    <div v-if="depth >= (isDir ? 3 : 4)">
       <va-popover :message="isDir ? props.data.path : parent" placement="top">
         <span>
           {{ getShortPath(props.data.path, isDir).replaceAll("/", " / ") }}
