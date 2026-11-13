@@ -593,9 +593,7 @@ const selectedDatasetType = ref(
     datasetTypeOptions.value.find(
       (type) => type.value === config.dataset.types.DATA_PRODUCT.key,
     ) ||
-    datasetTypeOptions.value.find(
-      (type) => type.value === config.dataset.types.RAW_DATA.key,
-    ),
+    datasetTypeOptions.value[0],
 );
 
 /**
