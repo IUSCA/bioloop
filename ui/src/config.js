@@ -83,7 +83,7 @@ const exports = {
     downloads: true,
     signup: false,
     uploads: {
-      enabledForRoles: ["admin", "operator"],
+      enabledForRoles: ["admin"],
     },
     // Compute and send a BLAKE3 manifest-hash before each upload so the
     // verification worker can confirm file integrity end-to-end.
