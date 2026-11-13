@@ -588,12 +588,14 @@ const datasetTypeOptions = ref(
 // The type of Dataset that the user has selected to upload.
 const selectedDatasetType = ref(
   datasetTypeOptions.value.find(
-    (type) =>
-      type.value ===
-      (isDataProductsEnabled
-        ? config.dataset.types.DATA_PRODUCT.key
-        : config.dataset.types.RAW_DATA.key),
-  ),
+    (type) => type.value === config.upload.default_dataset_type,
+  ) ||
+    datasetTypeOptions.value.find(
+      (type) => type.value === config.dataset.types.DATA_PRODUCT.key,
+    ) ||
+    datasetTypeOptions.value.find(
+      (type) => type.value === config.dataset.types.RAW_DATA.key,
+    ),
 );
 
 /**

@@ -100,6 +100,7 @@ const exports = {
     maxDisplayCount: 1, // Maximum number of alerts to display at once
   },
   upload: {
+    default_dataset_type: "DATA_PRODUCT",
     // Maximum size per individual file (bytes). Must match upload.max_file_size_bytes
     // in the API config. Enforced server-side by TUS; this value is used for
     // client-side validation so users get an immediate error instead of a
