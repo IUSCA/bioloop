@@ -23,7 +23,7 @@ const exports = {
     download: "",
   },
   file_browser: {
-    cache_busting_id: "fe09b01", // any random string different from the previous value will work
+    cache_busting_id: "63d6cbd", // any random string different from the previous value will work
   },
   enable_delete_archive: true,
   dataset: {

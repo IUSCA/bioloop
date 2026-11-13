@@ -1,5 +1,5 @@
 import config from "@/config";
-import { isLiveToken, setIntersection } from "@/services/utils";
+import { isFeatureEnabled, isLiveToken, setIntersection } from "@/services/utils";
 import { setupLayouts } from "virtual:generated-layouts";
 import { createRouter, createWebHistory } from "vue-router";
 import { routes } from "vue-router/auto-routes";
@@ -58,6 +58,16 @@ function auth_guard(to, _from) {
 
   if (routeRequiresAuth) {
     if (isLoggedIn) {
+      if (
+        to.meta.requiresFeature &&
+        !isFeatureEnabled({
+          featureKey: to.meta.requiresFeature,
+          hasRole: (role) => user.value?.roles?.includes(role),
+        })
+      ) {
+        return false;
+      }
+
       if (isRoleRestrictedRoute) {
         const required_roles = to.meta.requiresRoles;
         const user_roles = user.value?.roles || [];
