@@ -27,9 +27,8 @@ router.use(authenticate);
 if (featureService.isFeatureEnabled({ key: 'upload' })) {
   router.use('/datasets/uploads', uploadRouter /* #swagger.security = [{"BearerAuth": []}] */);
 }
-if (featureService.isFeatureEnabled({ key: 'import' })) {
-  router.use('/datasets/imports', importRouter /* #swagger.security = [{"BearerAuth": []}] */);
-}
+// Import routes check role-specific feature settings for each request.
+router.use('/datasets/imports', importRouter /* #swagger.security = [{"BearerAuth": []}] */);
 
 router.use('/datasets', require('./datasets') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/metrics', require('./metrics') /* #swagger.security = [{"BearerAuth": []}] */);
