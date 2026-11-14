@@ -1,17 +1,18 @@
 import config from "@/config";
 import constants from "@/constants";
 import authService from "@/services/auth";
+import { useAuthSession } from "@/services/authSession";
 import * as utils from "@/services/utils";
 import { useNotificationStore } from "@/stores/notification";
 import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
-import { ref } from "vue";
+import { computed, onScopeDispose, ref, watch } from "vue";
 
 export const useAuthStore = defineStore("auth", () => {
   const env = ref("");
-  const user = ref(useLocalStorage("user", {}));
-  const token = ref(useLocalStorage("token", ""));
-  const loggedIn = ref(false);
+  const session = useAuthSession();
+  const { user, token, isSpoofing } = session;
+  const loggedIn = computed(() => Boolean(token.value));
   const signupToken = ref(useLocalStorage("signup_token", ""));
   const signupEmail = ref("");
   let refreshTokenTimer = null;
@@ -23,24 +24,16 @@ export const useAuthStore = defineStore("auth", () => {
   });
 
   function initialize() {
-    if (user.value && token.value) {
-      loggedIn.value = true;
-      refreshTokenBeforeExpiry();
-    }
-  }
-
-  function onLogin(data) {
-    user.value = data.profile;
-    token.value = data.token;
-    loggedIn.value = true;
-    useNotificationStore().resetSession();
     refreshTokenBeforeExpiry();
   }
 
+  function onLogin(data, { spoof = false } = {}) {
+    session.saveSession(data, { spoof });
+    useNotificationStore().resetSession();
+  }
+
   function onLogout() {
-    loggedIn.value = false;
-    user.value = {};
-    token.value = "";
+    session.clearSession();
     useNotificationStore().resetSession();
   }
 
@@ -108,41 +101,48 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function logout() {
+    const wasSpoofing = isSpoofing.value;
     onLogout();
+    if (wasSpoofing) window.location.href = "/";
   }
 
   function refreshTokenBeforeExpiry() {
-    // idempotent method - will not create a timeout if one already exists
-    if (!refreshTokenTimer) {
-      // timer is not running running
-      try {
-        const payload = jwtDecode(token.value);
-        const expiresAt = new Date(payload.exp * 1000);
-        const now = new Date();
-        if (now < expiresAt) {
-          // token is still alive
-          const delay =
-            expiresAt - now - config.refreshTokenTMinusSeconds.appToken * 1000;
-          refreshTokenTimer = setTimeout(refreshToken, delay);
-        }
-        // else - do nothing, navigation guard will redirect to /auth
-      } catch (err) {
-        console.error("Errored trying to decode access token", err);
+    clearTimeout(refreshTokenTimer);
+    refreshTokenTimer = null;
+    if (!token.value) return;
+
+    try {
+      const payload = jwtDecode(token.value);
+      const expiresAt = new Date(payload.exp * 1000);
+      const now = new Date();
+      if (now < expiresAt) {
+        const delay =
+          expiresAt - now - config.refreshTokenTMinusSeconds.appToken * 1000;
+        refreshTokenTimer = setTimeout(refreshToken, Math.max(0, delay));
       }
+    } catch (err) {
+      console.error("Errored trying to decode access token", err);
     }
   }
 
   function refreshToken() {
-    refreshTokenTimer = null; // reset timer state
+    refreshTokenTimer = null;
+    const requestSession = session.getSessionSnapshot();
     authService
-      .refreshToken()
+      .refreshToken(requestSession)
       .then((res) => {
-        if (res.data) onLogin(res.data);
+        if (res.data && session.isCurrentSession(requestSession)) {
+          onLogin(res.data, { spoof: requestSession.spoof });
+        }
       })
       .catch((err) => {
         console.error("Unable to refresh token", err);
       });
   }
+
+  // Shared login changes and tab-local spoof changes each select a new timer.
+  watch([token, isSpoofing], refreshTokenBeforeExpiry, { flush: "sync" });
+  onScopeDispose(() => clearTimeout(refreshTokenTimer));
 
   // Check for roles
   function hasRole(role) {
@@ -159,8 +159,10 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function spoof(username) {
-    return authService.spoof(username).then((res) => {
-      onLogin(res.data);
+    const requestSession = session.getSessionSnapshot();
+    return authService.spoof(username, requestSession).then((res) => {
+      if (!session.isCurrentSession(requestSession)) return;
+      onLogin(res.data, { spoof: true });
       // reload entire app to reload all components
       window.location.href = "/";
     });
@@ -184,6 +186,7 @@ export const useAuthStore = defineStore("auth", () => {
     user,
     token,
     loggedIn,
+    isSpoofing,
     initialize,
     logout,
     hasRole,
