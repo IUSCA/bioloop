@@ -22,7 +22,6 @@ jobs:
       !github.event.pull_request.draft &&
       github.actor != 'dependabot[bot]'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
     permissions:
       contents: read
       pull-requests: write
@@ -51,18 +50,20 @@ jobs:
         env:
           # Keep the pinned CLI from updating itself while the action is running.
           OCR_NO_UPDATE: '1'
+          # The pinned action validates a positive input, then reads this
+          # step environment variable for the CLI. Zero disables its deadline.
+          REVIEW_TASK_TIMEOUT: '0'
         with:
           ocr_version: '1.12.13'
           github_token: ${{ github.token }}
           llm_url: https://reallms.rescloud.iu.edu/direct/v1/chat/completions
           llm_auth_token: ${{ secrets.REALLMS_API_KEY }}
-          llm_model: gemma-4-31B-it
+          llm_model: glm-5.3-flash
           llm_use_anthropic: 'false'
           llm_protocol: openai
           llm_extra_body: '{}'
           language: English
           llm_timeout: '120'
-          review_task_timeout: '10'
           review_concurrency: '1'
           effort: medium
           # No token budget cap; API and timeout limits still apply.
