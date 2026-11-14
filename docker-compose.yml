@@ -167,6 +167,7 @@ services:
       - db/queue/.env.default # For RabbitMQ connection settings
     volumes:
       - queue_volume:/var/lib/rabbitmq/
+      - ./db/queue/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
 
 
   mongo:
@@ -266,7 +267,7 @@ services:
     volumes:
       - signet_db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "appuser"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 10s
       retries: 10
