@@ -43,7 +43,7 @@ beforeEach(async () => {
   await nextTick();
   localStorage.clear();
   sessionStorage.clear();
-  window.history.replaceState({}, "", "/users");
+  window.location.href = "/users";
   normalLogin = loginData("admin", ["admin"]);
   spoofLogin = loginData("user-a", ["user"]);
   store = useAuthStore();
@@ -96,6 +96,73 @@ describe("Auth store storage selection", () => {
     expect(JSON.parse(localStorage.getItem("user"))).toEqual(
       normalLogin.profile,
     );
+  });
+});
+
+describe("Auth store spoof response validation", () => {
+  const profile = { username: "user-a", roles: ["user"] };
+
+  it.each([
+    ["missing body", undefined],
+    ["null body", null],
+    ["empty body", {}],
+    ["missing profile", { token: "token" }],
+    ["missing token", { profile }],
+    ["blank token", { profile, token: " " }],
+    ["non-string token", { profile, token: 123 }],
+    [
+      "blank username",
+      { profile: { ...profile, username: " " }, token: "token" },
+    ],
+    ["missing roles", { profile: { username: "user-a" }, token: "token" }],
+    [
+      "invalid role",
+      { profile: { ...profile, roles: [null] }, token: "token" },
+    ],
+  ])("rejects %s without changing the normal login", async (_name, data) => {
+    store.onLogin(normalLogin);
+    await nextTick();
+    authService.spoof.mockResolvedValueOnce({ data });
+
+    await expect(store.spoof("user-a")).rejects.toThrow(
+      "Invalid response from Log in as",
+    );
+
+    expect(store.loggedIn).toBe(true);
+    expect(store.isSpoofing).toBe(false);
+    expect(store.user).toEqual(normalLogin.profile);
+    expect(store.token).toBe(normalLogin.token);
+    expect(store.canAdmin).toBe(true);
+    expect(localStorage.getItem("token")).toBe(normalLogin.token);
+    expect(JSON.parse(localStorage.getItem("user"))).toEqual(
+      normalLogin.profile,
+    );
+    expect(sessionStorage.getItem("auth.spoof")).toBeNull();
+    expect(window.location.pathname).toBe("/users");
+  });
+
+  it("preserves an existing spoof session when a response is invalid", async () => {
+    store.onLogin(normalLogin);
+    await nextTick();
+    store.onLogin(spoofLogin, { spoof: true });
+    authService.spoof.mockResolvedValueOnce({ data: {} });
+
+    await expect(store.spoof("another-user")).rejects.toThrow(
+      "Invalid response from Log in as",
+    );
+
+    expect(store.loggedIn).toBe(true);
+    expect(store.isSpoofing).toBe(true);
+    expect(store.user).toEqual(spoofLogin.profile);
+    expect(store.token).toBe(spoofLogin.token);
+    expect(JSON.parse(sessionStorage.getItem("auth.spoof"))).toEqual(
+      spoofLogin,
+    );
+    expect(localStorage.getItem("token")).toBe(normalLogin.token);
+    expect(JSON.parse(localStorage.getItem("user"))).toEqual(
+      normalLogin.profile,
+    );
+    expect(window.location.pathname).toBe("/users");
   });
 });
 

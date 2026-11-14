@@ -162,7 +162,18 @@ export const useAuthStore = defineStore("auth", () => {
     const requestSession = session.getSessionSnapshot();
     return authService.spoof(username, requestSession).then((res) => {
       if (!session.isCurrentSession(requestSession)) return;
-      onLogin(res.data, { spoof: true });
+      const data = res?.data;
+      if (
+        typeof data?.profile?.username !== "string" ||
+        !data.profile.username.trim() ||
+        !Array.isArray(data.profile.roles) ||
+        data.profile.roles.some((role) => typeof role !== "string") ||
+        typeof data?.token !== "string" ||
+        !data.token.trim()
+      ) {
+        throw new Error("Invalid response from Log in as");
+      }
+      onLogin(data, { spoof: true });
       // reload entire app to reload all components
       window.location.href = "/";
     });
