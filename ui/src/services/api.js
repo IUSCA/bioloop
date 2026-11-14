@@ -1,9 +1,10 @@
 import config from "@/config";
-import router from "@/router";
 import axios from "axios";
+import { nextTick } from "vue";
+import { useAuthSession } from "./authSession";
 import toast from "./toast";
 
-const token = ref(useLocalStorage("token", ""));
+const session = useAuthSession();
 
 const axiosInstance = axios.create({
   baseURL: config.apiBasePath,
@@ -11,7 +12,8 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    const _token = token.value;
+    config.authSession ??= session.getSessionSnapshot();
+    const _token = config.authSession.token;
     if (_token) {
       config.headers.Authorization = `Bearer ${_token}`;
     }
@@ -22,14 +24,20 @@ axiosInstance.interceptors.request.use(
   },
 );
 
-// If API call has failed because of 401 Unauthorized
-// navigate to logout page
+// Only end the session that authorized the failed request.
 axiosInstance.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response && err.response.status === 401) {
+  async (err) => {
+    const requestSession = err.config?.authSession;
+    if (
+      err.response?.status === 401 &&
+      requestSession?.token &&
+      session.isCurrentSession(requestSession)
+    ) {
       console.error("Error: Unauthorized", err);
-      router.push("/auth/logout"); // logout
+      session.clearSession();
+      await nextTick();
+      window.location.href = requestSession.spoof ? "/" : "/auth/";
     }
     return Promise.reject(err);
   },
