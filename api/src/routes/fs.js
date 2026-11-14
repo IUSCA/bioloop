@@ -229,7 +229,7 @@ router.get(
                   total_matches: matchingFiles.length,
                 });
                 res.json(matchingFiles);
-              });
+              }).catch(next);
             } else {
               logger.info('[FS] Substring match results', {
                 search_term,
@@ -256,7 +256,7 @@ router.get(
         if (extension && dirs_only) {
           directoryContainsExtension(mounted_search_dir, extension).then((hasExtension) => {
             res.json(hasExtension ? [dirResult] : []);
-          });
+          }).catch(next);
         } else {
           res.json([dirResult]);
         }
@@ -310,7 +310,7 @@ router.get(
               total_after_filter: filesData.length,
             });
             res.json(filesData);
-          });
+          }).catch(next);
         } else {
           logger.info('[FS] Response prepared', {
             dirs_only,
