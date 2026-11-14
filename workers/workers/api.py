@@ -272,6 +272,16 @@ def update_dataset(dataset_id, update_data):
         return r.json()
 
 
+def expire_dataset_staging(dataset_id: int, staged_path: str, retention_days: int) -> bool:
+    with APIServerSession() as s:
+        r = s.post(f'datasets/{dataset_id}/expire-staging', json={
+            'staged_path': staged_path,
+            'retention_days': retention_days,
+        })
+        r.raise_for_status()
+        return r.json()['unstaged']
+
+
 def delete_dataset(dataset_id: int):
     with APIServerSession() as s:
         r = s.delete(f'datasets/{dataset_id}')

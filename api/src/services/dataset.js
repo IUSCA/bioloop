@@ -1207,6 +1207,38 @@ const buildDatasetsFetchQuery = ({
   return query_obj;
 };
 
+async function expireStaging({ datasetId, stagedPath, retentionDays }) {
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.dataset.updateMany({
+      where: {
+        id: datasetId,
+        staged_path: stagedPath,
+        ...buildDatasetsFetchQuery({ deleted: false, days_since_last_staged: retentionDays }),
+      },
+      data: { is_staged: false, staged_path: null },
+    });
+
+    // An already unstaged or recently restaged dataset must not get a purge log.
+    if (count === 0) return false;
+
+    await tx.dataset_state.create({
+      data: { dataset_id: datasetId, state: 'PURGED' },
+    });
+    await tx.dataset_audit.create({
+      data: {
+        dataset_id: datasetId,
+        action: 'auto_unstage',
+        old_data: { is_staged: true },
+        new_data: {
+          is_staged: false,
+          reason: `Staging retention expired (${retentionDays} days).`,
+        },
+      },
+    });
+    return true;
+  });
+}
+
 /**
  * Generates a Prisma query object for creating a new dataset.
  *
@@ -1340,6 +1372,7 @@ async function associateWorkflow({
 
 module.exports = {
   soft_delete,
+  expireStaging,
   get_dataset,
   create_workflow,
   associateWorkflow,
