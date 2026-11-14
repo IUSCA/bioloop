@@ -1,27 +1,29 @@
 <template>
-  <Header
-    :is-sidebar-collapsed="isSidebarCollapsed"
-    @toggle-sidebar-visibility="toggleSidebarVisibility"
-  >
-  </Header>
+  <div class="flex h-screen flex-col">
+    <Header
+      class="shrink-0"
+      :is-sidebar-collapsed="isSidebarCollapsed"
+      @toggle-sidebar-visibility="toggleSidebarVisibility"
+    />
 
-  <!-- Show any active alerts in the system  -->
-  <Alerts v-if="auth.isFeatureEnabled('alerts')" />
+    <!-- Show any active alerts in the system -->
+    <Alerts v-if="auth.isFeatureEnabled('alerts')" class="shrink-0" />
 
-  <div class="flex flex-row h-screen">
-    <nav
-      aria-label="menu nav"
-      class="relative h-full content-center flex-none shadow-xl"
-    >
-      <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
-    </nav>
-    <main id="main" class="w-full overflow-y-scroll">
-      <div class="px-2 md:px-6 pb-10 pt-4 min-h-screen">
-        <LeaveBreadcrumbs class="mb-2" />
-        <router-view></router-view>
-      </div>
-      <Footer></Footer>
-    </main>
+    <div class="flex min-h-0 flex-1">
+      <nav
+        aria-label="menu nav"
+        class="relative h-full content-center flex-none shadow-xl"
+      >
+        <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
+      </nav>
+      <main id="main" class="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        <div class="grow px-2 md:px-6 pb-10 pt-4">
+          <LeaveBreadcrumbs class="mb-2" />
+          <router-view></router-view>
+        </div>
+        <Footer class="shrink-0" />
+      </main>
+    </div>
   </div>
 </template>
 
@@ -81,3 +83,14 @@ onUnmounted(() => {
   alertStore.stopPolling();
 });
 </script>
+
+<style scoped>
+html.dark #main {
+  color-scheme: dark;
+}
+
+/* Keep the native dark scrollbar without changing the page's controls. */
+html.dark #main > * {
+  color-scheme: normal;
+}
+</style>
