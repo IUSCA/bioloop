@@ -7,7 +7,7 @@ import { useAuthStore } from "./auth";
 
 // Keep storage and the auth store real; replace network and notification work.
 vi.mock("@/services/auth", () => ({
-  default: { spoof: vi.fn() },
+  default: { spoof: vi.fn(), refreshToken: vi.fn() },
 }));
 
 vi.mock("@/stores/notification", () => ({
@@ -163,6 +163,99 @@ describe("Auth store spoof response validation", () => {
       normalLogin.profile,
     );
     expect(window.location.pathname).toBe("/users");
+  });
+});
+
+describe.each([
+  ["normal", false],
+  ["spoof", true],
+])("Auth store %s token refresh", (_name, spoof) => {
+  beforeEach(async () => {
+    store.onLogin(normalLogin);
+    await nextTick();
+    if (spoof) store.onLogin(spoofLogin, { spoof: true });
+  });
+
+  it.each([
+    ["null body", null],
+    ["empty body", {}],
+    ["missing profile", { token: "refreshed-token" }],
+    ["missing token", { profile: { username: "user-a", roles: ["user"] } }],
+  ])(
+    "preserves the current session after receiving %s",
+    async (_case, data) => {
+      const activeLogin = spoof ? spoofLogin : normalLogin;
+      const savedNormalToken = localStorage.getItem("token");
+      const savedNormalUser = localStorage.getItem("user");
+      const savedSpoof = sessionStorage.getItem("auth.spoof");
+      authService.refreshToken.mockResolvedValueOnce({ data });
+      const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      try {
+        await vi.advanceTimersByTimeAsync(55 * 60 * 1000);
+
+        expect(authService.refreshToken).toHaveBeenCalledWith({
+          token: activeLogin.token,
+          spoof,
+        });
+        expect(store.loggedIn).toBe(true);
+        expect(store.isSpoofing).toBe(spoof);
+        expect(store.user).toEqual(activeLogin.profile);
+        expect(store.token).toBe(activeLogin.token);
+        expect(store.canAdmin).toBe(!spoof);
+        expect(localStorage.getItem("token")).toBe(savedNormalToken);
+        expect(localStorage.getItem("user")).toBe(savedNormalUser);
+        expect(sessionStorage.getItem("auth.spoof")).toBe(savedSpoof);
+        expect(window.location.pathname).toBe("/users");
+        expect(spy).toHaveBeenCalledWith(
+          "Unable to refresh token",
+          expect.objectContaining({
+            message: "Invalid response from token refresh",
+          }),
+        );
+      } finally {
+        spy.mockRestore();
+      }
+    },
+  );
+
+  it("persists a valid refreshed login in the correct storage", async () => {
+    const activeLogin = spoof ? spoofLogin : normalLogin;
+    let refreshedLogin;
+    authService.refreshToken.mockImplementationOnce(() => {
+      refreshedLogin = loginData(
+        activeLogin.profile.username,
+        activeLogin.profile.roles,
+      );
+      return Promise.resolve({ data: refreshedLogin });
+    });
+
+    await vi.advanceTimersByTimeAsync(55 * 60 * 1000);
+
+    expect(authService.refreshToken).toHaveBeenCalledWith({
+      token: activeLogin.token,
+      spoof,
+    });
+    expect(store.loggedIn).toBe(true);
+    expect(store.isSpoofing).toBe(spoof);
+    expect(store.user).toEqual(refreshedLogin.profile);
+    expect(store.token).toBe(refreshedLogin.token);
+    expect(store.token).not.toBe(activeLogin.token);
+    if (spoof) {
+      expect(JSON.parse(sessionStorage.getItem("auth.spoof"))).toEqual(
+        refreshedLogin,
+      );
+      expect(localStorage.getItem("token")).toBe(normalLogin.token);
+      expect(JSON.parse(localStorage.getItem("user"))).toEqual(
+        normalLogin.profile,
+      );
+    } else {
+      expect(localStorage.getItem("token")).toBe(refreshedLogin.token);
+      expect(JSON.parse(localStorage.getItem("user"))).toEqual(
+        refreshedLogin.profile,
+      );
+      expect(sessionStorage.getItem("auth.spoof")).toBeNull();
+    }
   });
 });
 

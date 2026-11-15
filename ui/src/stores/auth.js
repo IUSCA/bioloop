@@ -1,7 +1,7 @@
 import config from "@/config";
 import constants from "@/constants";
 import authService from "@/services/auth";
-import { useAuthSession } from "@/services/authSession";
+import { isValidAuthSession, useAuthSession } from "@/services/authSession";
 import * as utils from "@/services/utils";
 import { useNotificationStore } from "@/stores/notification";
 import { jwtDecode } from "jwt-decode";
@@ -131,9 +131,12 @@ export const useAuthStore = defineStore("auth", () => {
     authService
       .refreshToken(requestSession)
       .then((res) => {
-        if (res.data && session.isCurrentSession(requestSession)) {
-          onLogin(res.data, { spoof: requestSession.spoof });
+        if (!session.isCurrentSession(requestSession)) return;
+        const data = res?.data;
+        if (!isValidAuthSession(data)) {
+          throw new Error("Invalid response from token refresh");
         }
+        onLogin(data, { spoof: requestSession.spoof });
       })
       .catch((err) => {
         console.error("Unable to refresh token", err);
@@ -163,14 +166,7 @@ export const useAuthStore = defineStore("auth", () => {
     return authService.spoof(username, requestSession).then((res) => {
       if (!session.isCurrentSession(requestSession)) return;
       const data = res?.data;
-      if (
-        typeof data?.profile?.username !== "string" ||
-        !data.profile.username.trim() ||
-        !Array.isArray(data.profile.roles) ||
-        data.profile.roles.some((role) => typeof role !== "string") ||
-        typeof data?.token !== "string" ||
-        !data.token.trim()
-      ) {
+      if (!isValidAuthSession(data)) {
         throw new Error("Invalid response from Log in as");
       }
       onLogin(data, { spoof: true });

@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
-import { useAuthSession } from "./authSession";
 
 const normalLogin = {
   profile: { username: "admin", roles: ["admin"] },
@@ -12,6 +11,7 @@ const spoofLogin = {
 };
 
 let session;
+let useAuthSession;
 
 async function resetSession() {
   session.saveSession({ profile: {}, token: "" }, { spoof: false });
@@ -21,13 +21,23 @@ async function resetSession() {
 }
 
 beforeEach(async () => {
-  session = useAuthSession();
-  await resetSession();
+  localStorage.clear();
+  sessionStorage.clear();
+  vi.resetModules();
+  ({ useAuthSession } = await import("./authSession"));
 });
 
-afterEach(resetSession);
+afterEach(async () => {
+  if (session) await resetSession();
+  session = undefined;
+});
 
 describe("Auth session storage selection", () => {
+  beforeEach(async () => {
+    session = useAuthSession();
+    await nextTick();
+  });
+
   it("stores a normal login in shared localStorage", async () => {
     session.saveSession(normalLogin, { spoof: false });
     await nextTick();
@@ -81,6 +91,11 @@ describe("Auth session storage selection", () => {
 });
 
 describe("Auth session cleanup", () => {
+  beforeEach(async () => {
+    session = useAuthSession();
+    await nextTick();
+  });
+
   it("clears only the spoof session and restores the normal login", async () => {
     session.saveSession(normalLogin, { spoof: false });
     await nextTick();
@@ -153,5 +168,83 @@ describe("Auth session cleanup", () => {
     expect(session.isSpoofing.value).toBe(false);
     expect(session.user.value).toEqual({});
     expect(session.token.value).toBe("");
+  });
+});
+
+describe("Auth session restoration", () => {
+  beforeEach(() => {
+    localStorage.setItem("user", JSON.stringify(normalLogin.profile));
+    localStorage.setItem("token", normalLogin.token);
+    localStorage.setItem("theme", "dark");
+    sessionStorage.setItem("draft", "unsaved changes");
+  });
+
+  it.each([
+    ["missing profile", { token: spoofLogin.token }],
+    ["missing token", { profile: spoofLogin.profile }],
+    [
+      "invalid role",
+      {
+        ...spoofLogin,
+        profile: { ...spoofLogin.profile, roles: [null] },
+      },
+    ],
+    [
+      "blank username",
+      {
+        ...spoofLogin,
+        profile: { ...spoofLogin.profile, username: " " },
+      },
+    ],
+  ])(
+    "discards a stored session with %s and restores the normal login",
+    (_name, data) => {
+      sessionStorage.setItem("auth.spoof", JSON.stringify(data));
+
+      session = useAuthSession();
+
+      expect(sessionStorage.getItem("auth.spoof")).toBeNull();
+      expect(session.isSpoofing.value).toBe(false);
+      expect(session.user.value).toEqual(normalLogin.profile);
+      expect(session.token.value).toBe(normalLogin.token);
+      expect(JSON.parse(localStorage.getItem("user"))).toEqual(
+        normalLogin.profile,
+      );
+      expect(localStorage.getItem("token")).toBe(normalLogin.token);
+      expect(localStorage.getItem("theme")).toBe("dark");
+      expect(sessionStorage.getItem("draft")).toBe("unsaved changes");
+    },
+  );
+
+  it.each([
+    ["user role", spoofLogin],
+    [
+      "no roles",
+      { ...spoofLogin, profile: { ...spoofLogin.profile, roles: [] } },
+    ],
+  ])("restores a valid stored spoof session with %s", (_name, data) => {
+    sessionStorage.setItem("auth.spoof", JSON.stringify(data));
+
+    session = useAuthSession();
+
+    expect(session.isSpoofing.value).toBe(true);
+    expect(session.user.value).toEqual(data.profile);
+    expect(session.token.value).toBe(data.token);
+    expect(JSON.parse(sessionStorage.getItem("auth.spoof"))).toEqual(data);
+    expect(localStorage.getItem("token")).toBe(normalLogin.token);
+  });
+
+  it("falls back to logged out when both the stored spoof and normal login are unavailable", () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    sessionStorage.setItem("auth.spoof", JSON.stringify({ token: "token" }));
+
+    session = useAuthSession();
+
+    expect(session.isSpoofing.value).toBe(false);
+    expect(session.user.value).toEqual({});
+    expect(session.token.value).toBe("");
+    expect(sessionStorage.getItem("auth.spoof")).toBeNull();
+    expect(localStorage.getItem("theme")).toBe("dark");
   });
 });
