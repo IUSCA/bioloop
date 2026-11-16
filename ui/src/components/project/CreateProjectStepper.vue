@@ -99,7 +99,15 @@
       <!-- custom controls -->
       <template #controls="{ nextStep, prevStep }">
         <div class="flex items-center justify-around w-full">
-          <va-button class="flex-none" preset="primary" @click="prevStep()">
+          <va-button class="flex-none" preset="secondary" @click="emit('close')">
+            Cancel
+          </va-button>
+          <va-button
+            class="flex-none"
+            preset="primary"
+            @click="prevStep()"
+            :disabled="is_first_step"
+          >
             Previous
           </va-button>
           <va-button
@@ -123,7 +131,7 @@
 import projectService from "@/services/projects";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 
-const emit = defineEmits(["update"]);
+const emit = defineEmits(["update", "close"]);
 
 const projectFormStore = useProjectFormStore();
 const selectedDatasets = computed(() => projectFormStore.datasets);
@@ -139,6 +147,7 @@ const steps = [
 const is_last_step = computed(() => {
   return step.value === steps.length - 1;
 });
+const is_first_step = computed(() => step.value === 0);
 
 function isValid({ validate = false } = {}) {
   if (validate) projectFormStore.form.validate();
@@ -171,6 +180,19 @@ function handleCreate() {
       });
   }
 }
+
+function handleEscapeKey(event) {
+  if (event.key !== "Escape") return;
+  emit("close");
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", handleEscapeKey);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleEscapeKey);
+});
 </script>
 
 <style lang="scss">
