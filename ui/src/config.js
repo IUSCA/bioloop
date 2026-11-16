@@ -72,6 +72,7 @@ const exports = {
   },
   alertForEnvironments: ["ci"],
   enabledFeatures: {
+    allowProjectsWithoutDatasets: false,
     genomeBrowser: true,
     notifications: false,
     import: {

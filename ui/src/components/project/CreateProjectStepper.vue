@@ -85,7 +85,11 @@
 
           <div>
             <p class="font-bold mb-2">Associated Datasets</p>
-            <ProjectDatasetsList :datasets="projectFormStore.datasets" />
+            <ProjectDatasetsList
+              v-if="projectFormStore.datasets.length"
+              :datasets="projectFormStore.datasets"
+            />
+            <p v-else>No datasets selected</p>
             <va-divider class="my-4" />
           </div>
 
@@ -105,8 +109,9 @@
           <va-button
             class="flex-none"
             @click="
-              isValid({ validate: true }) &&
-              (is_last_step ? handleCreate() : nextStep())
+              is_last_step
+                ? handleCreate()
+                : isValid({ validate: true }) && nextStep()
             "
             :color="is_last_step ? 'success' : 'primary'"
             :disabled="!isValid()"
@@ -120,6 +125,7 @@
 </template>
 
 <script setup>
+import config from "@/config";
 import projectService from "@/services/projects";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 
@@ -144,15 +150,15 @@ function isValid({ validate = false } = {}) {
   if (validate) projectFormStore.form.validate();
   const checks = [
     projectFormStore.form.isValid,
-    projectFormStore.datasets.length > 0,
+    config.enabledFeatures.allowProjectsWithoutDatasets ||
+      projectFormStore.datasets.length > 0,
     projectFormStore.users.length > 0,
   ];
   return checks.slice(0, step.value + 1).every((x) => x);
 }
 
 function handleCreate() {
-  projectFormStore.form.validate();
-  if (projectFormStore.form.isValid) {
+  if (isValid({ validate: true })) {
     loading.value = true;
 
     const user_ids = projectFormStore.user_ids;
