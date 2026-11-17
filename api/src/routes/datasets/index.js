@@ -800,7 +800,11 @@ router.post(
       size: BigInt(f.size),
       filetype: f.type,
     }));
-    datasetService.add_files({ dataset_id: req.params.id, data });
+    // fire-and-forget: an unhandled rejection here crashes the API process
+    datasetService.add_files({ dataset_id: req.params.id, data })
+      .catch((err) => {
+        logger.error(`Failed to add files to dataset ${req.params.id}: ${err.message}`);
+      });
 
     res.sendStatus(200);
   }),
