@@ -337,9 +337,9 @@ const route = useRoute();
 const isDark = useDark();
 const auth = useAuthStore();
 
-const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
+const props = defineProps({ appendFileBrowserUrl: Boolean });
+const dataset = defineModel("dataset", { type: Object, required: true });
 
-const dataset = ref({});
 const loading = ref(false);
 const stage_modal = ref(false);
 const delete_archive_modal = ref({
@@ -366,32 +366,37 @@ const polling_interval = computed(() => {
   return active_wf.value ? config.dataset_polling_interval : null;
 });
 
+function withWorkflowUiState(_dataset) {
+  const _workflows = [...(_dataset?.workflows || [])];
+
+  // sort workflows
+  _workflows.sort(workflow_compare_fn);
+  // add collapse_model to open running workflows
+  // keep workflows open that were open
+  return {
+    ..._dataset,
+    workflows: _workflows.map((w, i) => {
+      return {
+        ...w,
+        collapse_model:
+          !workflowService.is_workflow_done(w) ||
+          (dataset.value?.workflows || [])[i]?.collapse_model ||
+          false,
+      };
+    }),
+  };
+}
+
 function fetch_dataset(show_loading = false) {
   loading.value = show_loading;
   DatasetService.getById({
-    id: props.datasetId,
+    id: dataset.value.id,
     bundle: true,
     initiator: true,
     include_source_instrument: true,
   })
     .then((res) => {
-      const _dataset = res.data;
-      const _workflows = _dataset?.workflows || [];
-
-      // sort workflows
-      _workflows.sort(workflow_compare_fn);
-      // add collapse_model to open running workflows
-      // keep workflows open that were open
-      _dataset.workflows = _workflows.map((w, i) => {
-        return {
-          ...w,
-          collapse_model:
-            !workflowService.is_workflow_done(w) ||
-            (dataset.value?.workflows || [])[i]?.collapse_model ||
-            false,
-        };
-      });
-      dataset.value = _dataset;
+      dataset.value = withWorkflowUiState(res.data);
     })
     .catch((err) => {
       console.error(err);
@@ -404,11 +409,12 @@ function fetch_dataset(show_loading = false) {
     });
 }
 
-// initial data fetch
+// Parent owns the initial fetch; normalize workflow UI state when dataset arrives.
 watch(
-  [() => props.datasetId],
-  () => {
-    fetch_dataset(true);
+  () => dataset.value?.id,
+  (id) => {
+    if (!id) return;
+    dataset.value = withWorkflowUiState(dataset.value);
   },
   { immediate: true },
 );
@@ -483,7 +489,7 @@ function navigateToFileBrowser() {
   if (props.appendFileBrowserUrl) {
     router.push(route.path + "/filebrowser");
   } else {
-    router.push(`/datasets/${props.datasetId}/filebrowser`);
+    router.push(`/datasets/${dataset.value.id}/filebrowser`);
   }
 }
 

@@ -25,7 +25,7 @@
         <FileTable
           :show-download="props.showDownload"
           :files="files"
-          :dataset-id="props.datasetId"
+          :dataset-id="props.dataset.id"
           @search="search_files"
         />
       </va-inner-loading>
@@ -45,7 +45,10 @@ const store = useFileBrowserStore();
 const { pwd, filters, isInSearchMode, filterStatus } = storeToRefs(store);
 
 const props = defineProps({
-  datasetId: String,
+  dataset: {
+    type: Object,
+    required: true,
+  },
   showDownload: Boolean,
 });
 
@@ -59,7 +62,7 @@ const files = computed(() => {
 function get_file_list(path) {
   data_loading.value = true;
   datasetService
-    .list_files({ id: props.datasetId, basepath: path })
+    .list_files({ id: props.dataset.id, basepath: path })
     .then((res) => {
       fileList.value = res.data;
     })
@@ -88,7 +91,7 @@ function search_files({ sortBy = null, sortingOrder = null } = {}) {
   // console.log("payload", p);
   datasetService
     .search_files({
-      id: props.datasetId,
+      id: props.dataset.id,
       ...p,
       sortBy,
       sortOrder: sortingOrder,
