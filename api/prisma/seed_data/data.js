@@ -20,6 +20,10 @@ const admins = [
     name: 'svc_tasks',
     username: 'svc_tasks',
   },
+  {
+    name: 'E2E Admin',
+    username: 'e2eAdmin',
+  },
 ];
 
 const operators = [
@@ -35,6 +39,11 @@ const operators = [
     username: 'ejohnson', // cspell: disable-line
     name: 'Emma Johnson',
   },
+  {
+    username: 'e2eOperator',
+    name: 'E2E Operator',
+  },
+  
 ];
 
 const users = [
@@ -49,6 +58,10 @@ const users = [
   {
     username: 'ethompson', // cspell: disable-line
     name: 'Emily Thompson',
+  },
+  {
+    username: 'e2eUser',
+    name: 'E2E User',
   },
 ];
 

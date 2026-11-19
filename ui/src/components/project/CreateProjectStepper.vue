@@ -142,9 +142,10 @@ const is_last_step = computed(() => {
 
 function isValid({ validate = false } = {}) {
   if (validate) projectFormStore.form.validate();
+  const hasDatasets = projectFormStore.datasets.length > 0;
   const checks = [
     projectFormStore.form.isValid,
-    projectFormStore.datasets.length > 0,
+    hasDatasets,
     projectFormStore.users.length > 0,
   ];
   return checks.slice(0, step.value + 1).every((x) => x);
