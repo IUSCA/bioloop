@@ -1,3 +1,5 @@
+import { uploadEnabledForRoles } from "./runtimeConfig";
+
 const exports = {
   mode: "development",
   // vite server redirects traffic on URLs starting with apiBaseURL
@@ -80,7 +82,7 @@ const exports = {
     downloads: true,
     signup: false,
     uploads: {
-      enabledForRoles: ["admin"],
+      enabledForRoles: uploadEnabledForRoles,
     },
     // Compute and send a BLAKE3 manifest-hash before each upload so the
     // verification worker can confirm file integrity end-to-end.
