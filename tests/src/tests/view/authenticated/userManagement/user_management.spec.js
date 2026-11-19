@@ -23,13 +23,32 @@ const TEST_ID_EMAIL = 'user-email-input';
 const TEST_ID_CAS_ID = 'user-cas-id-input';
 const TEST_ID_NOTES = 'user-notes-input';
 
-test.describe.serial('User management', () => {
-  let userNameInputLocator;
-  let userUsernameInputLocator;
-  let userEmailInputLocator;
-  let userCasIdInputLocator;
-  let userNotesInputLocator;
+function getUserFormLocators(page) {
+  return {
+    name: page.locator(elementTestIdSelector({
+      elementType: 'input',
+      testId: TEST_ID_NAME,
+    })),
+    username: page.locator(elementTestIdSelector({
+      elementType: 'input',
+      testId: TEST_ID_USERNAME,
+    })),
+    email: page.locator(elementTestIdSelector({
+      elementType: 'input',
+      testId: TEST_ID_EMAIL,
+    })),
+    casId: page.locator(elementTestIdSelector({
+      elementType: 'input',
+      testId: TEST_ID_CAS_ID,
+    })),
+    notes: page.locator(elementTestIdSelector({
+      elementType: 'textarea',
+      testId: TEST_ID_NOTES,
+    })),
+  };
+}
 
+test.describe.serial('User management', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/users');
 
@@ -40,50 +59,35 @@ test.describe.serial('User management', () => {
   });
 
   test('Create User modal opened', async ({ page }) => {
-    userNameInputLocator = page.locator(elementTestIdSelector({
-      elementType: 'input',
-      testId: TEST_ID_NAME,
-    }));
-    userUsernameInputLocator = page.locator(elementTestIdSelector({
-      elementType: 'input',
-      testId: TEST_ID_USERNAME,
-    }));
-    userEmailInputLocator = page.locator(elementTestIdSelector({
-      elementType: 'input',
-      testId: TEST_ID_EMAIL,
-    }));
-    userCasIdInputLocator = page.locator(elementTestIdSelector({
-      elementType: 'input',
-      testId: TEST_ID_CAS_ID,
-    }));
-    userNotesInputLocator = page.locator(elementTestIdSelector({
-      elementType: 'textarea',
-      testId: TEST_ID_NOTES,
-    }));
+    const { notes } = getUserFormLocators(page);
 
     await expect(page.getByTestId(TEST_ID_NAME)).toHaveText('');
     await expect(page.getByTestId(TEST_ID_EMAIL)).toHaveText('');
     await expect(page.getByTestId(TEST_ID_USERNAME)).toHaveText('');
     await expect(page.getByTestId(TEST_ID_CAS_ID)).toHaveText('');
-    await expect(userNotesInputLocator).toHaveText('');
+    await expect(notes).toHaveText('');
   });
 
   test('Cancel Modal action taken', async ({ page }) => {
+    const {
+      name, username, email, casId, notes,
+    } = getUserFormLocators(page);
+
     // fill-in fields
     await fillAndAssertText({
-      locator: userNameInputLocator, text: TEXT,
+      locator: name, text: TEXT,
     });
     await fillAndAssertText({
-      locator: userUsernameInputLocator, text: TEXT,
+      locator: username, text: TEXT,
     });
     await fillAndAssertText({
-      locator: userEmailInputLocator, text: TEXT,
+      locator: email, text: TEXT,
     });
     await fillAndAssertText({
-      locator: userCasIdInputLocator, text: TEXT,
+      locator: casId, text: TEXT,
     });
     await fillAndAssertText({
-      locator: userNotesInputLocator, text: TEXT,
+      locator: notes, text: TEXT,
     });
 
     // close modal
@@ -95,19 +99,21 @@ test.describe.serial('User management', () => {
     await expect(page.getByTestId(TEST_ID_EMAIL)).toHaveText('');
     await expect(page.getByTestId(TEST_ID_USERNAME)).toHaveText('');
     await expect(page.getByTestId(TEST_ID_CAS_ID)).toHaveText('');
-    await expect(userNotesInputLocator).toHaveText('');
+    await expect(notes).toHaveText('');
   });
 
   test('User created', async ({ page }) => {
+    const { name, email, notes } = getUserFormLocators(page);
+
     // fill-in fields
     await fillAndAssertText({
-      locator: userNameInputLocator, text: TEST_USER.name,
+      locator: name, text: TEST_USER.name,
     });
     await fillAndAssertText({
-      locator: userEmailInputLocator, text: TEST_USER.email,
+      locator: email, text: TEST_USER.email,
     });
     await fillAndAssertText({
-      locator: userNotesInputLocator, text: TEST_USER.notes,
+      locator: notes, text: TEST_USER.notes,
     });
 
     // submit form
@@ -119,6 +125,6 @@ test.describe.serial('User management', () => {
     await expect(page.getByTestId(TEST_ID_EMAIL)).toHaveText('');
     await expect(page.getByTestId(TEST_ID_USERNAME)).toHaveText('');
     await expect(page.getByTestId(TEST_ID_CAS_ID)).toHaveText('');
-    await expect(userNotesInputLocator).toHaveText('');
+    await expect(notes).toHaveText('');
   });
 });

@@ -159,7 +159,7 @@ defineExpose({
 
 const downloadURL = computed(() => {
   // when projectSlug is present, open the filebrowser within the project context
-  if(props.projectSlug) {
+  if (props.projectSlug) {
     return `${window.location.origin}/projects/${props.projectSlug}/datasets/${props.dataset.id}/filebrowser`;
   }
   return `${window.location.origin}/datasets/${props.dataset?.id}/filebrowser`;
