@@ -784,6 +784,29 @@ router.patch(
   }),
 );
 
+// Record automatic staging expiry after the worker removes the staged files.
+router.post(
+  '/:id/expire-staging',
+  isPermittedTo('update'),
+  validate([
+    param('id').isInt().toInt(),
+    body('staged_path').isString().notEmpty(),
+    body('retention_days').isInt({ min: 0 }).toInt(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    if (req.user.username !== config.get('system_user.username')) {
+      return next(createError.Forbidden());
+    }
+
+    const unstaged = await datasetService.expireStaging({
+      datasetId: req.params.id,
+      stagedPath: req.body.staged_path,
+      retentionDays: req.body.retention_days,
+    });
+    return res.json({ unstaged });
+  }),
+);
+
 // add files to dataset - worker
 router.post(
   '/:id/files',
