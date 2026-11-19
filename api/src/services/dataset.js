@@ -17,7 +17,7 @@ const featureService = require('./features');
 const logger = require('./logger');
 const { buildNotificationPayload } = require('./notifications/typeService');
 
-const { log_axios_error } = require('../utils');
+const { log_axios_error, transactionWithRetry } = require('../utils');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
 } = require('../constants');
@@ -717,38 +717,49 @@ async function add_files({ dataset_id, data }) {
     filetype: 'directory',
   }));
 
-  // create files and directory metadata
-  await prisma.dataset_file.createMany({
-    data: files.concat(directories),
-    skipDuplicates: true,
-  });
+  // Commit each batch's metadata and hierarchy together, or roll back both on failure.
+  return transactionWithRetry(prisma, async (tx) => {
+    // create files and directory metadata
+    await tx.dataset_file.createMany({
+      data: files.concat(directories),
+      skipDuplicates: true,
+    });
 
-  // retrieve all files and directories for this dataset to get their ids
-  const fileObjs = await prisma.dataset_file.findMany({
-    where: {
-      dataset_id,
-    },
-    select: {
-      id: true,
-      path: true,
-    },
-  });
+    // retrieve all files and directories for this dataset to get their ids
+    const fileObjs = await tx.dataset_file.findMany({
+      where: {
+        dataset_id,
+      },
+      select: {
+        id: true,
+        path: true,
+      },
+    });
 
-  // create a map to lookup ids based on path
-  const path_to_ids = fileObjs.reduce((acc, fileObj) => {
-    acc[fileObj.path] = fileObj.id;
-    return acc;
-  }, {});
+    // create a map to lookup ids based on path
+    const path_to_ids = fileObjs.reduce((acc, fileObj) => {
+      acc[fileObj.path] = fileObj.id;
+      return acc;
+    }, {});
 
-  // query edges / parent-child relationships from the graph data structure
-  const edges = graph.edges().map(([src, dst]) => ({
-    parent_id: path_to_ids[src],
-    child_id: path_to_ids[dst],
-  }));
+    // query edges / parent-child relationships from the graph data structure
+    const edges = graph.edges().map(([src, dst]) => ({
+      parent_id: path_to_ids[src],
+      child_id: path_to_ids[dst],
+    }));
 
-  await prisma.dataset_file_hierarchy.createMany({
-    data: edges,
-    skipDuplicates: true,
+    await tx.dataset_file_hierarchy.createMany({
+      data: edges,
+      skipDuplicates: true,
+    });
+  }, {
+    // Share a 27s budget across at most three attempts, below the default 30s worker HTTP read timeout.
+    maxRetries: 3,
+    maxElapsedMs: 27000,
+    retryDelayMs: 100,
+    isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+    maxWait: 2000,
+    timeout: 25000,
   });
 }
 

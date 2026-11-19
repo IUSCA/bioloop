@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const { performance } = require('node:perf_hooks');
+const { setTimeout: delay } = require('node:timers/promises');
 const _ = require('lodash/fp');
 const { Prisma } = require('@prisma/client');
 
@@ -244,11 +246,24 @@ function readUsersFromJSON(fname) {
 }
 
 class TransactionRetryError extends Error {
-  constructor(maxRetries, message = 'Transaction failed after maximum retries') {
+  constructor(maxRetries, message = 'Transaction failed after maximum retries', options = {}) {
     const _message = maxRetries ? `${message}. Maximum retries: ${maxRetries}` : message;
-    super(_message);
+    super(_message, options);
     this.name = 'TransactionRetryError';
   }
+}
+
+function isTransactionConflict(error) {
+  const retryableCodes = ['40P01', '40001'];
+  if (error?.code === 'P2034'
+    || retryableCodes.includes(error?.code)
+    || retryableCodes.includes(error?.meta?.code)) {
+    return true;
+  }
+
+  // Prisma 5 can wrap PostgreSQL deadlocks in an unknown error instead of exposing P2034.
+  return error instanceof Prisma.PrismaClientUnknownRequestError
+    && /\bPostgresError\s*\{\s*code:\s*"(?:40P01|40001)"/u.test(error.message);
 }
 
 /**
@@ -257,7 +272,9 @@ class TransactionRetryError extends Error {
  * @param {object} prisma - The Prisma client instance.
  * @param {function|array} statementsOrFn - A function representing an interactive transaction or an array of statements for a batch transaction.
  * @param {object} [options] - Optional settings for the transaction.
- * @param {number} [options.maxRetries=5] - The maximum number of retry attempts.
+ * @param {number} [options.maxRetries=5] - The maximum number of attempts, including the initial attempt.
+ * @param {number} [options.maxElapsedMs=Infinity] - Shared time budget for all attempts and delays.
+ * @param {number} [options.retryDelayMs=0] - Initial backoff delay, with exponential growth and random jitter.
  * @param {string} [options.isolationLevel=Prisma.TransactionIsolationLevel.RepeatableRead] - The isolation level for the transaction.
  * @param {} [options.kwargs] - Additional options to pass to the transaction.
  *
@@ -272,11 +289,15 @@ async function transactionWithRetry(
   statementsOrFn,
   {
     maxRetries = 5,
+    maxElapsedMs = Infinity,
+    retryDelayMs = 0,
     isolationLevel = Prisma.TransactionIsolationLevel.RepeatableRead,
     ...kwargs
   } = {},
 ) {
   let retries = 0;
+  let lastError;
+  const startedAt = performance.now();
   const isFunction = typeof statementsOrFn === 'function';
   const isArray = Array.isArray(statementsOrFn);
 
@@ -286,31 +307,50 @@ async function transactionWithRetry(
   if (!prisma) {
     throw new Error('Prisma client is not defined');
   }
-  if (maxRetries < 1) {
-    throw new Error('maxRetries must be greater than 0');
+  if (!Number.isInteger(maxRetries) || maxRetries < 1) {
+    throw new Error('maxRetries must be a positive integer');
+  }
+  if (typeof maxElapsedMs !== 'number' || Number.isNaN(maxElapsedMs) || maxElapsedMs <= 0) {
+    throw new Error('maxElapsedMs must be positive');
+  }
+  if (!Number.isFinite(retryDelayMs) || retryDelayMs < 0) {
+    throw new Error('retryDelayMs must be a finite non-negative number');
   }
   while (retries < maxRetries) {
-    try {
-      if (isFunction) {
-        // Interactive transaction
-        // eslint-disable-next-line no-await-in-loop
-        return await prisma.$transaction(statementsOrFn, { isolationLevel, ...kwargs });
+    const transactionOptions = { isolationLevel, ...kwargs };
+    if (Number.isFinite(maxElapsedMs)) {
+      const remainingMs = Math.floor(maxElapsedMs - (performance.now() - startedAt));
+      if (remainingMs < 2) {
+        throw new TransactionRetryError(maxRetries, 'Transaction retry time limit exceeded', { cause: lastError });
       }
-      // Batch transaction
+      // Acquisition and execution share the remaining budget; retries do not get a fresh timeout.
+      transactionOptions.maxWait = Math.min(kwargs.maxWait ?? 2000, Math.floor(remainingMs / 2));
+      transactionOptions.timeout = Math.min(kwargs.timeout ?? 5000, remainingMs - transactionOptions.maxWait);
+    }
+    try {
       // eslint-disable-next-line no-await-in-loop
-      return await prisma.$transaction(statementsOrFn, { isolationLevel, ...kwargs });
+      return await prisma.$transaction(statementsOrFn, transactionOptions);
     } catch (error) {
-      if (error?.code === 'P2034') {
-        // P2034: "Transaction failed due to a write conflict or a deadlock. Please retry your transaction"
-        console.warn(`Transaction failed with error code P2034. Retrying (${retries + 1}/${maxRetries})...`);
-        retries += 1;
-      } else {
+      if (!isTransactionConflict(error)) {
         throw error;
+      }
+      lastError = error;
+      retries += 1;
+      if (retries >= maxRetries) break;
+
+      const delayMs = retryDelayMs * (2 ** (retries - 1)) + Math.floor(Math.random() * retryDelayMs);
+      if (performance.now() - startedAt + delayMs >= maxElapsedMs) {
+        throw new TransactionRetryError(maxRetries, 'Transaction retry time limit exceeded', { cause: lastError });
+      }
+      console.warn(`Transaction conflict. Retrying (${retries + 1}/${maxRetries})...`);
+      if (delayMs > 0) {
+        // eslint-disable-next-line no-await-in-loop
+        await delay(delayMs);
       }
     }
   }
   // if we reach here, it means we have exhausted all retries
-  throw new TransactionRetryError(maxRetries);
+  throw new TransactionRetryError(maxRetries, undefined, { cause: lastError });
 }
 
 function base64urlEncode(buf) {

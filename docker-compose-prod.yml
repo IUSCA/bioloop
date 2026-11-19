@@ -86,10 +86,12 @@ services:
       # ----------------------------------------------------------------------------
     expose:
       - 3030
+    # Exit nodemon on crashes so Docker's restart policy can recover the API.
+    # cspell:ignore exitcrash
     entrypoint:
       - sh
       - -c
-      - npm ci && npx prisma generate && exec node_modules/.bin/nodemon --ignore 'tests/**/*.js' src/index.js
+      - npm ci && npx prisma generate && exec node_modules/.bin/nodemon --exitcrash --ignore 'tests/**/*.js' src/index.js
     # entrypoint: [ "tail", "-f", "/dev/null" ]
     depends_on:
       - postgres

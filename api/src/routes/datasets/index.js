@@ -800,7 +800,7 @@ router.post(
       size: BigInt(f.size),
       filetype: f.type,
     }));
-    datasetService.add_files({ dataset_id: req.params.id, data });
+    await datasetService.add_files({ dataset_id: req.params.id, data });
 
     res.sendStatus(200);
   }),
