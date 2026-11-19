@@ -152,7 +152,9 @@
     }
   },
   "enabled_features": {
-    "import": true,
+    "import": {
+      "enabledForRoles": ["admin"]
+    },
     "upload": true,
     "fs": true,
     "downloads": true,

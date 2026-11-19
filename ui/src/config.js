@@ -74,9 +74,8 @@ const exports = {
   enabledFeatures: {
     genomeBrowser: true,
     notifications: false,
-    import: {
-      enabledForRoles: ["admin"],
-    },
+    // Loaded from the API before mounting; stay disabled if loading fails.
+    import: false,
     downloads: true,
     signup: false,
     uploads: {
