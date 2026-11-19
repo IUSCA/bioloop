@@ -1,4 +1,5 @@
 import config from "@/config";
+import { useAuthSession } from "@/services/authSession";
 import { isLiveToken, setIntersection } from "@/services/utils";
 import { setupLayouts } from "virtual:generated-layouts";
 import { createRouter, createWebHistory } from "vue-router";
@@ -35,8 +36,7 @@ const router = createRouter({
   routes: generatedRoutes,
 });
 
-const token = ref(useLocalStorage("token", ""));
-const user = ref(useLocalStorage("user", {}));
+const { token, user, isSpoofing, clearSession } = useAuthSession();
 
 function auth_guard(to, _from) {
   // console.log("to", to.path);
@@ -52,8 +52,12 @@ function auth_guard(to, _from) {
   if (isLiveToken(token.value)) {
     isLoggedIn = true;
   } else {
-    // JWT expired, remove user from local storage
-    token.value = "";
+    const wasSpoofing = isSpoofing.value;
+    clearSession();
+    if (wasSpoofing) {
+      window.location.href = "/";
+      return false;
+    }
   }
 
   if (routeRequiresAuth) {

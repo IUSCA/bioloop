@@ -10,11 +10,17 @@
   >
     <va-inner-loading :loading="loading">
       <div class="flex flex-col gap-3">
-        <span>
+        <p>
           Are you sure you want to log in as
-          <span class="font-bold"> {{ props.user.name }} </span> ? You will need
-          to completely log out to revert this change.
-        </span>
+          <span class="font-bold">{{ props.user.name }}</span
+          >?
+        </p>
+        <p>
+          This applies to this tab only. Select
+          <strong>Stop logging in as</strong> from the user menu to return to
+          your normal account. If your normal session has expired, you will need
+          to sign in again.
+        </p>
       </div>
     </va-inner-loading>
   </va-modal>

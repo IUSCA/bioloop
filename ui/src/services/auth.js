@@ -20,9 +20,11 @@ class AuthService {
 
   saveSettings = (data) => api.put("/users/mine/settings", data);
 
-  refreshToken = () => api.post("/auth/refresh_token");
+  refreshToken = (authSession) =>
+    api.post("/auth/refresh_token", undefined, { authSession });
 
-  spoof = (username) => api.post(`/auth/spoof/${username}`);
+  spoof = (username, authSession) =>
+    api.post(`/auth/spoof/${username}`, undefined, { authSession });
 
   getGoogleUrl() {
     return api.get("/auth/google/url", {
