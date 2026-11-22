@@ -45,7 +45,7 @@
           class="flex-none"
           @click="handleMerge"
           :color="delete_merged ? 'danger' : 'primary'"
-          :disabled="target_project_ids.length == 0"
+          :disabled="loading || target_project_ids.length === 0"
         >
           <span v-if="delete_merged">
             Merge and Delete ({{ target_project_ids.length }})</span
@@ -97,20 +97,24 @@ function remove_project(p) {
   delete selected.value[p.id];
 }
 
-function handleMerge() {
-  if (target_project_ids.value.length > 0) {
-    loading.value = true;
-    projectService
-      .mergeProjects({
-        src_project_id: props.id,
-        target_project_ids: target_project_ids.value,
-        delete_merged: delete_merged.value,
-      })
-      .finally(() => {
-        loading.value = false;
-        emit("update");
-        hide();
-      });
+async function handleMerge() {
+  if (loading.value || target_project_ids.value.length === 0) return;
+
+  loading.value = true;
+  try {
+    await projectService.mergeProjects({
+      src_project_id: props.id,
+      target_project_ids: target_project_ids.value,
+      delete_merged: delete_merged.value,
+    });
+  } catch {
+    // The service shows the error. Keep the selection available for retry.
+    return;
+  } finally {
+    loading.value = false;
   }
+
+  emit("update");
+  hide();
 }
 </script>

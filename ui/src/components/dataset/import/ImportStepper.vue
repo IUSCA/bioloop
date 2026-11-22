@@ -270,7 +270,15 @@
 
     <!-- custom controls -->
     <template #controls="{ nextStep, prevStep }">
-      <div class="flex items-center justify-around w-full">
+      <div class="flex flex-wrap items-center justify-around gap-2 w-full">
+        <va-button
+          v-if="!submitAttempted"
+          class="flex-none"
+          preset="secondary"
+          to="/datasets/imports"
+        >
+          Cancel
+        </va-button>
         <va-button
           class="flex-none"
           preset="primary"

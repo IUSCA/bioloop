@@ -21,7 +21,7 @@
         <va-button
           class="flex-none"
           @click="handleEdit"
-          :disabled="!projectFormStore.form.isValid"
+          :disabled="loading || !projectFormStore.form.isValid"
         >
           Edit
         </va-button>
@@ -58,17 +58,26 @@ function show() {
   visible.value = true;
 }
 
-function handleEdit() {
-  projectFormStore.form.validate();
-  if (projectFormStore.form.isValid) {
-    loading.value = true;
-    const project_data = projectFormStore.project_info;
+async function handleEdit() {
+  if (loading.value) return;
 
-    projectService.modifyProject({ id: props.id, project_data }).finally(() => {
-      loading.value = false;
-      emit("update");
-      hide();
+  projectFormStore.form.validate();
+  if (!projectFormStore.form.isValid) return;
+
+  loading.value = true;
+  try {
+    await projectService.modifyProject({
+      id: props.id,
+      project_data: projectFormStore.project_info,
     });
+  } catch {
+    // The service shows the error. Keep the draft available for retry.
+    return;
+  } finally {
+    loading.value = false;
   }
+
+  emit("update");
+  hide();
 }
 </script>

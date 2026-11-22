@@ -52,23 +52,30 @@ const props = defineProps({
 const data_loading = ref(false);
 const fileList = ref([]);
 const searchResults = ref([]);
+let latestRequestId = 0;
+
 const files = computed(() => {
   return isInSearchMode.value ? searchResults.value : fileList.value;
 });
 
-function get_file_list(path) {
+async function loadFiles(request, results) {
+  const requestId = ++latestRequestId;
   data_loading.value = true;
-  datasetService
-    .list_files({ id: props.datasetId, basepath: path })
-    .then((res) => {
-      fileList.value = res.data;
-    })
-    .catch((err) => {
-      console.error(err);
-    })
-    .finally(() => {
-      data_loading.value = false;
-    });
+  try {
+    const { data } = await request();
+    if (requestId === latestRequestId) results.value = data;
+  } catch (error) {
+    if (requestId === latestRequestId) console.error(error);
+  } finally {
+    if (requestId === latestRequestId) data_loading.value = false;
+  }
+}
+
+function get_file_list(path) {
+  loadFiles(
+    () => datasetService.list_files({ id: props.datasetId, basepath: path }),
+    fileList,
+  );
 }
 
 function payload() {
@@ -83,45 +90,32 @@ function payload() {
 }
 
 function search_files({ sortBy = null, sortingOrder = null } = {}) {
-  data_loading.value = true;
-  const p = payload();
-  // console.log("payload", p);
-  datasetService
-    .search_files({
-      id: props.datasetId,
-      ...p,
-      sortBy,
-      sortOrder: sortingOrder,
-    })
-    .then((res) => {
-      searchResults.value = res.data;
-    })
-    .catch((err) => {
-      console.error(err);
-    })
-    .finally(() => {
-      data_loading.value = false;
-    });
+  loadFiles(
+    () =>
+      datasetService.search_files({
+        id: props.datasetId,
+        ...payload(),
+        sortBy,
+        sortOrder: sortingOrder,
+      }),
+    searchResults,
+  );
 }
 
-onMounted(() => {
-  get_file_list(pwd.value);
-});
-
-watch(pwd, (newValue, oldValue) => {
+watch(pwd, (_, oldValue) => {
   if (oldValue == null) return;
   // navigating to a directory disables the search mode
   store.resetFilters();
   isInSearchMode.value = false;
-  get_file_list(pwd.value);
 });
 
 watch(
-  filters,
-  () => {
-    // console.log("filters changed", filters.value, isInSearchMode.value);
-    if (isInSearchMode.value) {
+  [pwd, isInSearchMode, filters],
+  ([path, searching], [previousPath, wasSearching]) => {
+    if (searching) {
       search_files();
+    } else if (path !== previousPath || searching !== wasSearching) {
+      get_file_list(path);
     }
   },
   { immediate: true, deep: true },
@@ -134,6 +128,7 @@ function openModal() {
 }
 
 onUnmounted(() => {
+  latestRequestId += 1;
   store.reset();
 });
 </script>

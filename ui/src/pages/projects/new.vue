@@ -3,7 +3,7 @@
   <div class="w-full flex justify-center">
     <va-card class="flex-auto max-w-5xl md:h-[calc(85vh)]">
       <va-card-content class="h-full">
-        <CreateProjectStepper class="" @update="router.push('/projects')" />
+        <CreateProjectStepper @update="goToProjects" @cancel="goToProjects" />
       </va-card-content>
     </va-card>
   </div>
@@ -14,6 +14,10 @@ import { useProjectFormStore } from "@/stores/projects/projectForm";
 
 const projectFormStore = useProjectFormStore();
 const router = useRouter();
+
+function goToProjects() {
+  router.push("/projects");
+}
 
 onUnmounted(() => {
   // clear project store when navigating away from this page
