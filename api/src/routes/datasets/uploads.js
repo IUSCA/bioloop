@@ -9,7 +9,7 @@ const path = require('path');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
-const { validate } = require('@/middleware/validators');
+const { validate, validateDatasetDescription } = require('@/middleware/validators');
 const datasetService = require('@/services/dataset');
 const { findUploadLogForDataset, tombstoneDataset, markUploadAsFailed } = require('@/services/upload/uploadLogService');
 const CONSTANTS = require('@/constants');
@@ -459,12 +459,7 @@ router.post(
   validate([
     body('type').trim().notEmpty().isIn(config.dataset_types),
     body('name').trim().notEmpty().isLength({ min: 3 }),
-    body('description')
-      .optional()
-      .isString()
-      .bail()
-      .trim()
-      .notEmpty(),
+    validateDatasetDescription(),
     body('src_dataset_id').optional().isInt().toInt(),
     body('project_id').optional(),
     body('src_instrument_id').optional(),
