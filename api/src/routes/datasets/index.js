@@ -516,7 +516,12 @@ router.post(
     body('workflow_id').optional(),
     body('state').optional(),
     body('metadata').optional(),
-    body('description').optional().notEmpty().escape(),
+    body('description')
+      .optional()
+      .isString()
+      .bail()
+      .trim()
+      .notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']

@@ -95,7 +95,9 @@
         <tr>
           <td>Description</td>
           <td>
-            <div class="max-h-[11.5rem] overflow-y-scroll">
+            <div
+              class="max-h-[11.5rem] overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere]"
+            >
               {{ props.dataset.description }}
             </div>
           </td>

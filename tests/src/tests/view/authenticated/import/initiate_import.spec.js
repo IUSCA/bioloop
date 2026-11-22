@@ -5,6 +5,7 @@ import { expect, test } from '../../../../fixtures';
 const FILE_AUTOCOMPLETE_TEST_ID = 'import-file-autocomplete';
 const NEXT_BUTTON_TEST_ID = 'import-next-button';
 const DATASET_NAME_INPUT_TEST_ID = 'dataset-name-input';
+const DATASET_DESCRIPTION = "Operator's notes & import context";
 
 test.describe.serial('Dataset Import — submit and verify workflow', () => {
   let page;
@@ -31,10 +32,9 @@ test.describe.serial('Dataset Import — submit and verify workflow', () => {
     });
 
     test('should select the first directory and enable Next', async () => {
-      const hasResults =
-        (await page
-          .locator(`[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`)
-          .count()) > 0;
+      const hasResults = (await page
+        .locator(`[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`)
+        .count()) > 0;
 
       test.skip(!hasResults, 'No import directories available in test environment');
 
@@ -60,9 +60,9 @@ test.describe.serial('Dataset Import — submit and verify workflow', () => {
 
       test.skip(!onStep1, 'Could not reach General Info step');
 
-      // Uncheck optional assignment fields so no selections are required to advance.
-      // Each call is a no-op when the checkbox is already unchecked or disabled
-      // (i.e. when there is no available data to assign in the test environment).
+      await page.getByRole('textbox', { name: 'Description (optional)' }).fill(DATASET_DESCRIPTION);
+
+      // Clear any optional assignments before continuing.
       await setCheckboxState({
         page,
         testId: 'import-metadata-assign-source-checkbox',
@@ -103,7 +103,7 @@ test.describe.serial('Dataset Import — submit and verify workflow', () => {
       const uniqueName = `e2e_import_${Date.now()}`;
       await page.getByTestId(DATASET_NAME_INPUT_TEST_ID).fill(uniqueName);
 
-      // The Import button stays disabled until the async name-uniqueness check passes.
+      // Wait for the name check to enable Import.
       await expect
         .poll(() => page.getByTestId(NEXT_BUTTON_TEST_ID).isEnabled(), { timeout: 10000 })
         .toBe(true);
@@ -145,7 +145,8 @@ test.describe.serial('Dataset Import — submit and verify workflow', () => {
       // (va-inner-loading hides its slot content while the fetch is in flight).
       await page.waitForLoadState('networkidle', { timeout: 20000 });
 
-      // Verify the WORKFLOWS section is present and contains at least one workflow.
+      await expect(page.getByRole('cell', { name: DATASET_DESCRIPTION, exact: true })).toBeVisible();
+
       const workflowsSection = page.getByTestId('dataset-workflows-section');
       await expect(workflowsSection).toBeVisible({ timeout: 15000 });
 

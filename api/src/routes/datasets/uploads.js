@@ -446,6 +446,7 @@ router.get(
 //   - name  dataset name (min 3 characters)
 //
 // Optional body fields:
+//   - description       description to store on the dataset
 //   - src_dataset_id    ID of a source dataset this upload is derived from
 //   - project_id        project to associate the dataset with
 //   - src_instrument_id instrument the data was collected on
@@ -458,6 +459,12 @@ router.post(
   validate([
     body('type').trim().notEmpty().isIn(config.dataset_types),
     body('name').trim().notEmpty().isLength({ min: 3 }),
+    body('description')
+      .optional()
+      .isString()
+      .bail()
+      .trim()
+      .notEmpty(),
     body('src_dataset_id').optional().isInt().toInt(),
     body('project_id').optional(),
     body('src_instrument_id').optional(),
@@ -467,7 +474,7 @@ router.post(
     // #swagger.summary = 'Register an uploaded dataset in the system'
 
     const {
-      project_id, src_instrument_id, src_dataset_id, name, type,
+      project_id, src_instrument_id, src_dataset_id, name, type, description,
     } = req.body;
 
     logger.info('[UPLOAD-CREATE] Starting dataset upload registration', {
@@ -484,6 +491,7 @@ router.post(
       const datasetCreateQuery = await datasetService.buildDatasetCreateQuery({
         name,
         type,
+        description,
         user_id: req.user.id,
         src_instrument_id,
         src_dataset_id,
