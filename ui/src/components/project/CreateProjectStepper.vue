@@ -58,7 +58,9 @@
                   <tr>
                     <td>Description</td>
                     <td>
-                      <div class="max-h-[11.5rem] overflow-y-scroll">
+                      <div
+                        class="max-h-[11.5rem] overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere]"
+                      >
                         {{ projectFormStore.project_info.description }}
                       </div>
                     </td>
@@ -98,8 +100,20 @@
 
       <!-- custom controls -->
       <template #controls="{ nextStep, prevStep }">
-        <div class="flex items-center justify-around w-full">
-          <va-button class="flex-none" preset="primary" @click="prevStep()">
+        <div class="flex flex-wrap items-center justify-around gap-2 w-full">
+          <va-button
+            class="flex-none"
+            preset="secondary"
+            @click="emit('cancel')"
+          >
+            Cancel
+          </va-button>
+          <va-button
+            class="flex-none"
+            preset="primary"
+            :disabled="step === 0"
+            @click="prevStep()"
+          >
             Previous
           </va-button>
           <va-button
@@ -123,7 +137,7 @@
 import projectService from "@/services/projects";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 
-const emit = defineEmits(["update"]);
+const emit = defineEmits(["update", "cancel"]);
 
 const projectFormStore = useProjectFormStore();
 const selectedDatasets = computed(() => projectFormStore.datasets);
