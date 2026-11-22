@@ -1,4 +1,4 @@
-const { validationResult } = require('express-validator');
+const { body, validationResult } = require('express-validator');
 
 // const validator = (fn) => (req, res, next) => {
 //   // express-validators functions such as body, query, param are used to validate requests
@@ -53,7 +53,15 @@ const addSortSanitizer = (validationChain) => validationChain
   .bail()
   .customSanitizer(sanitizeSort);
 
+const validateDatasetDescription = (field = 'description') => body(field)
+  .optional()
+  .isString()
+  .bail()
+  .trim()
+  .notEmpty();
+
 module.exports = {
   validate,
   addSortSanitizer,
+  validateDatasetDescription,
 };

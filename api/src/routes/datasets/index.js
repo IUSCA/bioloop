@@ -14,7 +14,7 @@ const he = require('he');
 const prisma = require('@/db');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
-const { validate } = require('@/middleware/validators');
+const { validate, validateDatasetDescription } = require('@/middleware/validators');
 const datasetService = require('@/services/dataset');
 const authService = require('@/services/auth');
 const wfService = require('@/services/workflow');
@@ -516,7 +516,7 @@ router.post(
     body('workflow_id').optional(),
     body('state').optional(),
     body('metadata').optional(),
-    body('description').optional().notEmpty().escape(),
+    validateDatasetDescription(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -603,7 +603,7 @@ router.post(
     body('datasets.*.workflow_id').optional(),
     body('datasets.*.state').optional(),
     body('datasets.*.metadata').optional(),
-    body('datasets.*.description').optional().notEmpty().escape(),
+    validateDatasetDescription('datasets.*.description'),
   ]),
   asyncHandler(async (req, res, next) => {
     /* eslint-disable */

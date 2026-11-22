@@ -8,6 +8,8 @@ import { expect, test } from '../../../../fixtures';
 
 const config = require('config');
 
+const DATASET_DESCRIPTION = "Operator's notes & upload context";
+
 const attachments = [
   { name: 'tiny-upload.txt', content: 'tiny upload payload' },
 ];
@@ -33,6 +35,8 @@ test('finished upload navigates to details page with correct info', async ({
     `${attachmentManager.getPath()}/${attachments[0].name}`,
   ]);
   await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
+
+  await page.getByRole('textbox', { name: 'Description (optional)' }).fill(DATASET_DESCRIPTION);
 
   await selectAutocompleteResult({
     page,
@@ -84,8 +88,12 @@ test('finished upload navigates to details page with correct info', async ({
 
   // Verify overview card renders with expected data
   await expect(page.getByTestId('upload-overview-card')).toBeVisible();
-  await expect(page.getByTestId('upload-overview-dataset-link')).toContainText(datasetName);
+  const datasetLink = page.getByTestId('upload-overview-dataset-link');
+  await expect(datasetLink).toContainText(datasetName);
   await expect(page.getByTestId('upload-overview-status-chip')).toBeVisible();
+
+  await datasetLink.click();
+  await expect(page.getByRole('cell', { name: DATASET_DESCRIPTION, exact: true })).toBeVisible();
 
   await page.close();
 });

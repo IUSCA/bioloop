@@ -91,6 +91,16 @@
           </div>
         </div>
 
+        <div class="w-full pb-6">
+          <va-textarea
+            v-model="datasetDescription"
+            label="Description (optional)"
+            class="w-full"
+            :min-rows="3"
+            :disabled="submitAttempted"
+          />
+        </div>
+
         <div
           class="flex w-full pb-6"
           data-testid="upload-metadata-assign-source-row"
@@ -638,6 +648,7 @@ const selectingDirectory = ref(false);
  * In both of the above cases, the user can select a name of their choosing before initiating the upload.
  */
 const uploadedDatasetName = ref("");
+const datasetDescription = ref("");
 
 // Current step index
 const step = ref(0);
@@ -779,9 +790,11 @@ const someFilesPendingUpload = computed(
 );
 
 const uploadFormData = computed(() => {
+  const description = datasetDescription.value.trim();
   return {
     name: uploadedDatasetName.value,
     type: selectedDatasetType.value["value"],
+    ...(description && { description }),
     ...(selectedRawData.value && {
       src_dataset_id: selectedRawData.value.id,
     }),

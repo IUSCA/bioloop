@@ -107,6 +107,16 @@
         </div>
       </div>
 
+      <div class="w-full pb-6">
+        <va-textarea
+          v-model="datasetDescription"
+          label="Description (optional)"
+          class="w-full"
+          :min-rows="3"
+          :disabled="submitAttempted"
+        />
+      </div>
+
       <div class="flex w-full pb-6">
         <div class="w-60 flex flex-shrink-0 mr-4">
           <div class="flex items-center">
@@ -423,6 +433,7 @@ const submissionSuccess = ref(false);
  * Name of the Dataset that the user will import. This is set by the user before initiating the import.
  */
 const importedDatasetName = ref("");
+const datasetDescription = ref("");
 
 // Current step index
 const step = ref(0);
@@ -493,9 +504,11 @@ const isNextButtonDisabled = computed(() => {
  * Payload sent along with the network request responsible for creating a database entry of the Dataset being imported.
  */
 const importFormData = computed(() => {
+  const description = datasetDescription.value.trim();
   return {
     name: importedDatasetName.value,
     type: selectedDatasetType.value["value"],
+    ...(description && { description }),
     ...(selectedRawData.value && {
       src_dataset_id: selectedRawData.value.id,
     }),
