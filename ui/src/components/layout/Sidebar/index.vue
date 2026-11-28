@@ -3,7 +3,7 @@
     :minimized="props.isSidebarCollapsed"
     class="pt-2"
     width="13rem"
-    minimizedWidth="0"
+    minimized-width="0"
   >
     <!-- user sidebar items -->
     <div v-if="user_items.length > 0">

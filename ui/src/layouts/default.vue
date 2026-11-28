@@ -9,12 +9,16 @@
     <!-- Show any active alerts in the system -->
     <Alerts v-if="auth.isFeatureEnabled('alerts')" class="shrink-0" />
 
-    <div class="flex min-h-0 flex-1">
+    <div class="relative flex min-h-0 flex-1">
       <nav
         aria-label="menu nav"
-        class="relative h-full content-center flex-none shadow-xl"
+        class="h-full content-center flex-none shadow-xl"
+        :class="
+          breakpoint.smDown ? 'absolute inset-y-0 left-0 z-20' : 'relative'
+        "
+        :inert="isSidebarCollapsed"
       >
-        <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
+        <Sidebar :is-sidebar-collapsed="isSidebarCollapsed" />
       </nav>
       <main id="main" class="flex min-w-0 flex-1 flex-col overflow-y-auto">
         <div class="grow px-2 md:px-6 pb-10 pt-4">
@@ -39,7 +43,7 @@ const breakpoint = useBreakpoint();
 const ui = useUIStore();
 const alertStore = useAlertStore();
 
-let isSidebarCollapsed = ref(false);
+const isSidebarCollapsed = ref(breakpoint.smDown);
 
 watch(
   () => breakpoint.current,
