@@ -1,15 +1,18 @@
-version: "3"
 name: bioloop
 services:
   ui:
     restart: unless-stopped
-    image: node:19
+    image: node:24
     volumes:
       - ./ui/:/opt/sca/app
       - ui_modules:/opt/sca/app/node_modules
     working_dir: /opt/sca/app
-    command: sh -c "npm install && npm run builddev"
-    
+    entrypoint:
+      - sh
+      - -c
+      - |
+        npm install && exec npm run builddev
+  
 
   api:
     restart: unless-stopped
@@ -18,16 +21,78 @@ services:
       args:
         APP_UID: ${APP_UID} # read from .env file
         APP_GID: ${APP_GID} # read from .env file
+    environment:
+      - UPLOAD_HOST_DIR=${UPLOAD_HOST_DIR}
     volumes:
       - ./api/:/opt/sca/app
       - api_modules:/opt/sca/app/node_modules
-      - ${FILESYSTEM_BASE_DIR_SCRATCH}:${FILESYSTEM_MOUNT_DIR_SCRATCH}
-      - ${FILESYSTEM_BASE_DIR_PROJECT}:${FILESYSTEM_MOUNT_DIR_PROJECT}
+      # ----------------------------------------------------------------------------
+      # This section describes the volumes needed to make certain features work in
+      #  Production.
+      # 
+      # **********************************************************************
+      # 
+      # 1. Uploads:
+      # - The following instructions are for making the Upload feature work in Production.
+      #  This is not needed if the Upload feature is not enabled.
+      # 
+      # - Mount the landing-directory for uploads (i.e. the directory where uploaded
+      #   files will be written to) into the API container.
+      # - This directory will be used:
+      #     A.) By the API, to upload files to.
+      #     B.) By the workers, to read the uploaded files for further processing.
+      # - This directory is expected to be available on the host(s) that run the API
+      #   and the celery_worker services (natively or via a mounted volume).
+      # 
+      # ** Format: **
+      #   - /host/path/to/uploads/destination:/opt/sca/data/uploads
+      # ** Example: **
+      #   - /data/bioloop/uploads:/opt/sca/uploads
+      # 
+      # ** Bioloop Production: **
+      - ${UPLOAD_HOST_DIR}:/opt/sca/data/uploads
+      # **********************************************************************
+      # 
+      # 2. Import-Sources:
+      # - The following instructions are for making the Import feature work in Production.
+      #  This is not needed if the Import feature is not enabled.
+      # 
+      # - Mount each Import-Source directory into the API container, so
+      #   that the API can read the files in the Import-Source.
+      #   - An "Import-Source" is a directory whose files can be registered
+      #     as Datasets using the web-interface.
+      # - This directory is expected to be available on the host(s) that run the API
+      #   and the celery_worker services (natively or via a mounted volume).
+      # 
+      # - For mounting an Import-Source into the API container, use the path
+      #   to the Import-Source on the host filesystem as the source, and the mount-point
+      #   as the target.
+      #   - The mount-point is the directory where the Import-Source will be mounted
+      #     in the API container.
+      # 
+      # ** Format: **
+      #   - /host/path/to/import/source:/opt/sca/data/imports/import-source-name:ro
+      # ** Examples: **
+      #   - /data/bioloop/genomics:/opt/sca/data/imports/genomics:ro
+      #   - /data/bioloop/proteomics:/opt/sca/data/imports/proteomics:ro
+      # ** Note: **
+      #   - The path to the Import-Source will also need to be populated in the
+      #     database. See api/src/scripts/init_prod_import_sources.js for more details.
+      # 
+      # ** Bioloop Production: **
+      - ${IMPORT_SOURCE_DIR}:/opt/sca/data/imports:ro
+      # 
+      # **********************************************************************
+      # ----------------------------------------------------------------------------
     expose:
       - 3030
+    entrypoint:
+      - sh
+      - -c
+      - npm ci && npx prisma generate && exec node_modules/.bin/nodemon --ignore 'tests/**/*.js' src/index.js
     # entrypoint: [ "tail", "-f", "/dev/null" ]
     depends_on:
-     - postgres
+      - postgres
     networks:
       network:
         ipv4_address: 172.19.0.2
@@ -51,7 +116,7 @@ services:
       network:
         ipv4_address: 172.19.0.3
 
-# sudo docker compose -f "docker-compose-prod.yml" run --rm pgbackup
+  # sudo docker compose -f "docker-compose-prod.yml" run --rm pgbackup
   pgbackup:
     image: postgres:14.5
     environment:
@@ -66,12 +131,62 @@ services:
     command: >
       bash -c "pg_dump -w -f /backup/$${PROJ_NAME}_postgres_backup.$$(date +%F).psql --username=$$POSTGRES_USER --host=postgres --dbname=$$POSTGRES_DB"
 
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
+    depends_on:
+      - postgres
+      # ports:
+      # - "9187:9187"
+    volumes:
+      - ./metrics/postgres_exporter/queries.yml:/etc/postgres_exporter/queries.yml
+    command:
+      - "--extend.query-path=/etc/postgres_exporter/queries.yml"
+    networks:
+      network:
+        ipv4_address: 172.19.0.7
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./metrics/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus  # Mount the volume for Prometheus data
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      # ports:
+      # - "9090:9090"
+    networks:
+      network:
+        ipv4_address: 172.19.0.6
+
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - grafana_data:/var/lib/grafana                   # Mount for Grafana data (dashboards, plugins)
+      - ./metrics/grafana/config:/etc/grafana           # Mount for custom Grafana configuration
+      - ./api/keys/auth.pub:/etc/grafana/auth.pub
+    # ports:
+    #   - "3000:3000"
+    depends_on:
+      - postgres_exporter
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    networks:
+      network:
+        ipv4_address: 172.19.0.5
+
 volumes:
   ui_modules:
     external: false
 
   api_modules:
     external: false
+
+  grafana_data:
+  prometheus_data:
 
 networks:
   network:

@@ -4,9 +4,10 @@ import urllib.parse
 
 from dotenv import load_dotenv
 
-load_dotenv()  # take environment variables from .env.
+load_dotenv(override=True)  # .env takes precedence over .env.default values pre-loaded by Docker Compose env_file
 YEAR = datetime.datetime.now().year
 APP_API_TOKEN = os.environ['APP_API_TOKEN']
+API_BASE_URL = os.environ['API_BASE_URL']
 
 QUEUE_URL = os.environ['QUEUE_URL']
 QUEUE_USER = os.environ['QUEUE_USER']
@@ -27,10 +28,11 @@ FIVE_MINUTES = 5 * 60
 
 config = {
     'app_id': 'bioloop-dev.sca.iu.edu',
+    # cspell: disable-next-line
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
                           '.vcf.gz.tbi', '.vcf'],
     'api': {
-        'base_url': 'http://localhost:3030',
+        'base_url': API_BASE_URL,
         'auth_token': APP_API_TOKEN,
         'conn_timeout': 5,  # seconds
         'read_timeout': 30  # seconds
@@ -38,6 +40,7 @@ config = {
     'paths': {
         'scratch': '/path/to/scratch',
         'RAW_DATA': {
+            'upload': '/path/to/uploads/raw_data',
             'archive': f'development/{YEAR}/raw_data',
             'stage': '/path/to/staged/raw_data',
             'bundle': {
@@ -47,7 +50,7 @@ config = {
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
-            'upload': '/path/to/data_product/upload',
+            'upload': '/path/to/uploads/data_products',
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {
@@ -70,27 +73,8 @@ config = {
         'recency_threshold_seconds': ONE_HOUR,
         'minimum_dataset_size': ONE_GIGABYTE,
         'wait_between_stability_checks_seconds': FIVE_MINUTES,
-        'poll_interval_seconds': 10
-    },
-    'upload': {
-        'UPLOAD_RETRY_THRESHOLD_HOURS': 72,
-        'types': {
-            'DATASET': 'DATASET'
-        },
-        'status': {
-            'UPLOADING': 'UPLOADING',
-            'UPLOAD_FAILED': 'UPLOAD_FAILED',
-            'UPLOADED': 'UPLOADED',
-            'PROCESSING': 'PROCESSING',
-            'PROCESSING_FAILED': 'PROCESSING_FAILED',
-            'COMPLETE': 'COMPLETE',
-            'FAILED': 'FAILED'
-        },
-    },
-    'DONE_STATUSES': {
-        'REVOKED': 'REVOKED',
-        'FAILURE': 'FAILURE',
-        'SUCCESS': 'SUCCESS'
+        'poll_interval_seconds': 10,
+        'full_scan_every_n_scans': 90  # every 90th scan will be a full scan / full scan every 15 minutes
     },
     'service_user': 'bioloopuser',
     'stage': {
@@ -144,22 +128,6 @@ config = {
                     'task': 'setup_dataset_download'
                 }
             ]
-        },
-        'process_dataset_upload': {
-            'steps': [
-                {
-                    'name': 'Process Dataset Upload',
-                    'task': 'process_dataset_upload'
-                }
-            ]
-        },
-        'cancel_dataset_upload': {
-            'steps': [
-                {
-                    'name': 'Cancel Dataset Upload',
-                    'task': 'cancel_dataset_upload'
-                }
-            ]
         }
     },
     'celery': {
@@ -182,6 +150,11 @@ config = {
             'age_threshold_seconds': 86400,
             'max_purge_count': 10
         }
-    }
-
+    },
+    'inspect': {
+        'file_metadata_batch_size': 25000
+    },
+    'enabled_features': {
+        'notifications': False,
+    },
 }

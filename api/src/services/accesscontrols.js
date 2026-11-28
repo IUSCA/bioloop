@@ -1,4 +1,6 @@
-const AccessControl = require('accesscontrol');
+const AccessControl = require('accesscontrol'); // cspell: disable-line
+
+const CONSTANTS = require('../constants');
 
 const grantsObject = {
   admin: {
@@ -20,7 +22,22 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    dataset_name: {
+      'read:any': ['*'],
+    },
+    instruments: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
     projects: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
+    project_datasets: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
@@ -55,7 +72,13 @@ const grantsObject = {
     fs: {
       'read:any': ['*'],
     },
+    import_sources: {
+      'read:any': ['*'],
+    },
     upload: {
+      'create:any': ['*'],
+    },
+    alerts: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
@@ -70,17 +93,49 @@ const grantsObject = {
       'update:own': ['*'],
     },
     projects: {
+      'create:any': ['*'],
       'read:own': ['*', '!users'], // cannot read associated users to the project
+    },
+    datasets: {
+      'create:any': ['*'],
+      'read:own': ['*'],
+      'update:own': ['*'],
+    },
+    dataset_name: {
+      'read:any': ['*'],
+    },
+    project_datasets: {
+      'create:own': ['*'], // can only add Datasets to Projects that the user owns
     },
     project_dataset_files: {
       'read:own': ['*'],
     },
     workflow: {
-      'create:any': ['stage'], // can only create a stage workflow
+      // user role can only create these two workflows
+      'create:any': [
+        CONSTANTS.WORKFLOWS.INTEGRATED,
+        CONSTANTS.WORKFLOWS.STAGE,
+      ],
+    },
+    instruments: {
+      'read:any': ['*'],
     },
     statistics: {
       'create:any': ['*'],
       'read:any': ['*'],
+    },
+    upload: {
+      'create:any': ['*'],
+    },
+    fs: {
+      'read:any': ['*'],
+    },
+    alerts: {
+      'read:any': ['*'],
+    },
+    notifications: {
+      'read:own': ['*'],
+      'update:own': ['*'],
     },
   },
 
@@ -102,7 +157,20 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    dataset_name: {
+      'read:any': ['*'],
+    },
+    instruments: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+    },
     projects: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
+    project_datasets: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
@@ -125,6 +193,7 @@ const grantsObject = {
       'delete:any': ['*'],
     },
     notifications: {
+      'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],
@@ -132,8 +201,17 @@ const grantsObject = {
     fs: {
       'read:any': ['*'],
     },
+    import_sources: {
+      'read:any': ['*'],
+    },
     upload: {
       'create:any': ['*'],
+    },
+    alerts: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
     },
   },
 };

@@ -1,18 +1,17 @@
 const exports = {
   mode: "development",
-  // vite server redirects traffic on starting with apiBaseURL
+  // vite server redirects traffic on URLs starting with apiBaseURL
   // to http://${config.apiHost}:${config.apiPort} in dev environment
   apiBasePath: "/api",
-  uploadApiBasePath:
-    import.meta.env.VITE_UPLOAD_API_BASE_PATH || "https://localhost",
   casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
   googleReturn:
     import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
   cilogonReturn:
     import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
+  microsoftReturn:
+    import.meta.env.VITE_MICROSOFT_RETURN || "https://localhost/auth/microsoft",
   refreshTokenTMinusSeconds: {
     appToken: 300,
-    uploadToken: 5,
   },
   analyticsId: "G-FOO",
   appTitle: "BIOLOOP",
@@ -55,6 +54,7 @@ const exports = {
   auth_enabled: {
     google: true,
     cilogon: true,
+    microsoft: true,
   },
   dashboard: {
     active_tasks: {
@@ -73,51 +73,45 @@ const exports = {
   alertForEnvironments: ["ci"],
   enabledFeatures: {
     genomeBrowser: true,
-    notifications: {
-      enabledForRoles: [],
-    },
-    ingestion: {
+    notifications: false,
+    import: {
       enabledForRoles: ["admin"],
     },
     downloads: true,
-    uploads: { enabledForRoles: ["admin"] },
+    signup: false,
+    uploads: {
+      enabledForRoles: ["admin"],
+    },
+    // Compute and send a BLAKE3 manifest-hash before each upload so the
+    // verification worker can confirm file integrity end-to-end.
+    upload_verify_checksums: true,
+    auto_create_project_on_dataset_creation: {
+      enabledForRoles: ["user"],
+    },
+    alerts: false,
   },
   notifications: {
     pollingInterval: 5000, // milliseconds
   },
-  filesystem_search_spaces: [
-    {
-      slateScratch: {
-        base_path:
-          import.meta.env.VITE_SCRATCH_BASE_DIR || "/bioloop/scratch/space",
-        mount_path:
-          import.meta.env.VITE_SCRATCH_MOUNT_DIR ||
-          "/bioloop/user/scratch/mount/dir",
-        key: "slateScratch",
-        label: "Slate-Scratch",
-      },
-    },
-  ],
-  restricted_ingestion_dirs: {
-    slateScratch: {
-      paths:
-        import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
-        "/scratch/space/restricted",
-      key: "scratch",
-    },
+  alerts: {
+    maxDisplayCount: 1, // Maximum number of alerts to display at once
   },
   upload: {
-    scope_prefix: "upload_file:",
-    types: { DATASET: "DATASET" },
-    status: {
-      UPLOADING: "UPLOADING",
-      UPLOAD_FAILED: "UPLOAD_FAILED",
-      UPLOADED: "UPLOADED",
-      PROCESSING: "PROCESSING",
-      PROCESSING_FAILED: "PROCESSING_FAILED",
-      COMPLETE: "COMPLETE",
-      FAILED: "FAILED",
-    },
+    // Maximum size per individual file (bytes). Must match upload.max_file_size_bytes
+    // in the API config. Enforced server-side by TUS; this value is used for
+    // client-side validation so users get an immediate error instead of a
+    // mid-upload rejection.
+    max_file_size_bytes:
+      parseInt(import.meta.env.VITE_UPLOAD_MAX_FILE_SIZE_BYTES) || 107374182400, // 100 GB default
+    // Cap concurrent file uploads to prevent browser resource exhaustion when
+    // uploading directories with many files.
+    max_concurrent_files:
+      parseInt(import.meta.env.VITE_UPLOAD_MAX_CONCURRENT_UPLOADS) || 4,
+    // TUS PATCH chunk size (bytes). Keeping this below proxy body-size limits
+    // prevents 413 errors on larger individual files.
+    tus_chunk_size_bytes:
+      parseInt(import.meta.env.VITE_UPLOAD_TUS_CHUNK_SIZE_BYTES) ||
+      25 * 1024 * 1024, // 25 MB
   },
 };
 

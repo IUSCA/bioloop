@@ -7,6 +7,25 @@ const exports = {
         path: "/projects",
         test_id: "sidebar-projects",
       },
+      {
+        icon: "mdi-folder-plus-outline",
+        title: "Create Dataset",
+        test_id: "sidebar-create-dataset",
+        children: [
+          {
+            feature_key: "import",
+            icon: "mdi-file-import-outline",
+            title: "Import",
+            path: "/datasets/imports",
+          },
+          {
+            feature_key: "uploads",
+            icon: "mdi-cloud-upload-outline",
+            title: "Upload",
+            path: "/datasets/uploads",
+          },
+        ],
+      },
     ],
     operator_items: [
       {
@@ -28,7 +47,7 @@ const exports = {
       // {
       //   icon: "mdi-folder-upload",
       //   title: "Data Uploader",
-      //   path: "/datauploader",
+      //   path: "/datauploader",  // cspell: disable-line
       // },
       {
         icon: "mdi-dna",
@@ -41,25 +60,6 @@ const exports = {
         title: "Data Products",
         path: "/dataproducts",
         test_id: "sidebar-data-products",
-      },
-      {
-        icon: "mdi-folder-plus-outline",
-        title: "Create Dataset",
-        test_id: "sidebar-create-dataset",
-        children: [
-          {
-            feature_key: "ingestion",
-            icon: "mdi-file-cog-outline",
-            title: "Ingest",
-            path: "/datasets/ingest",
-          },
-          {
-            feature_key: "uploads",
-            icon: "mdi:folder-upload",
-            title: "Upload",
-            path: "/datasetUpload",
-          },
-        ],
       },
       {
         icon: "mdi-table-account",
@@ -78,6 +78,13 @@ const exports = {
         title: "Workflows",
         path: "/workflows",
         test_id: "sidebar-workflows",
+      },
+      {
+        feature_key: "alerts",
+        icon: "mdi:alert-outline",
+        title: "Alerts",
+        path: "/alerts",
+        test_id: "sidebar-alerts",
       },
       // {
       //   icon: "mdi-account-multiple",
@@ -112,13 +119,77 @@ const exports = {
     ],
     admin_items: [],
   },
-  UPLOAD_STATES: {
-    UNINITIATED: "Uninitiated",
-    PROCESSING: "Processing",
-    PROCESSING_FAILED: "Processing Failed",
-    UPLOADING: "Uploading",
-    UPLOAD_FAILED: "Upload Failed",
-    UPLOADED: "Uploaded",
+  UPLOAD_STATUSES: {
+    // Statuses that only appear in the UI
+    UNINITIATED: "UNINITIATED",
+    COMPUTING_CHECKSUMS: "COMPUTING_CHECKSUMS",
+    CHECKSUM_COMPUTATION_FAILED: "CHECKSUM_COMPUTATION_FAILED",
+    // Statuses that appear in the UI and are also persisted to the database
+    UPLOADING: "UPLOADING",
+    UPLOAD_FAILED: "UPLOAD_FAILED",
+    UPLOADED: "UPLOADED",
+    VERIFYING: "VERIFYING",
+    VERIFIED: "VERIFIED",
+    VERIFICATION_FAILED: "VERIFICATION_FAILED",
+    PROCESSING: "PROCESSING",
+    PROCESSING_FAILED: "PROCESSING_FAILED",
+    COMPLETE: "COMPLETE",
+    PERMANENTLY_FAILED: "PERMANENTLY_FAILED",
+  },
+  DATASET_CREATE_METHODS: {
+    UPLOAD: "UPLOAD",
+    IMPORT: "IMPORT",
+    SCAN: "SCAN",
+  },
+  auth: {
+    verify: {
+      response: {
+        status: {
+          SUCCESS: "success",
+          SIGNUP_REQUIRED: "signup_required",
+          NOT_A_USER: "not_a_user",
+        },
+      },
+    },
+  },
+  alerts: {
+    types: {
+      INFO: "INFO",
+      WARNING: "WARNING",
+      ERROR: "ERROR",
+    },
+    statuses: {
+      SCHEDULED: "SCHEDULED",
+      ACTIVE: "ACTIVE",
+      EXPIRED: "EXPIRED",
+    },
+  },
+  notificationTheme: {
+    filters: {
+      unread: {
+        color: "primary",
+        iconOn: "mdi:email",
+        iconOff: "mdi:email-outline",
+      },
+      read: {
+        color: "info",
+        iconOn: "mdi:email-open",
+        iconOff: "mdi:email-open-outline",
+      },
+      bookmarked: {
+        color: "success",
+        iconOn: "mdi:bookmark",
+        iconOff: "mdi:bookmark-outline",
+      },
+    },
+    delivery: {
+      roleBroadcast: { color: "primary" },
+    },
+    actions: {
+      read: { color: "info", icon: "mdi:email-open-outline" },
+      bookmark: { color: "success", icon: "mdi:bookmark-outline" },
+      link: { color: "primary", icon: "mdi:open-in-new" },
+    },
   },
 };
 

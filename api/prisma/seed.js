@@ -1,5 +1,8 @@
+require('module-alias/register');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
+global.__basedir = path.join(__dirname, '..');
 const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
 const dayjs = require('dayjs');
@@ -15,13 +18,11 @@ const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
 const { readUsersFromJSON } = require('../src/utils');
 
-global.__basedir = path.join(__dirname, '..');
-
 const prisma = new PrismaClient();
 
 if (['production'].includes(config.get('mode'))) {
   // exit if in production mode
-  console.error('Seed script should not be run in production mode. Run node src/scripts/init_prod_users.js instead.');
+  console.error('Seed script should not be run in production mode. Run node src/scripts/init_prod_data.js instead.');
   process.exit(1);
 }
 
@@ -90,12 +91,57 @@ function createRandomUsers(num) {
   }));
 }
 
+function runNotificationSeedScript(usernames) {
+  const scriptPath = path.join(global.__basedir, 'prisma', 'seed_data', 'seed-notifications.js');
+  usernames.forEach((username) => {
+    const result = spawnSync(
+      process.execPath,
+      [scriptPath, '--user', username, '--stable-only', '--force'],
+      {
+        cwd: global.__basedir,
+        env: process.env,
+        stdio: 'inherit',
+      },
+    );
+
+    if (result.status !== 0) {
+      throw new Error(`seed-notifications.js failed for user '${username}'`);
+    }
+  });
+}
+
 async function main() {
   await Promise.allSettled(data.roles.map((role) => prisma.role.upsert({
     where: { id: role.id },
     create: role,
     update: role,
   })));
+
+  // Seed import sources for non-production environments.
+  // These paths match the directories created by workers/bin/init_dirs.sh.
+  const importSources = [
+    {
+      path: '/opt/sca/data/imports/genomics_lab_instrument_drop',
+      label: 'Genomics Lab',
+      description: 'Drop location for genomics lab instrument output',
+      sort_order: 1,
+    },
+    {
+      path: '/opt/sca/data/imports/proteomics_lab_instrument_drop',
+      label: 'Proteomics Lab',
+      description: 'Drop location for proteomics lab instrument output',
+      sort_order: 2,
+    },
+  ];
+  await Promise.all(
+    importSources.map((source) => prisma.import_source.upsert({
+      where: { path: source.path },
+      create: source,
+      update: { label: source.label, description: source.description, sort_order: source.sort_order },
+    })),
+  );
+  // eslint-disable-next-line no-console
+  console.log(`seeded ${importSources.length} import sources`);
 
   // Create default admins
   const additional_admins = readUsersFromJSON('admins.json');
@@ -176,7 +222,7 @@ async function main() {
 
   // upsert raw data - data product associations
   await Promise.all(
-    data.dataset_heirarchical_association.map((sd) => prisma.dataset_hierarchy.upsert({
+    data.dataset_hierarchical_association.map((sd) => prisma.dataset_hierarchy.upsert({
       where: {
         source_id_derived_id: sd,
       },
@@ -295,6 +341,19 @@ async function main() {
   await prisma.stage_request_log.createMany({
     data: stage_request_logs,
   });
+
+  // create instruments
+  // delete pre-existing records
+  await prisma.instrument.deleteMany();
+  await prisma.instrument.createMany({
+    data: _.range(0, 10).map((i) => ({
+      name: `Instrument ${i + 1}`,
+      host: `instrument ${i + 1}.iu.edu`,
+    })),
+  });
+
+  // Seed notification fixtures for E2E roles.
+  runNotificationSeedScript(['e2eAdmin', 'e2eOperator', 'e2eUser']);
 }
 
 main()

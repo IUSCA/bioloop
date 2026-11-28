@@ -9,6 +9,7 @@ logs
 npm-debug.log*
 
 # Runtime data
+# cspell:ignore pids
 pids
 *.pid
 *.seed
@@ -21,9 +22,6 @@ pids
 .node_repl_history
 .pnpm-store
 
-# MacOS metadata file
-.DS_store
-
 # keys
 keys/*.pub
 keys/*.key
@@ -35,10 +33,15 @@ swagger_output.json
 # generated reports
 reports
 
-test.js
-src/test.js
+# Ignore personal test files
+src/_test.js
 coverage
 
+# Used to populate the production Admins, Operators, and Users in the database
 admins.json
 operators.json
 users.json
+# Used to populate the production Import Sources in the database
+import_sources.json
+
+/notebooks

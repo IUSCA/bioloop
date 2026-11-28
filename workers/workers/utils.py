@@ -149,3 +149,26 @@ class DateTimeEncoder(json.JSONEncoder):
         #     # Encode bytes as base64
         #     return obj.decode('utf-8')
         return super().default(obj)
+
+def encode_value(value):
+    """
+    Encode values to be PostgreSQL-compatible.
+    Useful for preparing CSV data for PostgreSQL COPY command.
+    This function handles None, booleans, and lists specifically.
+    - None is converted to 'NULL'
+    - booleans are converted to lowercase strings 'true' or 'false'
+    - lists are converted to PostgreSQL array format
+    - other types are returned as-is
+    """
+    if value is None:
+        # Convert None to 'NULL'
+        return 'NULL'
+    elif isinstance(value, bool):
+        # Convert booleans to lowercase strings 'true' or 'false'
+        return 'true' if value else 'false'
+    elif isinstance(value, list):
+        # Convert lists to PostgreSQL array format
+        return '{' + ','.join(map(str, value)) + '}'
+    else:
+        # Return value as-is for other types
+        return value

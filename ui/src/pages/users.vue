@@ -40,7 +40,7 @@
 
   <!-- table -->
   <va-data-table
-    class="usertable"
+    class="user-table"
     :items="users"
     :columns="columns"
     v-model:sort-by="params.sortBy"
@@ -111,18 +111,11 @@
               size="small"
               preset="primary"
               color="info"
-              @click="openModaltoLogInAsUser(rowData)"
+              @click="openModalToLogInAsUser(rowData)"
             >
               <i-mdi-account-convert-outline class="" />
             </va-button>
           </va-popover>
-        </div>
-
-        <!-- delete button -->
-        <div class="flex-none" v-if="auth.canAdmin">
-          <va-button size="small" preset="primary" color="danger">
-            <i-mdi-delete />
-          </va-button>
         </div>
       </div>
     </template>
@@ -150,7 +143,8 @@
   >
     <div class="max-w-lg">
       <va-inner-loading :loading="modal_loading">
-        <va-form class="flex flex-wrap gap-2 gap-y-6" ref="modifyFormRef">
+        <va-form class="flex flex-wrap gap-2 gap-y-4" ref="modifyFormRef">
+          <!-- name -->
           <va-input
             data-testid="user-name-input"
             class="w-full"
@@ -160,6 +154,8 @@
               (value) => (value && value.length > 0) || 'Field is required',
             ]"
           />
+
+          <!-- email -->
           <va-input
             data-testid="user-email-input"
             v-model="editedUser.email"
@@ -169,6 +165,8 @@
               (value) => (value && value.length > 0) || 'Field is required',
             ]"
           />
+
+          <!-- username -->
           <va-input
             data-testid="user-username-input"
             :modelValue="editedUser.username || autofill.username"
@@ -179,6 +177,8 @@
               (value) => (value && value.length > 0) || 'Field is required',
             ]"
           />
+
+          <!-- cas id -->
           <va-input
             data-testid="user-cas-id-input"
             :modelValue="editedUser.cas_id || autofill.cas_id"
@@ -190,21 +190,38 @@
             ]"
           />
 
+          <!-- status -->
           <div class="flex-[1_1_100%] flex items-center gap-3">
-            <span
-              class="flex-none text-xs font-semibold"
-              style="color: var(--va-primary)"
-            >
-              STATUS
-            </span>
-            <va-switch
-              v-model="editedUser.status"
-              true-label="Enabled"
-              false-label="Disabled"
-              color="success"
-            />
+            <div class="flex items-center gap-3">
+              <span
+                class="flex-none text-xs font-semibold"
+                style="color: var(--va-primary)"
+              >
+                STATUS
+              </span>
+              <va-switch
+                v-model="editedUser.status"
+                true-label="Enabled"
+                false-label="Disabled"
+                color="success"
+              />
+            </div>
+
+            <!-- Delete User Text and Trash Bin Button -->
+            <div v-if="auth.canAdmin" class="flex items-center gap-2 ml-auto">
+              <span class="trash-can-button-text"> DELETE USER </span>
+              <va-button
+                color="danger"
+                preset="plain"
+                size="small"
+                @click="confirmDeleteUser"
+              >
+                <i-mdi-delete class="text-2xl" />
+              </va-button>
+            </div>
           </div>
 
+          <!-- roles -->
           <div class="flex-[1_1_100%]">
             <span
               class="block text-xs font-semibold mb-3"
@@ -220,6 +237,18 @@
             />
           </div>
 
+          <!-- metadata -->
+          <div class="flex-[1_1_100%]">
+            <span
+              class="block text-xs font-semibold mb-3"
+              style="color: var(--va-primary)"
+            >
+              METADATA
+            </span>
+            <KeyValueEditor v-model="editedUser.metadata" />
+          </div>
+
+          <!-- notes -->
           <va-textarea
             data-testid="user-notes-input"
             class="w-full"
@@ -236,6 +265,100 @@
 
   <!-- Log in as User modal -->
   <SudoUserModal ref="sudoModal" :user="selected" />
+
+  <!-- Delete Confirmation Modal -->
+  <va-modal
+    v-model="isDeleteModalVisible"
+    title="DELETE USER?"
+    okText="Confirm"
+    cancelText="Cancel"
+    @ok="showUsernamePrompt"
+    @cancel="isDeleteModalVisible = false"
+  >
+    <p>
+      Are you sure you want to delete the user record of
+      <strong>{{ editedUser.name }}</strong
+      >?
+    </p>
+  </va-modal>
+
+  <!-- Username Confirmation Modal -->
+  <va-modal
+    v-model="isUsernamePromptVisible"
+    title="CONFIRM DELETION"
+    hide-default-actions
+    @cancel="isUsernamePromptVisible = false"
+  >
+    <p>
+      Please note that hard deletion is irreversible and will impact other data
+      linked to this user.
+    </p>
+    <p>
+      Please type the username <strong>{{ editedUser.username }}</strong> to
+      confirm deletion:
+    </p>
+
+    <!-- Username Input -->
+    <va-input
+      class="username-input"
+      v-model="usernameConfirmation"
+      placeholder="Enter username"
+    />
+
+    <!-- Deletion Type Toggle Group -->
+    <div class="flex gap-4 items-center mt-2">
+      <!-- Deletion Type Label -->
+      <span class="deletion-type-label">Deletion Type:</span>
+
+      <!-- Deletion Options -->
+      <div class="flex gap-8">
+        <VaRadio
+          v-for="option in deletionOptions"
+          :key="option.value"
+          v-model="selectedDeletionType"
+          :option="option.value"
+          :label="option.label"
+          :disabled="option.disabled"
+          :color="option.value === 'hard' ? 'danger' : 'info'"
+          name="deletionType"
+        />
+      </div>
+    </div>
+
+    <!-- Display alert when Soft Deletion is disabled -->
+    <VaAlert v-if="isSoftDeleted" color="warning" class="mb-2">
+      Soft Deletion is unavailable because the user is already soft deleted.
+    </VaAlert>
+
+    <!-- Display impact details -->
+    <VaAlert
+      v-if="impactDetails.length > 0"
+      border="top"
+      border-color="primary"
+      class="mt-4"
+    >
+      <template #title>
+        <strong> Impact Details of the Selected Deletion </strong>
+      </template>
+      <ul class="va-unordered">
+        <li v-for="detail in impactDetails" :key="detail">
+          {{ detail }}
+        </li>
+      </ul>
+    </VaAlert>
+
+    <!-- Custom footer with "Confirm Delete" and "Cancel" buttons -->
+    <template #footer>
+      <va-button @click="isUsernamePromptVisible = false">Cancel</va-button>
+      <va-button
+        color="danger"
+        :disabled="usernameConfirmation !== editedUser.username"
+        @click="deleteUser"
+      >
+        Confirm Delete
+      </va-button>
+    </template>
+  </va-modal>
 </template>
 
 <script setup>
@@ -260,6 +383,56 @@ const roleOptions = ["user", "operator", "admin"];
 const autofill = ref({
   username: "",
   cas_id: "",
+});
+
+// New variables for delete confirmation modals
+const isDeleteModalVisible = ref(false);
+const isUsernamePromptVisible = ref(false);
+const usernameConfirmation = ref("");
+const isHardDelete = ref(false);
+const isSoftDeleted = computed(() => editedUser.value.is_deleted); //check soft delete status
+
+// Open the initial delete confirmation modal
+function confirmDeleteUser() {
+  isDeleteModalVisible.value = true;
+}
+
+const impactDetails = computed(() => {
+  return isHardDelete.value
+    ? [
+        "User profile, roles, and settings will be permanently removed.",
+        "Project assignments, notifications, and login history will be removed.",
+        "Related system logs, project-related datasets, and uploads will no longer reference the user.",
+      ]
+    : [
+        "The user's account will be marked as inactive but not permanently removed.",
+        "Other data, such as linked projects and system logs, will remain intact.",
+      ];
+});
+
+// Show the final username prompt after confirming initial delete dialog
+function showUsernamePrompt() {
+  isDeleteModalVisible.value = false;
+  isUsernamePromptVisible.value = true;
+  usernameConfirmation.value = ""; // reset input
+  //isHardDelete.value = false;
+
+  isHardDelete.value = isSoftDeleted.value;
+}
+
+// define options for radio buttons
+const deletionOptions = computed(() => [
+  { label: "Soft Deletion", value: "soft", disabled: isSoftDeleted.value },
+  { label: "Hard Deletion", value: "hard" },
+]);
+
+// handle the radio button selection logic
+const selectedDeletionType = computed({
+  get: () => (isHardDelete.value ? "hard" : "soft"),
+  set: (deletionType) => {
+    console.log("selectedDeletionType changed to:", deletionType);
+    isHardDelete.value = deletionType === "hard";
+  },
 });
 
 const debouncedUpdate = useDebounceFn((val) => {
@@ -348,7 +521,7 @@ function fetch_all_users() {
 
   const skip = (params.value.currentPage - 1) * params.value.itemsPerPage;
 
-  const queryparams = {
+  const queryParams = {
     forSelf: !auth.canOperate,
     search: params.value.search,
     take: params.value.itemsPerPage,
@@ -357,7 +530,7 @@ function fetch_all_users() {
     sort_order: params.value.sortingOrder,
   };
 
-  UserService.getAll(queryparams)
+  UserService.getAll(queryParams)
     .then((data) => {
       const { metadata, users: userList } = data;
       users.value = userList;
@@ -411,7 +584,7 @@ function resetEditModal() {
 const sudoModal = ref(null);
 const selected = ref({});
 
-function openModaltoLogInAsUser(rowData) {
+function openModalToLogInAsUser(rowData) {
   selected.value = rowData;
   sudoModal.value.show();
 }
@@ -468,6 +641,47 @@ function createUser() {
   }
 }
 
+function deleteUser() {
+  // Prevent deletion if the username doesn't match
+  if (usernameConfirmation.value !== editedUser.value.username) {
+    console.warn("Username mismatch detected during deletion attempt.");
+    return;
+  }
+
+  // Prevent soft delete if the user is already soft deleted/ no options
+  // selected
+  if (!isHardDelete.value && isSoftDeleted.value) {
+    console.warn("Soft delete attempted on an already soft-deleted user.");
+    return;
+  }
+
+  modal_loading.value = true;
+
+  // Call the unified deletion function with the query parameter
+  UserService.deleteUser(editedUser.value.username, isHardDelete.value)
+    .then(() => {
+      const successMessage = isHardDelete.value
+        ? "User record and their associated data have been successfully removed or disassociated."
+        : "User is temporarily disabled. Their associated data remains intact.";
+      toast.success(successMessage);
+      fetch_all_users();
+      resetEditModal();
+      isUsernamePromptVisible.value = false;
+    })
+    .catch((err) => {
+      console.error(
+        `Error during ${isHardDelete.value ? "hard" : "soft"} delete for user ${editedUser.value.username}:`,
+        err,
+      );
+      toast.error(
+        "Failed to delete the user. Please try again or contact support.",
+      );
+    })
+    .finally(() => {
+      modal_loading.value = false;
+    });
+}
+
 watch(
   [
     () => params.value.itemsPerPage,
@@ -509,8 +723,24 @@ fetch_all_users();
 </script>
 
 <style scoped>
-.usertable {
+.user-table {
   --va-data-table-cell-padding: 3px;
+}
+
+.trash-can-button-text {
+  color: var(--va-primary);
+  font-size: 12px;
+  font-weight: 600;
+  flex: none;
+}
+
+.deletion-type-label {
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.username-input {
+  width: 300px;
 }
 </style>
 

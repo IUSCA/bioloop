@@ -10,12 +10,11 @@ from concurrent.futures import ThreadPoolExecutor
 from email.message import EmailMessage
 from pathlib import Path
 from queue import Queue
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
 
 from sca_rhythm import WorkflowTask
 
-from workers import api
-from workers import utils
+from workers import api, utils
 from workers.config import config
 
 logger = logging.getLogger(__name__)
@@ -38,7 +37,8 @@ def execute(cmd: list[str], **kwargs) -> tuple[str, str]:
     """
     kwargs.pop('capture_output', None)
     kwargs.pop('text', None)
-    p = subprocess.run(cmd, capture_output=True, text=True, **kwargs)
+    encoding_errors = kwargs.pop('encoding_errors', 'strict')
+    p = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors=encoding_errors, **kwargs)
     if p.returncode != 0:
         msg = {
             'return_code': p.returncode,
@@ -85,10 +85,12 @@ def read_popen_pipes(p, blocking_delay: float = 0.5):
 def register_process(celery_task, process, process_start_time):
     try:
         hostname = socket.getfqdn()
+        # WorkflowTask exposes .workflow_id, .step, and .id as properties.
+        # Plain Celery tasks (bind=True) only have .request.id and .name.
         worker_process = api.register_process({
-            'workflow_id': celery_task.workflow_id,
-            'step': celery_task.step,
-            'task_id': celery_task.id,
+            'workflow_id': getattr(celery_task, 'workflow_id', None),
+            'step': getattr(celery_task, 'step', celery_task.name),
+            'task_id': getattr(celery_task, 'id', celery_task.request.id),
             'pid': process.pid,
             'hostname': hostname,
             'start_time': process_start_time,
@@ -133,9 +135,12 @@ def execute_with_log_tracking(cmd: list[str], celery_task: WorkflowTask, cwd: st
             'return_code': p.returncode,
             'stdout': None,
             'stderr': None,
-            'args': p.args
+            'args': p.args,
+            'worker_process_id': worker_process_id,
         }
         raise SubprocessError(msg)
+
+    return worker_process_id
 
 
 def execute_old(cmd, cwd=None):

@@ -6,6 +6,8 @@
 *nginx.key
 
 .idea
+.DS_Store
+**/.DS_Store
 
 ui/node_modules
 ui/dist
@@ -23,11 +25,11 @@ api/yarn-error.log
 api/.vscode
 api/node_modules
 api/.env
+api/.db_seeded
 
 api/config/auth*
 
 db/*.wt
-db/*
 dbdump
 
 cypress
@@ -64,6 +66,19 @@ backup
 !db/backups
 db/backups/*.sql
 db/backups/*.psql
+db/db_postgres
+db/postgres/data/
+db/mongo/data
+
 todo.md
 
 .pm2
+
+rhythm_api/
+rhythm/rhythm_api
+
+signet/signet
+
+.ai/
+.cursor/
+.cursorrules

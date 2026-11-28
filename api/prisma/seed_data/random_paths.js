@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 /* eslint-disable import/no-extraneous-dependencies */
+// cspell:ignore Mersenne
 const { Random, MersenneTwister19937 } = require('random-js');
 // eslint-disable-next-line lodash-fp/use-fp
 const _ = require('lodash');
@@ -14,8 +15,10 @@ function convertEpochToDateString(epoch) {
 }
 
 function random_filename(rng) {
-  const names = ['document', 'image', 'report', 'backup', 'project', 'screenshot', 'data_analysis', 'readme', 'video', 'presentation'];
-  const extensions = ['txt', 'jpg', 'png', 'docx', 'zip', 'pdf', 'xlsx', 'mov', 'pptx', 'bak', 'tar.gz', 'tar', 'fastq', 'fastq.gz', 'bam', 'vcf'];
+  const names = ['document', 'image', 'report', 'backup', 'project', 'screenshot',
+    'data_analysis', 'readme', 'video', 'presentation'];
+  const extensions = ['txt', 'jpg', 'png', 'docx', 'zip', 'pdf', 'xlsx', 'mov',
+    'pptx', 'bak', 'tar.gz', 'tar', 'fastq', 'fastq.gz', 'bam', 'vcf'];
 
   return () => {
     const random_date = convertEpochToDateString(rng.integer(993082044, 1687306012));

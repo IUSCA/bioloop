@@ -1,3 +1,4 @@
+# cspell:ignore myvhost signedint
 """
 Deletes the Celery app's queue from RabbitMQ.
 

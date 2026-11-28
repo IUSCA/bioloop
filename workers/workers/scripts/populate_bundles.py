@@ -1,17 +1,9 @@
-import json
 import logging
-from pathlib import Path
-from sca_rhythm import Workflow
-from pymongo import MongoClient, DESCENDING
+
 import fire
 
-from workers.config.celeryconfig import result_backend
-from workers.celery_app import app as celery_app
-import workers.sda as sda
 import workers.api as api
-import workers.cmd as cmd
-import workers.workflow_utils as wf_utils
-import workers.utils as utils
+import workers.sda as sda
 from workers.config import config
 
 logging.basicConfig(level=logging.INFO)
@@ -26,30 +18,28 @@ class BundleSyncManager:
         self.dry_run = dry_run
         self.app_id = app_id
 
-
     def populate_bundles(self):
-        archived_datasets = api.get_all_datasets(archived=True, bundle=True)
+        archived_datasets = api.get_all_datasets(archived=True,
+                                                 bundle=True)
+
+        logger.info(f'Found {len(archived_datasets)} archived datasets to process')
 
         processed_datasets = []
         unprocessed_datasets = []
 
         for dataset in archived_datasets:
-            logger.info(f'processing dataset {dataset["id"]}')
-
-            update_data = {
-                'is_staged': False,
-                'staged_path': None,
-            }
-            api.update_dataset(dataset_id=dataset['id'], update_data=update_data)
-            logger.info(f"unstaged dataset {dataset['id']}")
+            logger.info(f'Processing dataset {dataset["id"]}')
 
             bundle_metadata_populated = dataset['bundle'] is not None
+            logger.info(f'Bundle metadata is populated? : {bundle_metadata_populated}')
+
             if not bundle_metadata_populated:
+                # Populate Dataset's bundle metadata
                 try:
                     bundle_metadata_populated = self.populate_bundle_metadata(dataset)
-                    logger.info(f'bundle_metadata_populated for {dataset["id"]}: {bundle_metadata_populated}')
+                    logger.info(f'Bundle metadata populated for {dataset["id"]}?: {bundle_metadata_populated}')
                 except Exception as err:
-                    logger.info(f'failed to populate bundle for dataset {dataset["id"]}')
+                    logger.info(f'Failed to populate bundle metadata for dataset {dataset["id"]}')
                     logger.info(err)
 
             if not bundle_metadata_populated:
@@ -62,22 +52,27 @@ class BundleSyncManager:
         processed_datasets_ids = [dataset['id'] for dataset in processed_datasets]
         logger.info(f'processed datasets: {processed_datasets_ids}')
 
-
     def populate_bundle_metadata(self, dataset: dict) -> bool:
         logger.info(f'populating dataset {dataset["id"]}')
 
         bundle_md5 = sda.get_hash(dataset['archive_path'])
         bundle_metadata = {
             'name': f'{dataset["name"]}.tar',
-            'size': dataset['bundle_size'],
+            'size': dataset['du_size'],
             'md5': bundle_md5,
         }
-        update_data = {
-            'bundle': bundle_metadata
-        }
-        api.update_dataset(dataset_id=dataset['id'], update_data=update_data)
-
-        logger.info(f'successfully finished populating dataset {dataset["id"]}')
+        if not self.dry_run:
+            api.update_dataset(dataset_id=dataset['id'],
+                               update_data=
+                               {
+                                   'is_staged': False,
+                                   'bundle': bundle_metadata
+                               })
+            logger.info(f'successfully finished populating bundle metadata for dataset {dataset["id"]}')
+            logger.info(f"unstaged dataset {dataset['id']}")
+        else:
+            logger.info(f"dry run: would have populated bundle metadata for dataset {dataset['id']}")
+            logger.info(f"dry run: would have unstaged dataset {dataset['id']}")
         return True
 
 

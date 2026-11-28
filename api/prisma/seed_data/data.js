@@ -24,30 +24,30 @@ const admins = [
 
 const operators = [
   {
-    username: 'arodriguez',
+    username: 'arodriguez', // cspell: disable-line
     name: 'Alex Rodriguez',
   },
   {
-    username: 'bfoster',
+    username: 'bfoster', // cspell: disable-line
     name: 'Benjamin Foster',
   },
   {
-    username: 'ejohnson',
+    username: 'ejohnson', // cspell: disable-line
     name: 'Emma Johnson',
   },
 ];
 
 const users = [
   {
-    username: 'ajohnson',
+    username: 'ajohnson', // cspell: disable-line
     name: 'Alice Johnson',
   },
   {
-    username: 'sdavis',
+    username: 'sdavis', // cspell: disable-line
     name: 'Samuel Davis',
   },
   {
-    username: 'ethompson',
+    username: 'ethompson', // cspell: disable-line
     name: 'Emily Thompson',
   },
 ];
@@ -194,7 +194,7 @@ const additional_datasets = [11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22, 23, 24,
 
 const datasets = _datasets.concat(additional_datasets);
 
-const dataset_heirarchical_association = [{
+const dataset_hierarchical_association = [{
   source_id: 1,
   derived_id: 7,
 }, {
@@ -316,7 +316,10 @@ const about_records = [
   {
     html: '<p>BIOLOOP is a service of the <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a> group.'
         + '<br><br>'
-        + 'Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs.'
+        + 'Bioloop is a web-based portal to simplify the management of large-scale datasets '
+        + 'shared among research teams in scientific domains. This platform optimizes data handling '
+        + 'by effectively utilizing both cold and hot storage solutions, like tape and disk storage, '
+        + 'to reduce overall storage costs.'
         + '<br><br>'
         + 'This instance of Bioloop is being run by:'
         + '<br><br>'
@@ -330,7 +333,7 @@ module.exports = {
   operators,
   users,
   datasets,
-  dataset_heirarchical_association,
+  dataset_hierarchical_association,
   metrics,
   dataset_audit_data,
   contacts,

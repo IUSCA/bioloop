@@ -26,19 +26,20 @@
           :show-download="props.showDownload"
           :files="files"
           :dataset-id="props.datasetId"
+          @search="search_files"
         />
       </va-inner-loading>
     </div>
   </div>
 
-  <FileBrowserSearchModal ref="advancedSearchModal" @search="search_files" />
+  <FileBrowserSearchModal ref="advancedSearchModal" />
 </template>
 
 <script setup>
 import datasetService from "@/services/dataset";
+import { filterByValues } from "@/services/utils";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { storeToRefs } from "pinia";
-import { filterByValues } from "@/services/utils";
 
 const store = useFileBrowserStore();
 const { pwd, filters, isInSearchMode, filterStatus } = storeToRefs(store);
@@ -81,7 +82,7 @@ function payload() {
   return p;
 }
 
-function search_files() {
+function search_files({ sortBy = null, sortingOrder = null } = {}) {
   data_loading.value = true;
   const p = payload();
   // console.log("payload", p);
@@ -89,6 +90,8 @@ function search_files() {
     .search_files({
       id: props.datasetId,
       ...p,
+      sortBy,
+      sortOrder: sortingOrder,
     })
     .then((res) => {
       searchResults.value = res.data;
@@ -101,28 +104,27 @@ function search_files() {
     });
 }
 
-watch(
-  pwd,
-  () => {
-    // navigating to a directory disables the search mode
-    store.resetFilters();
-    isInSearchMode.value = false;
-    get_file_list(pwd.value);
-  },
-  { immediate: true },
-);
+onMounted(() => {
+  get_file_list(pwd.value);
+});
 
-const nameRef = toRefs(store.filters).name;
-const debouncedNameFilter = refDebounced(nameRef, 215);
+watch(pwd, (newValue, oldValue) => {
+  if (oldValue == null) return;
+  // navigating to a directory disables the search mode
+  store.resetFilters();
+  isInSearchMode.value = false;
+  get_file_list(pwd.value);
+});
 
 watch(
-  [debouncedNameFilter],
+  filters,
   () => {
+    // console.log("filters changed", filters.value, isInSearchMode.value);
     if (isInSearchMode.value) {
       search_files();
     }
   },
-  { immediate: true },
+  { immediate: true, deep: true },
 );
 
 const advancedSearchModal = ref(null);

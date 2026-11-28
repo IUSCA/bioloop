@@ -12,7 +12,7 @@ from workers.config import config
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
 
-
+# cspell:ignore metas
 def download_recent_datasets(celery_task: WorkflowTask, download_dir: Path, n_days: int):
     download_dir.mkdir(exist_ok=True, parents=True)
     ds_metas = illumina.list_datasets(n_days)

@@ -36,6 +36,28 @@
       "scope": "openid+email",
       "client_id": "",
       "client_secret": ""
+    },
+    "microsoft": {
+      "enabled": true,
+      "authorization_endpoint": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+      "token_endpoint": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+      "scope": "https://graph.microsoft.com/User.Read",
+      "client_id": "",
+      "client_secret": ""
+    },
+    "auto_sign_up": {
+      "enabled": false,
+      "default_role": "user"
+    },
+    "signup": {
+      "default_role": "user",
+      "dev_default_role": "admin",
+      "jwt": {
+        "scope": "signup",
+        "ttl_milliseconds": 600000
+      },
+      "auto_generate_username_if_not_unique": true,
+      "max_username_suffix": 999
     }
   },
   "oauth": {
@@ -44,25 +66,12 @@
       "client_id": "",
       "client_secret": "",
       "scope_prefix": "download_file:"
-    },
-    "upload": {
-      "scope_prefix": "upload_file:"
     }
   },
   "upload": {
-    "path": "",
-    "types": {
-      "DATASET": "DATASET"
-    },
-    "status": {
-      "UPLOADING": "UPLOADING",
-      "UPLOAD_FAILED": "UPLOAD_FAILED",
-      "UPLOADED": "UPLOADED",
-      "PROCESSING": "PROCESSING",
-      "PROCESSING_FAILED": "PROCESSING_FAILED",
-      "COMPLETE": "COMPLETE",
-      "FAILED": "FAILED"
-    }
+    "path": "/opt/sca/data/uploads",
+    "host_path": "",
+    "max_file_size_bytes": 107374182400
   },
   "download_server": {
     "base_url": ""
@@ -120,29 +129,15 @@
           "task": "delete_dataset"
         }
       ]
-    },
-    "process_dataset_upload": {
-      "steps": [
-        {
-          "name": "Process Dataset Upload",
-          "task": "process_dataset_upload"
-        }
-      ]
-    },
-    "cancel_dataset_upload": {
-      "steps": [
-        {
-          "name": "Cancel Dataset Upload",
-          "task": "cancel_dataset_upload"
-        }
-      ]
     }
-
   },
   "dataset_types": [
     "RAW_DATA",
     "DATA_PRODUCT"
   ],
+  "system_user": {
+    "username": "svc_tasks"
+  },
   "e2e": {
     "users": {
       "admin": {
@@ -156,23 +151,20 @@
       }
     }
   },
-  "filesystem_search_spaces": "",
-  "filesystem": {
-    "search_spaces": "",
-    "base_dir": {
-      "slateScratch": ""
-    },
-    "mount_dir": {
-      "slateScratch": ""
-    }
-  },
-  "restricted_ingestion_dirs": {
-    "slateScratch": ""
-  },
   "enabled_features": {
-    "fs": {
-      "enabled_for_roles": ["admin"]
-    },
-    "downloads": true
-  }
+    "import": true,
+    "upload": true,
+    "fs": true,
+    "downloads": true,
+    "signup": true,
+    "auto_create_project_on_dataset_creation": true,
+    "notifications": true
+  },
+  "institution_types": [
+    "Commercial",
+    "External Academic",
+    "Internal Academic",
+    "Non-profit",
+    "Other"
+  ]
 }

@@ -1,5 +1,7 @@
 <template>
-  <va-navbar class="navbar-container flex-row shadow-lg">
+  <va-navbar
+    class="navbar-container navbar-container--dropdown-host flex-row shadow-lg"
+  >
     <template #left>
       <va-button
         class="fixed top-0 left-0 rounded-none font-normal skip-to-content"
@@ -39,22 +41,27 @@
       <va-navbar-item class="flex items-center">
         <env-alert icon="warning" />
       </va-navbar-item>
-      <va-navbar-item class="flex items-center" v-if="auth.user?.username">
-        <HeaderUserDropdown />
-      </va-navbar-item>
+
       <va-navbar-item
         class="flex items-center"
-        v-if="
-          isFeatureEnabled({
-            featureKey: 'notifications',
-            hasRole: auth.hasRole,
-          })
-        "
+        v-if="auth.isFeatureEnabled('alerts')"
+      >
+        <AlertDropdown />
+      </va-navbar-item>
+
+      <va-navbar-item
+        class="flex items-center"
+        v-if="auth.isFeatureEnabled('notifications')"
       >
         <NotificationDropdown />
       </va-navbar-item>
+
       <va-navbar-item class="flex items-center">
         <ThemeToggle />
+      </va-navbar-item>
+
+      <va-navbar-item class="flex items-center" v-if="auth.user?.username">
+        <HeaderUserDropdown />
       </va-navbar-item>
     </template>
   </va-navbar>
@@ -62,7 +69,6 @@
 
 <script setup>
 import { useAuthStore } from "@/stores/auth";
-import { isFeatureEnabled } from "@/services/utils";
 
 const auth = useAuthStore();
 
@@ -75,6 +81,16 @@ const props = defineProps({
 .navbar-container {
   --va-navbar-padding-y: 0.6rem;
   --va-navbar-mobile-height: 4rem;
+}
+
+.navbar-container--dropdown-host {
+  overflow: visible;
+}
+
+.navbar-container--dropdown-host .va-navbar__inner,
+.navbar-container--dropdown-host .va-navbar__content,
+.navbar-container--dropdown-host .va-navbar-item {
+  overflow: visible;
 }
 
 .navbar-container .va-navbar__left {

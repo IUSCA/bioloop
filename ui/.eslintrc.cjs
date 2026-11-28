@@ -28,11 +28,29 @@ module.exports = {
       "warn",
       {
         mode: "overflow-only",
-        maxLength: 80,
+        maxLength: 120,
         logicalWrap: true,
         ignoreUrls: true,
         ignoreCommentsWithCode: true,
         tabSize: 2,
+      },
+    ],
+    "comment-length/limit-single-line-comments": [
+      "warn",
+      {
+        mode: "overflow-only",
+        maxLength: 120,
+        logicalWrap: true,
+        ignoreUrls: true,
+        ignoreCommentsWithCode: true,
+        tabSize: 2,
+      },
+    ],
+    // Ignore parsing errors for custom tags like <route>
+    "vue/no-parsing-error": [
+      "error",
+      {
+        "invalid-first-character-of-tag-name": false,
       },
     ],
   },

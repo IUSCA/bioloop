@@ -115,7 +115,7 @@ const columns = computed(() => {
     { key: "message" },
   ];
   if (show_timestamps.value) {
-    // add timestamp colum to the front of the cols array
+    // add timestamp column to the front of the cols array
     cols.unshift({ key: "timestamp", width: "150px" });
   }
   return cols;
@@ -152,11 +152,11 @@ function onClick(event) {
 }
 
 function getRowBind(row) {
-  const rowClasees = [];
+  const rowClasses = [];
   if (row.level === "stderr") {
-    rowClasees.push(["text-red-600"]);
+    rowClasses.push(["text-red-600"]);
   }
-  return { class: rowClasees };
+  return { class: rowClasses };
 }
 
 const { pause, resume } = useIntervalFn(() => {

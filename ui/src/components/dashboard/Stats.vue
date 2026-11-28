@@ -45,12 +45,7 @@
           </div>
 
           <div
-            v-if="
-              isFeatureEnabled({
-                featureKey: 'genomeBrowser',
-                hasRole: auth.hasRole,
-              })
-            "
+            v-if="auth.isFeatureEnabled('genome_files')"
             class="flex flex-col items-center justify-end"
           >
             <h2
@@ -93,9 +88,9 @@
 </template>
 
 <script setup>
-import { formatBytes, isFeatureEnabled } from "@/services/utils";
-import { useColors } from "vuestic-ui";
+import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import { useColors } from "vuestic-ui";
 
 const { colors } = useColors();
 const number_formatter = Intl.NumberFormat("en", { notation: "compact" });

@@ -106,7 +106,7 @@
             class="flex-none"
             @click="
               isValid({ validate: true }) &&
-                (is_last_step ? handleCreate() : nextStep())
+              (is_last_step ? handleCreate() : nextStep())
             "
             :color="is_last_step ? 'success' : 'primary'"
             :disabled="!isValid()"
@@ -178,6 +178,7 @@ function handleCreate() {
   .step-button {
     color: var(--va-secondary);
   }
+
   .step-button--active {
     color: var(--va-primary);
   }
@@ -189,14 +190,16 @@ function handleCreate() {
   .step-button:hover {
     background-color: var(--va-background-element);
   }
+
   .va-stepper__step-content-wrapper {
     // flex: 1 to expand the element to available height
-    // min-height: 0 to shrink the elemenet to below its calculated min-height of children
+    // min-height: 0 to shrink the element to below its calculated min-height of children
     display: flex;
     flex-direction: column;
     flex: 1;
     min-height: 0;
   }
+
   .va-stepper__step-content {
     // step-content-wrapper contains step-content and controls
     // only shrink and grow step-content

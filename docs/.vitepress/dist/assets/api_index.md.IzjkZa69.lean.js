@@ -1,1 +1,0 @@
-import{_ as s,c as i,o as a,V as e,a2 as n}from"./chunks/framework.MXVb71fM.js";const y=JSON.parse('{"title":"API","description":"","frontmatter":{},"headers":[],"relativePath":"api/index.md","filePath":"api/index.md"}'),t={name:"api/index.md"},h=e("",111),l=[h];function r(p,k,d,o,E,c){return a(),i("div",null,l)}const u=s(t,[["render",r]]);export{y as __pageData,u as default};

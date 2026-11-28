@@ -1,3 +1,4 @@
+require('module-alias/register');
 const swaggerAutogen = require('swagger-autogen')();
 const config = require('config');
 

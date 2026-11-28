@@ -22,21 +22,25 @@
 <script setup>
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
+import { storeToRefs } from "pinia";
 
 const store = useFileBrowserStore();
+const { filters } = storeToRefs(store);
 useSearchKeyShortcut();
 
 const emit = defineEmits(["advancedSearch"]);
 
 const state = computed({
   get() {
-    return store.filters.name;
+    return filters.value.name;
   },
-  set(newValue) {
+  // debounce the user input so that state is not updated on every
+  // key
+  set: useDebounceFn((newValue) => {
     // console.log("setting  store.filters.name", newValue);
-    store.filters.name = newValue;
+    filters.value.name = newValue;
     // enable search view when the search input has value
     if (newValue) store.isInSearchMode = true;
-  },
+  }, 500),
 });
 </script>

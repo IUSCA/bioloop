@@ -31,7 +31,7 @@ class FileGraph {
 
   edges() {
     return Object.entries(this.graph)
-      .flatMap(([src, dsts]) => [...dsts].map((dst) => ([src, dst])));
+      .flatMap(([src, destinations]) => [...destinations].map((dst) => ([src, dst])));
   }
 }
 

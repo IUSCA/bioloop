@@ -1,9 +1,42 @@
 /* eslint-disable no-console */
+require('module-alias/register');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 const { readUsersFromJSON } = require('../utils');
 
 global.__basedir = path.join(__dirname, '..', '..');
+
+/*
+ * Users are read from JSON files in the api/ root directory.
+ * Each file must be a JSON array of user objects.
+ *
+ * Required fields for each user: name, username, email
+ *
+ * Example admins.json / operators.json / users.json:
+ *
+ * [
+ *   {
+ *     "name": "Alice Admin",
+ *     "username": "alice",
+ *     "email": "alice@example.edu"
+ *   },
+ *   {
+ *     "name": "Bob Bioloop",
+ *     "username": "bob",
+ *     "email": "bob@example.edu"
+ *   }
+ * ]
+ *
+ * Files:
+ *   admins.json    — users created with the "admin" role   (role_id 1)
+ *   operators.json — users created with the "operator" role (role_id 2)
+ *   users.json     — users created with the "user" role    (role_id 3)
+ *
+ * Missing or empty files are silently skipped.
+ *
+ * The upsert is keyed on email, so re-running is safe (idempotent).
+ * Existing users are not updated — only created if absent.
+ */
 
 const prisma = new PrismaClient();
 
@@ -96,7 +129,7 @@ async function main() {
 
   await Promise.all(promises);
 
-  console.log(`created ${admins.length} adminstrators`);
+  console.log(`created ${admins.length} administrators`);
   console.log(`created ${operators.length} operators`);
   console.log(`created ${users.length} users`);
 

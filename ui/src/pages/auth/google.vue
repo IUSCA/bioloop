@@ -1,14 +1,14 @@
 <template>
   <AuthStatus
     :get-url="authService.getGoogleUrl"
-    :verify="auth.googleLogin"
+    :verify="auth.withHandledVerifyResponse(authService.googleVerify)"
     :param-names="['code', 'state']"
   />
 </template>
 
 <script setup>
-import { useAuthStore } from "@/stores/auth";
 import authService from "@/services/auth";
+import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
 </script>

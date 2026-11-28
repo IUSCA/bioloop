@@ -1,10 +1,11 @@
 /* eslint-disable no-console */
+require('module-alias/register');
 const path = require('path');
 const assert = require('assert');
 
 global.__basedir = path.join(__dirname, '..', '..');
 
-require('dotenv-safe').config();
+require('dotenv-safe').config({ example: '.env.default' });
 require('../db');
 
 const userService = require('../services/user');
@@ -18,15 +19,19 @@ async function issue_token(username) {
   return token;
 }
 
-// check if username argument is present
-if (process.argv.length < 3) {
-  console.error('Error: Missing username argument');
-  process.exit(1);
+if (require.main === module) {
+  // check if username argument is present
+  if (process.argv.length < 3) {
+    console.error('Error: Missing username argument');
+    process.exit(1);
+  }
+
+  // get username argument
+  const username = process.argv[2];
+
+  issue_token(username)
+    .then((token) => { console.log(token); })
+    .catch((err) => { console.error(err); });
 }
 
-// get username argument
-const username = process.argv[2];
-
-issue_token(username)
-  .then((token) => { console.log(token); })
-  .catch((err) => { console.error(err); });
+module.exports = issue_token;

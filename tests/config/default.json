@@ -1,6 +1,6 @@
 {
   "baseURL": "https://localhost",
-  "apiPrefix": "/api",
+  "apiBaseURL": "http://localhost",
   "e2e": {
     "users": {
       "admin": {
@@ -16,7 +16,12 @@
   },
   "enabledFeatures": {
     "notifications": {
-      "enabledForRoles": []
+      "enabledForRoles": ["admin"]
+    },
+    "uploads": {
+      "enabledForRoles": [
+        "admin"
+      ]
     }
   }
 }

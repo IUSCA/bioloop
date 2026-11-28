@@ -1,0 +1,18 @@
+sequenceDiagram
+    participant UI as UI (localStorage + tus-js-client)
+    participant MW as tus.js middleware
+    participant FS as TestableFileStore
+
+    UI->>UI: set SIMULATE_UPLOAD_FAILURE(+ COUNT)
+    UI->>MW: PATCH with X-Simulate-Failure headers
+    MW->>MW: mark uploadId in global failure map
+    MW->>FS: write(stream, id, offset)
+    FS->>FS: write ~1 MB to disk, then destroy stream
+    FS-->>UI: 500 simulated error
+    UI->>MW: HEAD (check server offset)
+    MW-->>UI: Upload-Offset (bytes written so far)
+    UI->>MW: retry PATCH from new offset
+    Note over MW: repeat until count exhausted
+    MW->>MW: count exhausted - stop marking
+    MW->>FS: write(stream, id, offset) - no flag
+    FS-->>UI: normal write completes

@@ -1,2 +1,3 @@
 .idea
 notebooks
+.vitepress/dist

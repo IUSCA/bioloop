@@ -1,7 +1,23 @@
-const { Prisma, PrismaClient } = require('@prisma/client');
+const { Prisma } = require('@prisma/client');
 const _ = require('lodash/fp');
+const usernameRegex = require('regex-username')();
+const usernameBlacklist = require('the-big-username-blacklist');
+const config = require('config');
 
-const prisma = new PrismaClient();
+const prisma = require('@/db');
+
+let systemUser = null;
+
+async function getSystemUser() {
+  if (!systemUser) {
+    const _systemUser = await prisma.user.findFirst({
+      where: { username: config.get('system_user.username') },
+      include: INCLUDE_ROLES_LOGIN,
+    });
+    systemUser = transformUser(_systemUser);
+  }
+  return systemUser;
+}
 
 const INCLUDE_ROLES_LOGIN = {
   user_role: {
@@ -33,8 +49,8 @@ const transformUser = _.flow([
 ]);
 
 async function findRoles(roles, _prisma) {
-  const __primsa = _prisma || prisma;
-  return __primsa.role.findMany({
+  const __prisma = _prisma || prisma;
+  return __prisma.role.findMany({
     where: {
       OR: roles.map((role) => ({
         name: {
@@ -55,17 +71,27 @@ async function setPassword({ user_id, password, _prisma }) {
   `;
 }
 
-async function findActiveUserBy(key, value) {
+async function findUserBy(key, value, { is_deleted = null } = {}) {
   // do not throw error if no results are found, instead return null
   // findFirst return null if no results are found
+  if (!key) {
+    return null;
+  }
+  if (value === undefined) {
+    return null;
+  }
   const user = await prisma.user.findFirst({
     where: {
-      is_deleted: false,
+      ...(is_deleted !== null && { is_deleted }),
       [key]: value,
     },
     include: INCLUDE_ROLES_LOGIN,
   });
-  return user ? transformUser(user) : user;
+  return user ? transformUser(user) : null;
+}
+
+function findActiveUserBy(key, value) {
+  return findUserBy(key, value, { is_deleted: false });
 }
 
 async function updateLastLogin({ id, method }) {
@@ -83,21 +109,25 @@ async function updateLastLogin({ id, method }) {
     },
   });
 }
-/** The function `findAll` is used to retrieve a list of users from the database with various filtering, sorting,
- * and pagination options. */
+
+/**
+ * The function `findAll` is used to retrieve a list of users from the database
+ * with various filtering, sorting, and pagination options.
+ */
 async function findAll({
   search, sortBy, sort_order, skip, take,
 }) {
   const sort_sql = Prisma.raw(`"${sortBy}" ${sort_order}`);
   /**
- * Constructs a SQL query to:
- * 1. Join `user`, `user_login`, `user_role`, and `role` tables to retrieve user details, roles, and last login info.
- * 2. Filter users based on the search term.
- * 3. Group results by user ID and login method.
- * 4. Sort results by the specified column and order, with nulls last.
- * 5. Apply pagination using limit and offset.
- * Executes the query and returns the total user count and details.
- */
+   * Constructs a SQL query to:
+   * 1. Join `user`, `user_login`, `user_role`,
+   * and `role` tables to retrieve user details, roles, and last login info. 2.
+   * Filter users based on the search term.
+   * 3. Group results by user ID and login method.
+   * 4. Sort results by the specified column and order, with nulls last.
+   * 5. Apply pagination using limit and offset.
+   * Executes the query and returns the total user count and details.
+   */
   const sql = Prisma.sql`
   with results as (
       select u.*, ul.last_login, ul."method", array_agg(r."name") as roles from "user" u
@@ -129,7 +159,7 @@ async function findAll({
 
 async function createUser(data) {
   const userData = _.flow([
-    _.pick(['username', 'name', 'email', 'cas_id', 'notes']),
+    _.pick(['username', 'name', 'email', 'cas_id', 'notes', 'metadata']),
     _.omitBy(_.isNil),
   ])(data);
   const roleObjs = await findRoles(data.roles || []);
@@ -149,17 +179,42 @@ async function createUser(data) {
   return user ? transformUser(user) : user;
 }
 
-async function softDeleteUser(username) {
-  const updatedUser = await prisma.user.update({
-    where: {
-      username,
-    },
-    data: {
-      is_deleted: true,
-    },
-    include: INCLUDE_ROLES_LOGIN,
+async function deleteUser(username, isHardDelete = false) {
+  if (isHardDelete) {
+    // Hard delete: Directly delete the user + some data
+    return prisma.user.delete({
+      where: { username },
+      select: { id: true, username: true },
+    });
+  }
+
+  // Soft delete: Use an interactive transaction
+  return prisma.$transaction(async (_prisma) => {
+    const user = await _prisma.user.findUniqueOrThrow({
+      where: { username },
+      include: INCLUDE_ROLES_LOGIN,
+    });
+
+    if (user?.is_deleted) {
+      return transformUser(user);
+    }
+
+    const updatedUser = await _prisma.user.update({
+      where: { username },
+      data: { is_deleted: true },
+      include: INCLUDE_ROLES_LOGIN,
+    });
+
+    return transformUser(updatedUser);
   });
-  return updatedUser ? transformUser(updatedUser) : updatedUser;
+}
+
+async function softDeleteUser(username) {
+  return deleteUser(username, false);
+}
+
+async function hardDeleteUser(username) {
+  return deleteUser(username, true);
 }
 
 // async function setRoles(user_id, role_ids) {
@@ -168,7 +223,7 @@ async function softDeleteUser(username) {
 
 async function updateUser(username, data) {
   const updates = _.flow([
-    _.pick(['username', 'name', 'email', 'cas_id', 'notes', 'is_deleted']),
+    _.pick(['username', 'name', 'email', 'cas_id', 'notes', 'is_deleted', 'metadata']),
     _.omitBy(_.isNil),
   ])(data);
 
@@ -202,8 +257,10 @@ async function updateUser(username, data) {
 async function canUpdateUser(username, requester) {
   if (
     requester.username === username
-    || requester.roles.includes('admin')
-  ) { return true; }
+      || requester.roles.includes('admin')
+  ) {
+    return true;
+  }
   const resource = transformUser(
     await prisma.user.findUniqueOrThrow(
       {
@@ -216,6 +273,78 @@ async function canUpdateUser(username, requester) {
   return resource.roles?.includes('user');
 }
 
+async function generateUniqueUsername(username) {
+  let suffix = 1;
+  let uniqueUsername = username;
+  const maxSuffix = config.get('auth.signup.max_username_suffix');
+  await prisma.$transaction(async (tx) => {
+    while (suffix <= maxSuffix) {
+      // eslint-disable-next-line no-await-in-loop
+      const existingUser = await tx.user.findUnique({
+        where: { username: uniqueUsername },
+      });
+      if (!existingUser) {
+        break;
+      }
+      uniqueUsername = `${username}${suffix}`;
+      suffix += 1;
+    }
+  });
+  if (suffix > config.get('auth.signup.max_username_suffix')) {
+    throw new Error('Unable to generate unique username');
+  }
+  return uniqueUsername;
+}
+
+function validateUsernameOrThrow(username) {
+  // https://www.npmjs.com/package/regex-username
+  // GitHub username convention
+  // Username may only contain alphanumeric characters
+  // and only single hyphens, and cannot begin or end with a hyphen.
+  if (!usernameRegex.test(username)) {
+    throw new Error('Invalid username format: must be alphanumeric, \
+      may only contain single hyphen and cannot begin or end with a hyphen.');
+  }
+  // disallow reserved words (privilege, programming terms, section names, financial terms and actions)
+  if (!usernameBlacklist.validate(username)) {
+    throw new Error('Username is blacklisted.');
+  }
+
+  return true;
+}
+
+/**
+ * Retrieves the roles associated with a user.
+ *
+ * @async
+ * @function getUserRoles
+ * @param {Object} params - The parameters for the function.
+ * @param {number} params.user_id - The unique identifier of the user whose roles are to be retrieved.
+ * @returns {Promise<string[]>} A promise that resolves to an array of roles assigned to the user.
+ *
+ * @example
+ * const roles = await getUserRoles({ user_id: 123 });
+ * console.log(roles); // ['admin', 'user']
+ */
+const getUserRoles = async ({ user_id }) => {
+  const user = await prisma.user.findUnique({
+    where: { id: user_id },
+    select: {
+      user_role: {
+        select: {
+          roles: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return user.user_role.map((u) => u.roles.name);
+};
+
 module.exports = {
   transformUser,
   findActiveUserBy,
@@ -223,9 +352,16 @@ module.exports = {
   findAll,
   createUser,
   setPassword,
+  deleteUser,
   softDeleteUser,
+  hardDeleteUser,
   updateUser,
   findRoles,
   canUpdateUser,
   INCLUDE_ROLES_LOGIN,
+  findUserBy,
+  generateUniqueUsername,
+  validateUsernameOrThrow,
+  getSystemUser,
+  getUserRoles,
 };

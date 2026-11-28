@@ -50,10 +50,10 @@ const badgeText = computed(() => {
 // setTimeout seems to run after the DOM update
 watch([y, () => props.totalItems], () => {
   setTimeout(() => {
-    const scrollcontainer = props.elemRef?.scrollContainer;
-    if (scrollcontainer) {
+    const scrollContainer = props.elemRef?.scrollContainer;
+    if (scrollContainer) {
       const scrollTotal =
-        scrollcontainer.scrollHeight - scrollcontainer.clientHeight;
+        scrollContainer.scrollHeight - scrollContainer.clientHeight;
       isNearBottom.value = scrollTotal - y.value < 50;
     } else {
       isNearBottom.value = false;
@@ -66,10 +66,10 @@ function scrollToTop() {
 }
 
 function scrollToBottom() {
-  const scrollcontainer = props.elemRef?.scrollContainer;
-  if (scrollcontainer) {
-    const h = scrollcontainer.scrollHeight - scrollcontainer.clientHeight;
-    scrollcontainer.scrollTo(0, h);
+  const scrollContainer = props.elemRef?.scrollContainer;
+  if (scrollContainer) {
+    const h = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+    scrollContainer.scrollTo(0, h);
   }
 }
 </script>

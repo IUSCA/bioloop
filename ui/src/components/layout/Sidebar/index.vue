@@ -5,25 +5,37 @@
     width="13rem"
     minimized-width="0"
   >
-    <!-- User sidebar items -->
+    <!-- user sidebar items -->
     <div v-if="user_items.length > 0">
       <SidebarItems :items="user_items" :isActive="isActive" />
       <va-divider />
     </div>
 
-    <!-- Operator sidebar items -->
+    <!-- operator sidebar items -->
     <div v-if="auth.canOperate && operator_items.length > 0">
       <SidebarItems :items="operator_items" :isActive="isActive" />
       <va-divider />
     </div>
 
-    <!-- Admin sidebar items -->
-    <div v-if="auth.canAdmin && admin_items.length > 0">
+    <!-- admin sidebar items   -->
+    <div v-if="auth.canAdmin">
       <SidebarItems :items="admin_items" :isActive="isActive" />
+      <va-sidebar-item href="/grafana/dashboards" target="_blank">
+        <va-sidebar-item-content>
+          <Icon icon="mdi:chart-line" class="text-2xl" />
+          <!-- User can hide item with css if they want -->
+          <va-sidebar-item-title>
+            <div class="flex items-center">
+              <span>Metrics</span>
+              <i-mdi-open-in-new class="ml-1 text-sm" />
+            </div>
+          </va-sidebar-item-title>
+        </va-sidebar-item-content>
+      </va-sidebar-item>
       <va-divider />
     </div>
 
-    <!-- Other sidebar items -->
+    <!-- other sidebar items   -->
     <div v-if="bottom_items.length > 0">
       <SidebarItems :items="bottom_items" :isActive="isActive" />
     </div>
@@ -51,6 +63,16 @@ const nav = useNavStore();
 const { sidebarDatasetType } = storeToRefs(nav);
 
 function isActive(path) {
+  /**
+   * This function is executed for every sidebar item rendered
+   * If the return value is true, that item is highlighted
+   * path is from the sidebar item config
+   * route.path is the actual path in the browser URL
+   *
+   * Since paths of all components start with '/',
+   * dashboard requires a special check All types of datasets use the same
+   * /datasets/ prefix, these require special handling
+   */
   if (path === "/") return route.path === "/";
   if (
     route.path.startsWith("/datasets") &&
@@ -67,4 +89,22 @@ function isActive(path) {
 router.beforeEach(() => {
   sidebarDatasetType.value = null;
 });
+
+function scrollActiveItemIntoView() {
+  document.querySelector(".custom-sidebar-item--active")?.scrollIntoView({
+    behavior: "auto",
+    block: "center",
+  });
+}
+
+onMounted(() => {
+  scrollActiveItemIntoView();
+});
 </script>
+
+<style>
+/* In minimized state, the default right margin is making the icons smaller */
+aside.va-sidebar--minimized .va-sidebar__item__content > * {
+  margin-right: 0;
+}
+</style>
